@@ -9,7 +9,7 @@ const httpStart: AzureFunction = async (
   const client = df.getClient(context);
   const instanceId = await client.startNew(
     req.params.functionName,
-    undefined,
+    "FOOBAR",
     req.body
   );
 

@@ -15,22 +15,22 @@ import {
 } from "durable-functions/lib/src/classes";
 
 import * as df from "durable-functions";
-import * as t from "io-ts";
 
 const orchestrator = df.orchestrator(function*(
   context: IOrchestrationFunctionContext
 ): Generator<Task> {
-  return [
-    t.string
-      .decode(yield context.df.callActivity("ActivityFunction", "Tokyo"))
-      .getOrElse(""),
-    t.string
-      .decode(yield context.df.callActivity("ActivityFunction", "Seattle"))
-      .getOrElse(""),
-    t.string
-      .decode(yield context.df.callActivity("ActivityFunction", "London"))
-      .getOrElse("")
-  ];
+  context.log.info("IS replaying %s", context.df.isReplaying);
+  return yield context.df.callActivityWithRetry(
+    "ActivityFunction",
+    {
+      backoffCoefficient: 1,
+      firstRetryIntervalInMilliseconds: 1000,
+      maxNumberOfAttempts: 100,
+      maxRetryIntervalInMilliseconds: 1000000,
+      retryTimeoutInMilliseconds: 10000
+    },
+    JSON.stringify(context.bindingData)
+  );
 });
 
 export default orchestrator;

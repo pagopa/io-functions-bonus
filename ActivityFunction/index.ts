@@ -9,12 +9,20 @@
  *   function app in Kudu
  */
 
+import nodeFetch from "node-fetch";
+
 import { AzureFunction, Context } from "@azure/functions";
 
 const activityFunction: AzureFunction = async (
   context: Context
 ): Promise<string> => {
-  return `Hello ${context.bindings.name}!`;
+  const res = await nodeFetch(
+    "https://webhook.site/2d3e1c11-14e6-47e3-8acf-4e0e260ddd55"
+  );
+  if (res.status !== 200) {
+    throw new Error(`STATUS=${res.status}`);
+  }
+  return res.json();
 };
 
 export default activityFunction;
