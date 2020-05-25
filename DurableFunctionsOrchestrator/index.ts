@@ -25,9 +25,9 @@ const orchestrator = df.orchestrator(function*(
     {
       backoffCoefficient: 1,
       firstRetryIntervalInMilliseconds: 1000,
-      maxNumberOfAttempts: 100,
-      maxRetryIntervalInMilliseconds: 1000000,
-      retryTimeoutInMilliseconds: 10000
+      maxNumberOfAttempts: 10,
+      maxRetryIntervalInMilliseconds: 10000,
+      retryTimeoutInMilliseconds: 100000
     },
     JSON.stringify(context.bindingData)
   );
