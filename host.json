@@ -17,9 +17,8 @@
       },
       "tracing": {
         "traceInputsAndOutputs": false,
-        "traceReplayEvents": true
-      },
-      "useGracefulShutdown": true
+        "traceReplayEvents": false
+      }
     }
   }
 }
