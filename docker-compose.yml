@@ -3,7 +3,7 @@ version: "3.2"
 services:
 
   functions:
-    image: functions-template:v2.0.0
+    image: functions-bonus:v2.0.0
     build:
       context: ./
       dockerfile: docker/functions/Dockerfile

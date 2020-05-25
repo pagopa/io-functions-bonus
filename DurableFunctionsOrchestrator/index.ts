@@ -19,7 +19,7 @@ import * as t from "io-ts";
 
 const orchestrator = df.orchestrator(function*(
   context: IOrchestrationFunctionContext
-): IterableIterator<Task> {
+): Generator<Task> {
   return [
     t.string
       .decode(yield context.df.callActivity("ActivityFunction", "Tokyo"))
