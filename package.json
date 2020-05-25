@@ -8,7 +8,7 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
-    "prestart": "func extensions install",
+    "prestart": "func extensions install --javascript",
     "start": "func start --javascript",
     "predev": "npm-run-all generate build",
     "dev": "npm-run-all --parallel start watch",

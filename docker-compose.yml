@@ -10,11 +10,11 @@ services:
     env_file: 
       - .env
     environment:
-      - languageWorkers__node__arguments=--inspect=0.0.0.0:5858
+      - languageWorkers__node__arguments=--inspect=0.0.0.0:5860
     working_dir: /usr/src/app
     ports:
       - "7071:7071"
-      - "5858:5858"
+      - "5860:5860"
     networks:
       - io-fn
     depends_on:
