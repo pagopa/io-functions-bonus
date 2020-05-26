@@ -21,7 +21,7 @@
     "dist:zip": "zip -r dist.zip . --exclude @.funcignore --exclude .funcignore",
     "predeploy": "npm-run-all generate build dist:modules",
     "generate:definitions": "shx rm -rf ./generated/definitions && shx mkdir -p ./generated/definitions && gen-api-models --api-spec ./openapi/index.yaml --out-dir ./generated/definitions",
-    "generate": "npm-run-all generate:*",
+    "generate": "npm-run-all generate:* generate:ts-from-yaml:*",
     "generate:ts-from-yaml:SvcConsultazione": "shx mkdir -p generated/SvcConsultazione && rimraf generated/SvcConsultazione/* && gen-api-models --strict 0 --api-spec generated/yaml-file/SvcConsultazione.yaml --out-dir generated/SvcConsultazione",
     "generate:yaml-from-wsdl": "shx mkdir -p generated/yaml-file && rimraf generated/yaml-file/* && node generator/yamlGenerator.js"
   },

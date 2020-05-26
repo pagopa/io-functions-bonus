@@ -1,6 +1,4 @@
-﻿import { AzureFunction, Context, HttpRequest } from "@azure/functions";
-import * as df from "durable-functions";
-import { IHttpResponse } from "durable-functions/lib/src/classes";
+﻿import { AzureFunction, Context } from "@azure/functions";
 import * as express from "express";
 import { secureExpressApp } from "io-functions-commons/dist/src/utils/express";
 import { setAppContext } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";

@@ -34,7 +34,7 @@ paths:
           description: Not found.
 parameters:
   FiscalCode:
-    name: fiscal_code
+    name: fiscalcode
     in: path
     type: string
     maxLength: 16
