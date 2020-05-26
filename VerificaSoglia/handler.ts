@@ -41,6 +41,7 @@ export function VerificaSogliaHandler(): IVerificaSogliaHandler {
         fiscalCode
       );
     } catch (err) {
+      context.log.error("VerificaSoglia|ERROR|Orchestrator already running");
       return ResponseErrorConflict("Orchestrator already running");
     }
     return InstanceId.decode(response.body).fold<

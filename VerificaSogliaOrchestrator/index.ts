@@ -4,8 +4,8 @@
   TaskSet
 } from "durable-functions/lib/src/classes";
 
+import add from "date-fns/add";
 import * as df from "durable-functions";
-import * as moment from "moment";
 
 const VerificaSogliaOrchestrator = df.orchestrator(function*(
   context: IOrchestrationFunctionContext
@@ -18,8 +18,9 @@ const VerificaSogliaOrchestrator = df.orchestrator(function*(
     context.df.getInput()
   );
   context.df.setCustomStatus(taskVerificaSoglia);
-  const deadline = moment.utc(context.df.currentUtcDateTime).add(10, "seconds");
-  yield context.df.createTimer(deadline.toDate());
+  yield context.df.createTimer(
+    add(context.df.currentUtcDateTime, { seconds: 10 })
+  );
 
   yield context.df.callActivity("NotifyVerificaSogliaActivity");
 

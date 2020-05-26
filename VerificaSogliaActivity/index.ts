@@ -76,6 +76,24 @@ const ActivityResult = t.taggedUnion("kind", [
 ]);
 type ActivityResult = t.TypeOf<typeof ActivityResult>;
 
+function soapClientBuilder(): () => Promise<SvcConsultazioneClientAsync> {
+  // tslint:disable-next-line: no-let
+  let client: SvcConsultazioneClientAsync | undefined;
+  return async () => {
+    return client
+      ? client
+      : (client = new SvcConsultazioneClientAsync(
+          await createSvcConsultazioneClient({
+            endpoint: `${INPS_SERVICE_HOST}/ConsultazioneSogliaIndicatore`,
+            wsdl_options: {
+              timeout: 1000
+            }
+          })
+        ));
+  };
+}
+const soapClientAsync = soapClientBuilder();
+
 const VerificaSogliaActivity: AzureFunction = async (
   context: Context,
   input: unknown
@@ -88,17 +106,8 @@ const VerificaSogliaActivity: AzureFunction = async (
     .chain(fiscalCode => {
       return tryCatch(
         async () => {
-          const inpsSvcConsultazioneClient = new SvcConsultazioneClientAsync(
-            await createSvcConsultazioneClient({
-              endpoint: `${INPS_SERVICE_HOST}/ConsultazioneSogliaIndicatore`,
-              wsdl_options: {
-                timeout: 1000
-              }
-            })
-          );
-          return await inpsSvcConsultazioneClient.ConsultazioneSogliaIndicatore(
-            fiscalCode
-          );
+          const client = await soapClientAsync();
+          return await client.ConsultazioneSogliaIndicatore(fiscalCode);
         },
         _ => new Error("Error calling ConsultazioneSogliaIndicatore service")
       );
