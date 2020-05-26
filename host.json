@@ -7,7 +7,7 @@
   },
   "extensions": {
       "http": {
-        "routePrefix": "/bonus"
+        "routePrefix": ""
       },
 
     "durableTask": {
