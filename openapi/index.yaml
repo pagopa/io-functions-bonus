@@ -14,36 +14,41 @@ basePath: "/template"
 schemes:
   - https
 paths:
-  "/echo/{input}":
-    parameters:
-      - name: input
-        in: path
-        type: string
-        required: true
-        description: test input.
+  "/v1/bonus/verifica/{fiscalcode}":
     get:
       operationId: echo
       summary: Echo API
       description: Some API description here.
+      parameters:
+        - $ref: "#/parameters/FiscalCode"
       responses:
         "200":
           description: Found.
           schema:
-            "$ref": "#/definitions/Input"
-          examples:
-            application/json:
-              id: "10000AAAA"
-              output: "hello world !"
+            "$ref": "#/definitions/InstanceId"
         "401":
           description: Unauthorized
-        "404":
+        "500":
           description: Not found.
-      parameters: []
+parameters:
+  FiscalCode:
+    name: fiscal_code
+    in: path
+    type: string
+    maxLength: 16
+    minLength: 16
+    required: true
+    description: The fiscal code of the user, all upper case.
+    pattern: "[A-Z]{6}[0-9LMNPQRSTUV]{2}[ABCDEHLMPRST][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]"
+    x-example: SPNDNL80R13C555X
 definitions:
-  Input:
+  FiscalCode:
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/FiscalCode"
+  InstanceId:
     type: object
     properties:
-      id:
+      instanceId:
         type: string
-      output:
-        type: string
+        minLength: 1
+    required:
+      - instanceId

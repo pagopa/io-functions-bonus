@@ -1,12 +1,12 @@
 {
   "bindings": [
     {
-      "authLevel": "anonymous",
+      "authLevel": "function",
       "name": "req",
       "type": "httpTrigger",
       "direction": "in",
-      "route": "orchestrators/{functionName}",
-      "methods": ["post", "get"]
+      "route": "v1/bonus/verifica/{fiscalcode}",
+      "methods": ["get"]
     },
     {
       "name": "$return",
@@ -19,5 +19,5 @@
       "direction": "in"
     }
   ],
-  "scriptFile": "./index.js"
+  "scriptFile": "../dist/VerificaSoglia/index.js"
 }

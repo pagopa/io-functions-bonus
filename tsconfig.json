@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "target": "es6",
+    "outDir": "dist",
     "rootDir": ".",
     "module": "commonjs",
     "moduleResolution": "node",
@@ -14,6 +15,7 @@
     "__mocks__",
     "dist",
     "node_modules",
-    "src/**/__tests__/*"
+    "**/__tests__/*",
+    "docker/**/*"
   ]
 }
