@@ -52,7 +52,7 @@
     "typescript": "^3.9.0"
   },
   "dependencies": {
-    "@types/node-fetch": "^2.5.7",
+    "applicationinsights": "^1.7.5",
     "date-fns": "^2.14.0",
     "documentdb": "^1.15.3",
     "durable-functions": "^1.4.1",
