@@ -20,7 +20,7 @@ import { InstanceId } from "../generated/definitions/InstanceId";
 
 type IVerificaSogliaHandler = (
   context: Context,
-  registerPaymentNotify: FiscalCode
+  fiscalCode: FiscalCode
 ) => Promise<
   | IResponseSuccessJson<InstanceId>
   | IResponseErrorInternal
