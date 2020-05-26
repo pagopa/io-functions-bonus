@@ -8,8 +8,10 @@ import {
   wrapRequestHandler
 } from "io-functions-commons/dist/src/utils/request_middleware";
 import {
+  IResponseErrorConflict,
   IResponseErrorInternal,
   IResponseSuccessJson,
+  ResponseErrorConflict,
   ResponseErrorInternal,
   ResponseSuccessJson
 } from "italia-ts-commons/lib/responses";
@@ -19,20 +21,28 @@ import { InstanceId } from "../generated/definitions/InstanceId";
 type IVerificaSogliaHandler = (
   context: Context,
   registerPaymentNotify: FiscalCode
-) => Promise<IResponseSuccessJson<InstanceId> | IResponseErrorInternal>;
+) => Promise<
+  | IResponseSuccessJson<InstanceId>
+  | IResponseErrorInternal
+  | IResponseErrorConflict
+>;
 
 export function VerificaSogliaHandler(): IVerificaSogliaHandler {
   return async (context, fiscalCode) => {
     const client = df.getClient(context);
-    const instanceId = await client.startNew(
-      "VerificaSogliaOrchestrator",
-      undefined,
-      fiscalCode
-    );
     const response = client.createCheckStatusResponse(
       context.bindingData.req,
-      instanceId
+      fiscalCode
     );
+    try {
+      await client.startNew(
+        "VerificaSogliaOrchestrator",
+        fiscalCode,
+        fiscalCode
+      );
+    } catch (err) {
+      return ResponseErrorConflict("Orchestrator already running");
+    }
     return InstanceId.decode(response.body).fold<
       IResponseErrorInternal | IResponseSuccessJson<InstanceId>
     >(

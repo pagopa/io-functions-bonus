@@ -9,11 +9,15 @@ import * as path from "path";
 import * as soap from "soap";
 import { ConsultazioneSogliaIndicatore } from "../generated/SvcConsultazione/ConsultazioneSogliaIndicatore";
 import { ConsultazioneSogliaIndicatoreResponse_element_tns } from "../generated/SvcConsultazione/ConsultazioneSogliaIndicatoreResponse_element_tns";
+import {
+  SottoSogliaEnum,
+  TipoIndicatoreEnum
+} from "../generated/SvcConsultazione/ConsultazioneSogliaIndicatoreResponseType_type_tns";
 import { createClient, promisifySoapMethod, SoapMethodCB } from "../utils/soap";
 
 const INPS_SERVICE_HOST = getRequiredStringEnv("INPS_SERVICE_HOST");
 
-export interface ISvcConsultazione {
+interface ISvcConsultazione {
   readonly ConsultazioneSogliaIndicatore: SoapMethodCB<
     ConsultazioneSogliaIndicatore,
     ConsultazioneSogliaIndicatoreResponse_element_tns
@@ -25,7 +29,7 @@ const SVC_CONSULTAZIONE_WSDL_PATH = path.join(
   "./../../wsdl/ConsultazioneISEE.wsdl"
 ) as NonEmptyString;
 
-export function createSvcConsultazioneClient(
+function createSvcConsultazioneClient(
   options: soap.IOptions,
   cert?: string,
   key?: string,
@@ -44,7 +48,7 @@ export function createSvcConsultazioneClient(
  * Converts the callback based methods of a FespCd client to
  * promise based methods.
  */
-export class SvcConsultazioneClientAsync {
+class SvcConsultazioneClientAsync {
   public readonly ConsultazioneSogliaIndicatore = promisifySoapMethod(
     this.client.ConsultazioneSogliaIndicatore
   );
@@ -53,6 +57,7 @@ export class SvcConsultazioneClientAsync {
 
 // Activity result
 const ActivityResultSuccess = t.interface({
+  data: ConsultazioneSogliaIndicatoreResponse_element_tns,
   kind: t.literal("SUCCESS")
 });
 
@@ -65,59 +70,84 @@ const ActivityResultFailure = t.interface({
 
 type ActivityResultFailure = t.TypeOf<typeof ActivityResultFailure>;
 
-export const ActivityResult = t.taggedUnion("kind", [
+const ActivityResult = t.taggedUnion("kind", [
   ActivityResultSuccess,
   ActivityResultFailure
 ]);
-export type ActivityResult = t.TypeOf<typeof ActivityResult>;
+type ActivityResult = t.TypeOf<typeof ActivityResult>;
 
-const verificaSogliaActivity: AzureFunction = async (
+const VerificaSogliaActivity: AzureFunction = async (
   context: Context,
   input: unknown
 ): Promise<ActivityResult> => {
-  return (
-    fromEither(
-      FiscalCode.decode(input).mapLeft(
-        err => new Error(`Error: [${readableReport(err)}]`)
-      )
+  return await fromEither(
+    FiscalCode.decode(input).mapLeft(
+      err => new Error(`Error: [${readableReport(err)}]`)
     )
-      .chain(fiscalCode => {
-        return tryCatch(
-          async () => {
-            const inpsSvcConsultazioneClient = new SvcConsultazioneClientAsync(
-              await createSvcConsultazioneClient({
-                endpoint: `${INPS_SERVICE_HOST}/ConsultazioneSogliaIndicatore`,
-                wsdl_options: {
-                  timeout: 1000
-                }
-              })
-            );
-            return await inpsSvcConsultazioneClient.ConsultazioneSogliaIndicatore(
-              fiscalCode
-            );
-          },
-          _ => new Error("Error calling ConsultazioneSogliaIndicatore service")
-        );
-      })
-      // TODO: Save the success response data
-      .mapLeft(err => {
-        const errorMessage = `VerificaSogliaActivity|ERROR|${err}`;
-        context.log.error(errorMessage);
-        return errorMessage;
-      })
-      .fold<ActivityResult>(
-        errorMessage =>
+  )
+    .chain(fiscalCode => {
+      return tryCatch(
+        async () => {
+          const inpsSvcConsultazioneClient = new SvcConsultazioneClientAsync(
+            await createSvcConsultazioneClient({
+              endpoint: `${INPS_SERVICE_HOST}/ConsultazioneSogliaIndicatore`,
+              wsdl_options: {
+                timeout: 1000
+              }
+            })
+          );
+          return await inpsSvcConsultazioneClient.ConsultazioneSogliaIndicatore(
+            fiscalCode
+          );
+        },
+        _ => new Error("Error calling ConsultazioneSogliaIndicatore service")
+      );
+    })
+    .mapLeft(err => {
+      const errorMessage = `VerificaSogliaActivity|ERROR|${err}`;
+      context.log.error(errorMessage);
+      return errorMessage;
+    })
+    .fold(
+      errorMessage =>
+        Promise.reject(
           ActivityResultFailure.encode({
             kind: "FAILURE",
             reason: errorMessage
-          }),
-        _ =>
+          })
+        ),
+      _ =>
+        Promise.resolve(
           ActivityResultSuccess.encode({
+            data: _,
             kind: "SUCCESS"
           })
-      )
-      .run()
-  );
+        )
+    )
+    .run()
+    // TODO: Remove this test code
+    .catch(() =>
+      ActivityResultSuccess.encode({
+        data: {
+          ConsultazioneSogliaIndicatoreResult: {
+            TipoIndicatore: TipoIndicatoreEnum["ISEE Standard"],
+
+            DataPresentazioneDSU: new Date().toISOString(),
+            ProtocolloDSU: "123",
+            SottoSoglia: SottoSogliaEnum.SI,
+
+            Componente: [
+              {
+                CodiceFiscale: "AAABBB01C02D123Z",
+                Cognome: "Rossi",
+                Nome: "Mario"
+              }
+            ]
+          }
+        },
+        kind: "SUCCESS"
+      })
+    );
 };
 
-export default verificaSogliaActivity;
+export default VerificaSogliaActivity;

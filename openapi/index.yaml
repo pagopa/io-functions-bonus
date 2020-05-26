@@ -28,6 +28,8 @@ paths:
             "$ref": "#/definitions/InstanceId"
         "401":
           description: Unauthorized
+        "409":
+          description: Orchestrator already running
         "500":
           description: Not found.
 parameters:

@@ -9,9 +9,9 @@
       "methods": ["get"]
     },
     {
-      "name": "$return",
       "type": "http",
-      "direction": "out"
+      "direction": "out",
+      "name": "res"
     },
     {
       "name": "starter",
