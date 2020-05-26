@@ -17,6 +17,7 @@ import {
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { InstanceId } from "../generated/definitions/InstanceId";
+import { initTelemetryClient } from "../utils/appinsights";
 
 type IVerificaSogliaHandler = (
   context: Context,
@@ -27,6 +28,8 @@ type IVerificaSogliaHandler = (
   | IResponseErrorConflict
 >;
 
+initTelemetryClient();
+
 export function VerificaSogliaHandler(): IVerificaSogliaHandler {
   return async (context, fiscalCode) => {
     const client = df.getClient(context);
@@ -34,6 +37,10 @@ export function VerificaSogliaHandler(): IVerificaSogliaHandler {
       context.bindingData.req,
       fiscalCode
     );
+    const status = await client.getStatus(fiscalCode);
+    if (status.runtimeStatus === df.OrchestrationRuntimeStatus.Running) {
+      return ResponseErrorConflict("Orchestrator already running");
+    }
     try {
       await client.startNew(
         "VerificaSogliaOrchestrator",
@@ -41,8 +48,13 @@ export function VerificaSogliaHandler(): IVerificaSogliaHandler {
         fiscalCode
       );
     } catch (err) {
-      context.log.error("VerificaSoglia|ERROR|Orchestrator already running");
-      return ResponseErrorConflict("Orchestrator already running");
+      context.log.error(
+        "VerificaSoglia|ERROR|Orchestrator cannot start (status=%s)",
+        status
+      );
+      return ResponseErrorInternal(
+        `Orchestrator error=${err} status=${status}`
+      );
     }
     return InstanceId.decode(response.body).fold<
       IResponseErrorInternal | IResponseSuccessJson<InstanceId>
