@@ -9,7 +9,7 @@ import * as t from "io-ts";
 const orchestrator = df.orchestrator(function*(
   context: IOrchestrationFunctionContext
   // tslint:disable-next-line: no-any
-): Generator<unknown, unknown, any> {
+): Generator<Task> {
   return yield context.df.callActivityWithRetry(
     "VerificaSogliaActivity",
     new df.RetryOptions(60000, 20),

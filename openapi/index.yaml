@@ -23,7 +23,7 @@ paths:
         - $ref: "#/parameters/FiscalCode"
       responses:
         "200":
-          description: Found.
+          description: Orchestrator task started
           schema:
             "$ref": "#/definitions/InstanceId"
         "401":
@@ -47,8 +47,20 @@ definitions:
   InstanceId:
     type: object
     properties:
-      instanceId:
+      id:
+        type: string
+        minLength: 1
+      statusQueryGetUri:
+        type: string
+        minLength: 1
+      sendEventPostUri:
+        type: string
+        minLength: 1
+      terminatePostUri:
         type: string
         minLength: 1
     required:
-      - instanceId
+      - id
+      - statusQueryGetUri
+      - sendEventPostUri
+      - terminatePostUri

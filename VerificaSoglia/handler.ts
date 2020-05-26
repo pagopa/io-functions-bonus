@@ -9,7 +9,6 @@ import {
 } from "io-functions-commons/dist/src/utils/request_middleware";
 import {
   IResponseErrorInternal,
-  IResponseErrorValidation,
   IResponseSuccessJson,
   ResponseErrorInternal,
   ResponseSuccessJson
@@ -20,12 +19,7 @@ import { InstanceId } from "../generated/definitions/InstanceId";
 type IVerificaSogliaHandler = (
   context: Context,
   registerPaymentNotify: FiscalCode
-) => Promise<
-  // tslint:disable-next-line: max-union-size
-  | IResponseSuccessJson<InstanceId>
-  | IResponseErrorValidation
-  | IResponseErrorInternal
->;
+) => Promise<IResponseSuccessJson<InstanceId> | IResponseErrorInternal>;
 
 export function VerificaSogliaHandler(): IVerificaSogliaHandler {
   return async (context, fiscalCode) => {
@@ -35,10 +29,14 @@ export function VerificaSogliaHandler(): IVerificaSogliaHandler {
       undefined,
       fiscalCode
     );
-    return InstanceId.decode({ instanceId }).fold<
-      IResponseSuccessJson<InstanceId> | IResponseErrorInternal
+    const response = client.createCheckStatusResponse(
+      context.bindingData.req,
+      instanceId
+    );
+    return InstanceId.decode(response.body).fold<
+      IResponseErrorInternal | IResponseSuccessJson<InstanceId>
     >(
-      _ => ResponseErrorInternal("Decoding instance id error"),
+      _ => ResponseErrorInternal("Invalid check status response"),
       _ => ResponseSuccessJson(_)
     );
   };
