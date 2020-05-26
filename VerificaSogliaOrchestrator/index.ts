@@ -4,7 +4,7 @@
   TaskSet
 } from "durable-functions/lib/src/classes";
 
-import add from "date-fns/add";
+import { addSeconds } from "date-fns";
 import * as df from "durable-functions";
 
 const NOTIFICATION_DELAY_SECONDS = 10;
@@ -30,13 +30,14 @@ const VerificaSogliaOrchestrator = df.orchestrator(function*(
   // sleep before sending push notification
   // so we can let the client stop the flow here
   yield context.df.createTimer(
-    add(context.df.currentUtcDateTime, {
-      seconds: NOTIFICATION_DELAY_SECONDS
-    })
+    addSeconds(context.df.currentUtcDateTime, NOTIFICATION_DELAY_SECONDS)
   );
 
   // send push notification with eligibility details
-  yield context.df.callActivity("NotifyVerificaSogliaActivity");
+  yield context.df.callActivity(
+    "NotifyVerificaSogliaActivity",
+    taskVerificaSoglia
+  );
 
   return taskVerificaSoglia;
 });

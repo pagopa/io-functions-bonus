@@ -84,7 +84,7 @@ function soapClientBuilder(): () => Promise<SvcConsultazioneClientAsync> {
       ? client
       : (client = new SvcConsultazioneClientAsync(
           await createSvcConsultazioneClient({
-            endpoint: `${INPS_SERVICE_HOST}/ConsultazioneSogliaIndicatore`,
+            endpoint: `${INPS_SERVICE_HOST}/webservices/inps/SvcConsultazione`,
             wsdl_options: {
               timeout: 1000
             }
@@ -109,7 +109,10 @@ const VerificaSogliaActivity: AzureFunction = async (
           const client = await soapClientAsync();
           return await client.ConsultazioneSogliaIndicatore(fiscalCode);
         },
-        _ => new Error("Error calling ConsultazioneSogliaIndicatore service")
+        err =>
+          new Error(
+            `Error calling ConsultazioneSogliaIndicatore service: ${err}`
+          )
       );
     })
     .mapLeft(err => {
@@ -135,8 +138,9 @@ const VerificaSogliaActivity: AzureFunction = async (
     )
     .run()
     // TODO: Remove this test code
-    .catch(() =>
-      ActivityResultSuccess.encode({
+    .catch(e => {
+      context.log.error(`Error calling SOAP service: ${JSON.stringify(e)}`);
+      return ActivityResultSuccess.encode({
         data: {
           ConsultazioneSogliaIndicatoreResult: {
             TipoIndicatore: TipoIndicatoreEnum["ISEE Standard"],
@@ -155,8 +159,8 @@ const VerificaSogliaActivity: AzureFunction = async (
           }
         },
         kind: "SUCCESS"
-      })
-    );
+      });
+    });
 };
 
 export default VerificaSogliaActivity;

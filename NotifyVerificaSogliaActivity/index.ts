@@ -5,7 +5,10 @@ const NotifyVerificaSogliaActivity: AzureFunction = async (
   input: unknown
 ): Promise<unknown> => {
   // TODO: Implementation missing
-  context.log.info("SendVerificaSogliaActivity|SUCCESS|%s", input);
+  context.log.info(
+    "SendVerificaSogliaActivity|SUCCESS|%s",
+    JSON.stringify(input)
+  );
   return Promise.resolve("OK");
 };
 
