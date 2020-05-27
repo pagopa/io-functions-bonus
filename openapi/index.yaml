@@ -14,7 +14,7 @@ basePath: "/template"
 schemes:
   - https
 paths:
-  "/v1/bonus/verifica/{fiscalcode}":
+  "/v1/bonus/eligibility/{fiscalcode}":
     get:
       operationId: echo
       summary: Echo API

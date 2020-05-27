@@ -19,7 +19,7 @@ import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { initTelemetryClient } from "../utils/appinsights";
 
-type IVerificaSogliaHandler = (
+type IEligibilityCheckHandler = (
   context: Context,
   fiscalCode: FiscalCode
 ) => Promise<
@@ -30,7 +30,7 @@ type IVerificaSogliaHandler = (
 
 initTelemetryClient();
 
-export function VerificaSogliaHandler(): IVerificaSogliaHandler {
+export function EligibilityCheckHandler(): IEligibilityCheckHandler {
   return async (context, fiscalCode) => {
     const client = df.getClient(context);
     const response = client.createCheckStatusResponse(
@@ -43,13 +43,13 @@ export function VerificaSogliaHandler(): IVerificaSogliaHandler {
     }
     try {
       await client.startNew(
-        "VerificaSogliaOrchestrator",
+        "EligibilityCheckOrchestrator",
         fiscalCode,
         fiscalCode
       );
     } catch (err) {
       context.log.error(
-        "VerificaSoglia|ERROR|Orchestrator cannot start (status=%s)",
+        "EligibilityCheck|ERROR|Orchestrator cannot start (status=%s)",
         status
       );
       return ResponseErrorInternal(
@@ -65,8 +65,8 @@ export function VerificaSogliaHandler(): IVerificaSogliaHandler {
   };
 }
 
-export function VerificaSoglia(): express.RequestHandler {
-  const handler = VerificaSogliaHandler();
+export function EligibilityCheck(): express.RequestHandler {
+  const handler = EligibilityCheckHandler();
 
   const middlewaresWrap = withRequestMiddlewares(
     // Extract Azure Functions bindings

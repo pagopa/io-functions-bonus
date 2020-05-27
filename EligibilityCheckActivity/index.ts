@@ -94,7 +94,7 @@ function soapClientBuilder(): () => Promise<SvcConsultazioneClientAsync> {
 }
 const soapClientAsync = soapClientBuilder();
 
-const VerificaSogliaActivity: AzureFunction = async (
+const EligibilityCheckActivity: AzureFunction = async (
   context: Context,
   input: unknown
 ): Promise<ActivityResult> => {
@@ -116,7 +116,7 @@ const VerificaSogliaActivity: AzureFunction = async (
       );
     })
     .mapLeft(err => {
-      const errorMessage = `VerificaSogliaActivity|ERROR|${err}`;
+      const errorMessage = `EligibilityCheckActivity|ERROR|${err}`;
       context.log.error(errorMessage);
       return errorMessage;
     })
@@ -163,4 +163,4 @@ const VerificaSogliaActivity: AzureFunction = async (
     });
 };
 
-export default VerificaSogliaActivity;
+export default EligibilityCheckActivity;
