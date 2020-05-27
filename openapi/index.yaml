@@ -22,23 +22,10 @@ paths:
       parameters:
         - $ref: "#/parameters/FiscalCode"
       responses:
-        "202":
-          description: Request accepted.
+        "200":
+          description: Orchestrator task started
           schema:
-            type: object
-            properties:
-              id:
-                type: string
-                description: The identifier of the created request.
-          headers:
-            Location:
-              type: string
-              description: |-
-                Location (URL) of created request resource.
-                A GET request to this URL returns the request status and details.
-          examples:
-            application/json:
-              id: SPNDNL80R11C522K
+            "$ref": "#/definitions/InstanceId"
         "401":
           description: Bearer token null or expired.
         "409":
