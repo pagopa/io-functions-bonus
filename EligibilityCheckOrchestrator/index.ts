@@ -9,13 +9,13 @@ import * as df from "durable-functions";
 
 const NOTIFICATION_DELAY_SECONDS = 10;
 
-const VerificaSogliaOrchestrator = df.orchestrator(function*(
+const EligibilityCheckOrchestrator = df.orchestrator(function*(
   context: IOrchestrationFunctionContext
   // tslint:disable-next-line: no-any
 ): Generator<TaskSet | Task> {
   context.df.setCustomStatus({});
-  const taskVerificaSoglia = yield context.df.callActivityWithRetry(
-    "VerificaSogliaActivity",
+  const eligibilityCheckResponse = yield context.df.callActivityWithRetry(
+    "EligibilityCheckActivity",
     {
       backoffCoefficient: 1.5,
       firstRetryIntervalInMilliseconds: 1000,
@@ -25,7 +25,7 @@ const VerificaSogliaOrchestrator = df.orchestrator(function*(
     },
     context.df.getInput()
   );
-  context.df.setCustomStatus(taskVerificaSoglia);
+  context.df.setCustomStatus(eligibilityCheckResponse);
 
   // sleep before sending push notification
   // so we can let the client stop the flow here
@@ -35,11 +35,11 @@ const VerificaSogliaOrchestrator = df.orchestrator(function*(
 
   // send push notification with eligibility details
   yield context.df.callActivity(
-    "NotifyVerificaSogliaActivity",
-    taskVerificaSoglia
+    "NotifyEligibilityCheck",
+    eligibilityCheckResponse
   );
 
-  return taskVerificaSoglia;
+  return eligibilityCheckResponse;
 });
 
-export default VerificaSogliaOrchestrator;
+export default EligibilityCheckOrchestrator;

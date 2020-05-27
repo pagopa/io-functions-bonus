@@ -5,7 +5,7 @@
       "name": "req",
       "type": "httpTrigger",
       "direction": "in",
-      "route": "v1/bonus/verifica/{fiscalcode}",
+      "route": "v1/bonus/eligibility/{fiscalcode}",
       "methods": ["get"]
     },
     {
@@ -19,5 +19,5 @@
       "direction": "in"
     }
   ],
-  "scriptFile": "../dist/VerificaSoglia/index.js"
+  "scriptFile": "../dist/EligibilityCheck/index.js"
 }

@@ -3,14 +3,14 @@ import * as express from "express";
 import { secureExpressApp } from "io-functions-commons/dist/src/utils/express";
 import { setAppContext } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import createAzureFunctionHandler from "io-functions-express/dist/src/createAzureFunctionsHandler";
-import { VerificaSoglia } from "./handler";
+import { EligibilityCheck } from "./handler";
 
 // Setup Express
 const app = express();
 secureExpressApp(app);
 
 // Add express route
-app.get("/v1/bonus/verifica/:fiscalcode", VerificaSoglia());
+app.get("/v1/bonus/eligibility/:fiscalcode", EligibilityCheck());
 
 const azureFunctionHandler = createAzureFunctionHandler(app);
 
