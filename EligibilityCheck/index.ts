@@ -10,7 +10,7 @@ const app = express();
 secureExpressApp(app);
 
 // Add express route
-app.get("/v1/bonus/eligibility/:fiscalcode", EligibilityCheck());
+app.get("/api/v1/bonus/eligibility/:fiscalcode", EligibilityCheck());
 
 const azureFunctionHandler = createAzureFunctionHandler(app);
 
