@@ -11,7 +11,7 @@
       },
 
     "durableTask": {
-      "hubName": "IoFunctionsBonus",
+      "hubName": "%SLOT_TASK_HUBNAME%",
       "storageProvider": {
         "connectionStringName": "AzureWebJobsStorage"
       },
