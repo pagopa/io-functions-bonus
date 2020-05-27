@@ -15,10 +15,12 @@ schemes:
 security:
   - SubscriptionKey: []
 paths:
-  "/bonus/vacanze/eligibility":
+  "/bonus/vacanze/eligibility/{fiscalcode}":
     post:
       operationId: startBonusEligibilityCheck
       summary: Start bonus eligibility check (ISEE)
+      parameters:
+        - $ref: "#/parameters/FiscalCode"
       responses:
         "202":
           description: Request accepted.
@@ -47,182 +49,16 @@ paths:
           description: Service unavailable.
           schema:
             $ref: "#/definitions/ProblemJson"
-
-    get:
-      operationId: getBonusEligibilityCheck
-      summary: Get eligibility (ISEE) check information for user's bonus
-      responses:
-        "202":
-          description: Processing request.
-          schema:
-            type: object
-            properties:
-              id:
-                type: string
-                description: The identifier of the created request.
-          examples:
-            application/json:
-              id: SPNDNL80R11C522K
-        "200":
-          description: Request processed.
-          schema:
-            $ref: "#/definitions/EligibilityCheck"
-          examples:
-            application/json:
-              id: SPNDNL80R11C522K
-              status: ELIGIBLE
-              family_members:
-                - name: "Mario"
-                  surname: "Rossi"
-                  fiscal_code: "XXXYYY80R13C555Y"
-                - name: "Piero"
-                  surname: "Rossi"
-                  fiscal_code: "ZZZYYY80R13C555Y"
-                - name: "Giulia"
-                  surname: "Rossi"
-                  fiscal_code: "WWWYYY80R13C555Y"
-              max_amount: 50000
-              max_tax_benefit: 3000
-        "401":
-          description: Bearer token null or expired.
-        "404":
-          description: Request not found.
-        "500":
-          description: Service unavailable.
-          schema:
-            $ref: "#/definitions/ProblemJson"
-
-  "/bonus/vacanze/eligibility/notifications":
-    delete:
-      operationId: cancelBonusEligibilityProcedure
-      summary: |
-        Stop the bonus eligibility check procedure to avoid
-        sending a push notification when done.
-      responses:
-        "200":
-          description: Request canceled.
-          schema:
-            type: object
-            properties:
-              id:
-                type: string
-                description: The identifier of the canceled request.
-          examples:
-            application/json:
-              id: SPNDNL80R11C522K
-        "401":
-          description: Bearer token null or expired.
-        "404":
-          description: Not found.
-        "409":
-          description: "Conflict: pending request found."
-          schema:
-            $ref: "#/definitions/ProblemJson"
-        "500":
-          description: Service unavailable.
-          schema:
-            $ref: "#/definitions/ProblemJson"
-
-  ## BONUS ACTIVATIONS
-
-  "/bonus/vacanze/activations":
-    post:
-      operationId: startBonusActivationProcedure
-      summary: Start bonus activation request procedure
-      responses:
-        "202":
-          description: Request accepted.
-          schema:
-            type: object
-            properties:
-              id:
-                type: string
-                description: The identifier of the created request.
-          headers:
-            Location:
-              type: string
-              description: |-
-                Location (URL) of created activation resource.
-                A GET request to this URL returns the request status and details.
-          examples:
-            application/json:
-              id: SOMEBONUSID
-        "401":
-          description: Bearer token null or expired.
-        "500":
-          description: Service unavailable.
-          schema:
-            $ref: "#/definitions/ProblemJson"
-
-    get:
-      operationId: getAllBonusActivations
-      summary: |
-        Get all IDs of the bonus activations requested by
-        the authenticated user or by any between his family member
-      responses:
-        "200":
-          description: |
-            List of bonus activations ID activated by the authenticated user 
-            or any between his family member (former and actual)
-          schema:
-            $ref: "#/definitions/PaginatedBonusActivationsCollection"
-        "404":
-          description: No activation found.
-        "401":
-          description: Bearer token null or expired.
-        "500":
-          description: Service unavailable.
-          schema:
-            $ref: "#/definitions/ProblemJson"
-
-  "/bonus/vacanze/activations/{bonus_id}":
-    get:
-      operationId: getLatestBonusActivationById
-      summary: |
-        Get the activation details for the latest version
-        of the bonus entity identified by the provided id
-      parameters:
-        - name: bonus_id
-          in: path
-          required: true
-          description: Bonus activation ID.
-          type: string
-      responses:
-        "202":
-          description: Processing request.
-          schema:
-            type: object
-            properties:
-              id:
-                type: string
-                description: The identifier of the created request.
-          examples:
-            application/json:
-              id: SOMEBONUSID
-        "200":
-          description: Bonus activation details.
-          schema:
-            $ref: "#/definitions/BonusActivation"
-          examples:
-            application/json:
-              id: SOMEBONUSID
-              applicant_fiscal_code: SPNDNL80R11C522K
-              code: MYSECRETCODE
-              qr_code:
-                mime_type: "svg+xml"
-                base64_content: "foobar"
-              max_amount: 50000
-              max_tax_benefit: 3000
-              updated_at: "2020-07-04T12:20:00.000Z"
-              status: ACTIVE
-        "401":
-          description: Bearer token null or expired.
-        "404":
-          description: No bonus found.
-        "500":
-          description: Service unavailable.
-          schema:
-            $ref: "#/definitions/ProblemJson"
+parameters:
+  FiscalCode:
+    name: fiscalcode
+    in: path
+    type: string
+    maxLength: 16
+    minLength: 16
+    required: true
+    description: The fiscal code of the user, all upper case.
+    x-example: SPNDNL80R13C555X
 consumes:
   - application/json
 produces:
@@ -293,7 +129,7 @@ definitions:
       - id
       - status
       - max_amount
-      - tax_benefit
+      - max_tax_benefit
       - family_members
   QrCode:
     type: object
@@ -357,7 +193,6 @@ definitions:
       - max_amount
       - max_tax_benefit
       - updated_at
-
   BonusActivationItem:
     type: object
     properties:
@@ -370,10 +205,12 @@ definitions:
       - id
       - is_applicant
   BonusActivationCollection:
-    items:
-      type: array
+    type: object
+    properties:
       items:
-        $ref: "#/definitions/BonusActivationItem"
+        type: array
+        items:
+          $ref: "#/definitions/BonusActivationItem"
     required:
       - items
   PaginatedBonusActivationsCollection:
