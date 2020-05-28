@@ -9,7 +9,8 @@
     "noImplicitAny": true,
     "declaration": false,
     "sourceMap": false,
-    "lib": []
+    "lib": [],
+    "resolveJsonModule": true
   },
   "exclude": [
     "__mocks__",
