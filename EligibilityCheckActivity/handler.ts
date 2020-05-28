@@ -1,15 +1,10 @@
 import { Context } from "@azure/functions";
-import { format } from "date-fns";
 import { fromEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "io-functions-commons/dist/generated/definitions/FiscalCode";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FornituraNucleoEnum } from "../generated/definitions/ConsultazioneSogliaIndicatoreInput";
-import {
-  ConsultazioneSogliaIndicatoreResponse,
-  SottoSogliaEnum,
-  TipoIndicatoreEnum
-} from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
+import { ConsultazioneSogliaIndicatoreResponse } from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
 import { ISoapClientAsync } from "../utils/inpsSoapClient";
 
 // Activity result
@@ -33,6 +28,9 @@ export const ActivityResult = t.taggedUnion("kind", [
 ]);
 export type ActivityResult = t.TypeOf<typeof ActivityResult>;
 
+/**
+ * Call INPS webservice to read the ISEE information
+ */
 export const getEligibilityCheckActivityHandler = (
   soapClientAsync: ISoapClientAsync
 ) => {
@@ -45,7 +43,7 @@ export const getEligibilityCheckActivityHandler = (
       .chain(fiscalCode => {
         return soapClientAsync.ConsultazioneSogliaIndicatore({
           CodiceFiscale: fiscalCode,
-          CodiceSoglia: "BVAC01",
+          CodiceSoglia: "BVAC01", // Value for `Bonus Vacanze 2020` @see https://docs.google.com/document/d/1k-oWVK7Qs-c42b5HW4ild6rzpbQFDJ-f
           FornituraNucleo: FornituraNucleoEnum.SI
         });
       })
@@ -56,6 +54,8 @@ export const getEligibilityCheckActivityHandler = (
       })
       .fold(
         errorMessage =>
+          // Reject fail the Activity execution
+          // If called with `callActivityWithRetry` the execution will be restarted
           Promise.reject(
             ActivityResultFailure.encode({
               kind: "FAILURE",
@@ -70,28 +70,6 @@ export const getEligibilityCheckActivityHandler = (
             })
           )
       )
-      .run()
-      // TODO: Remove this test code
-      .catch(e => {
-        context.log.error(`Error calling SOAP service: ${JSON.stringify(e)}`);
-        return ActivityResultSuccess.encode({
-          data: {
-            TipoIndicatore: TipoIndicatoreEnum["ISEE Standard"],
-
-            DataPresentazioneDSU: format(new Date(), "yyyy-MM-dd"),
-            ProtocolloDSU: "INPS-ISEE-1234-12345678A-12",
-            SottoSoglia: SottoSogliaEnum.SI,
-
-            Componente: [
-              {
-                CodiceFiscale: "AAABBB01C02D123Z",
-                Cognome: "Rossi",
-                Nome: "Mario"
-              }
-            ]
-          },
-          kind: "SUCCESS"
-        });
-      });
+      .run();
   };
 };

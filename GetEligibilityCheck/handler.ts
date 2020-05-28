@@ -22,6 +22,7 @@ import { ActivityResultSuccess } from "../EligibilityCheckActivity/handler";
 import { SottoSogliaEnum } from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
 import { EligibilityCheck } from "../generated/definitions/EligibilityCheck";
 import { EligibilityCheckStatusEnum } from "../generated/definitions/EligibilityCheckStatus";
+import { NucleoType } from "../generated/definitions/NucleoType";
 import { initTelemetryClient } from "../utils/appinsights";
 
 type IGetEligibilityCheckHandler = (
@@ -35,24 +36,31 @@ type IGetEligibilityCheckHandler = (
 
 initTelemetryClient();
 
+function calculateBonus(familyMembers?: ReadonlyArray<NucleoType>): number {
+  return fromNullable(familyMembers)
+    .map(_1 =>
+      _1.length > 2
+        ? 50000
+        : _1.length === 2
+        ? 25000
+        : _1.length === 1
+        ? 15000
+        : 0
+    )
+    .getOrElse(0);
+}
+
 // tslint:disable-next-line: cognitive-complexity
 export function GetEligibilityCheckHandler(): IGetEligibilityCheckHandler {
   return async (context, fiscalCode) => {
     const client = df.getClient(context);
     const status = await client.getStatus(fiscalCode);
+    if (status.runtimeStatus === df.OrchestrationRuntimeStatus.Running) {
+      return ResponseSuccessAccepted("Orchestrator already running");
+    }
     return ActivityResultSuccess.decode(status.customStatus)
       .map(_ => {
-        const bonusValue = fromNullable(_.data.Componente)
-          .map(_1 =>
-            _1.length > 2
-              ? 50000
-              : _1.length === 2
-              ? 25000
-              : _1.length === 1
-              ? 15000
-              : 0
-          )
-          .getOrElse(0);
+        const bonusValue = calculateBonus(_.data.Componente);
         return EligibilityCheck.encode({
           family_members: _.data.Componente || [],
           max_amount: bonusValue,
@@ -69,9 +77,6 @@ export function GetEligibilityCheckHandler(): IGetEligibilityCheckHandler {
         | IResponseSuccessJson<EligibilityCheck>
       >(
         _ => {
-          if (status.runtimeStatus === df.OrchestrationRuntimeStatus.Running) {
-            return ResponseSuccessAccepted("Orchestrator already running");
-          }
           context.log.error("GetEligibilityCheck|ERROR|%s", readableReport(_));
           return ResponseErrorInternal("Invalid check status response");
         },
