@@ -51,11 +51,11 @@ consumes:
 produces:
   - application/json
 securityDefinitions:
-  SubscriptionKey:
+  ApiKey:
     type: apiKey
-    name: Ocp-Apim-Subscription-Key
+    name: X-Functions-Key
     in: header
-    description: The API key obtained through the developer portal.
+    description: The API key to access this function app.
 definitions:
   FiscalCode:
     $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/FiscalCode"
