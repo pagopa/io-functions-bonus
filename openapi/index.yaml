@@ -1,24 +1,24 @@
 swagger: "2.0"
 info:
   version: 1.1.0
-  title: IO Function API
+  title: IO Bonus Function API
   contact:
     name: IO team
     url: https://forum.italia.it/c/progetto-io
   x-logo:
     url: https://io.italia.it/assets/img/io-logo-blue.svg
-  description: >
-    Documentation of the IO Function API here.
+  description:  This is a specification for io-functions-bonus app API
 host: api.cd.italia.it
-basePath: "/template"
+basePath: "/api/v1"
 schemes:
   - https
+security:
+  - ApiKey: []
 paths:
-  "/v1/bonus/eligibility/{fiscalcode}":
-    get:
-      operationId: echo
-      summary: Echo API
-      description: Some API description here.
+  "/bonus/vacanze/eligibility/{fiscalcode}":
+    post:
+      operationId: startBonusEligibilityCheck
+      summary: Start bonus eligibility check (ISEE)
       parameters:
         - $ref: "#/parameters/FiscalCode"
       responses:
@@ -27,11 +27,15 @@ paths:
           schema:
             "$ref": "#/definitions/InstanceId"
         "401":
-          description: Unauthorized
+          description: Bearer token null or expired.
         "409":
-          description: Orchestrator already running
+          description: "Conflict: pending request found."
+          schema:
+            $ref: "#/definitions/ProblemJson"
         "500":
-          description: Not found.
+          description: Service unavailable.
+          schema:
+            $ref: "#/definitions/ProblemJson"
 parameters:
   FiscalCode:
     name: fiscalcode
@@ -41,8 +45,17 @@ parameters:
     minLength: 16
     required: true
     description: The fiscal code of the user, all upper case.
-    pattern: "[A-Z]{6}[0-9LMNPQRSTUV]{2}[ABCDEHLMPRST][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]"
     x-example: SPNDNL80R13C555X
+consumes:
+  - application/json
+produces:
+  - application/json
+securityDefinitions:
+  ApiKey:
+    type: apiKey
+    name: X-Functions-Key
+    in: header
+    description: The API key to access this function app.
 definitions:
   FiscalCode:
     $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/FiscalCode"
@@ -66,3 +79,136 @@ definitions:
       - statusQueryGetUri
       - sendEventPostUri
       - terminatePostUri
+  ProblemJson:
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/ProblemJson"
+  EligibilityCheckStatus:
+    type: string
+    description: |
+      Eligibility check status.
+      - USER_NOT_FOUND    User not found in INPS database
+      - ISEE_NOT_FOUND    User found but there's no ISEE data
+      - ELIGIBILE         The user is eligible for the bonus
+      - INELIGIBLE        The user is not eligible for the bonus
+    x-extensible-enum:
+      - USER_NOT_FOUND
+      - ISEE_NOT_FOUND
+      - ELIGIBILE
+      - INELIGIBLE
+  FamilyMember:
+    type: object
+    properties:
+      fiscal_code:
+        $ref: '#/definitions/FiscalCode'
+      name:
+        type: string
+        minLength: 1
+      surname:
+        type: string
+        minLength: 1
+    required:
+      - name
+      - surname
+  EligibilityCheck:
+    type: object
+    title: Eligibility check
+    description: Eligibility check
+    properties:
+      id:
+        type: string
+        minLength: 1
+      status:
+        $ref: "#/definitions/EligibilityCheckStatus"
+      family_members:
+        type: array
+        items:
+          $ref: "#/definitions/FamilyMember"
+      max_amount:
+        description: Max bonus amount in euro cents
+        type: integer
+        minimum: 0
+        maximum: 50000
+      max_tax_benefit:
+        description: Max bonus tax benefit in euro cents
+        type: integer
+        minimum: 0
+        maximum: 50000
+    required:
+      - id
+      - status
+      - max_amount
+      - max_tax_benefit
+      - family_members
+  BonusActivationStatus:
+    type: string
+    description: |
+      Bonus activation status.
+      - ACTIVE      The bonus has been successfully activated by this user
+      - CANCELLED   The bonus activation was cancelled on purpose and can be resumed
+      - FAILED      The bonus activation failed as the user is currently ineligible
+      - CONSUMED    The bonus is comsumed by this user or any member of the family
+                    and cannot be activated anymore
+    x-extensible-enum:
+      - ACTIVE
+      - CANCELLED
+      - FAILED
+      - CONSUMED
+  BonusActivation:
+    type: object
+    title: Bonus activation
+    description: Bonus activation
+    properties:
+      id:
+        type: string
+        minLength: 1
+      applicant_fiscal_code:
+        $ref: '#/definitions/FiscalCode'
+      status:
+        $ref: "#/definitions/BonusActivationStatus"
+      code:
+        type: string
+        minLength: 1
+      max_amount:
+        description: Max bonus amount in euro cents
+        type: integer
+        minimum: 0
+        maximum: 50000
+      max_tax_benefit:
+        description: Max bonus tax benefit in euro cents
+        type: integer
+        minimum: 0
+        maximum: 50000
+      updated_at:
+        $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/master/openapi/definitions.yaml#/Timestamp"
+    required:
+      - id
+      - applicant_fiscal_code
+      - status
+      - code
+      - max_amount
+      - max_tax_benefit
+      - updated_at
+  BonusActivationItem:
+    type: object
+    properties:
+      id:
+        type: string
+        minLength: 1
+      is_applicant:
+        type: boolean
+    required:
+      - id
+      - is_applicant
+  BonusActivationCollection:
+    type: object
+    properties:
+      items:
+        type: array
+        items:
+          $ref: "#/definitions/BonusActivationItem"
+    required:
+      - items
+  PaginatedBonusActivationsCollection:
+    allOf: 
+      - $ref: "#/definitions/BonusActivationCollection"
+      - $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/PaginationResponse"         
+
