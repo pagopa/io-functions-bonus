@@ -138,16 +138,6 @@ definitions:
       - max_amount
       - max_tax_benefit
       - family_members
-  QrCode:
-    type: object
-    properties:
-      content:
-        type: string
-      mime_type:
-        type: string
-    required:
-      - content
-      - mime_type
   BonusActivationStatus:
     type: string
     description: |
@@ -177,8 +167,6 @@ definitions:
       code:
         type: string
         minLength: 1
-      qr_code:
-        $ref: "#/definitions/QrCode"
       max_amount:
         description: Max bonus amount in euro cents
         type: integer
@@ -196,7 +184,6 @@ definitions:
       - applicant_fiscal_code
       - status
       - code
-      - qr_code
       - max_amount
       - max_tax_benefit
       - updated_at
