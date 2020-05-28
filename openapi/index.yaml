@@ -13,7 +13,7 @@ basePath: "/api/v1"
 schemes:
   - https
 security:
-  - SubscriptionKey: []
+  - ApiKey: []
 paths:
   "/bonus/vacanze/eligibility/{fiscalcode}":
     post:
