@@ -16,11 +16,11 @@ security:
   - ApiKey: []
 paths:
   "/bonus/vacanze/eligibility/{fiscalcode}":
+    parameters:
+      - $ref: "#/parameters/FiscalCode"
     post:
       operationId: startBonusEligibilityCheck
       summary: Start bonus eligibility check (ISEE)
-      parameters:
-        - $ref: "#/parameters/FiscalCode"
       responses:
         "200":
           description: Orchestrator task started
@@ -36,6 +36,21 @@ paths:
           description: Service unavailable.
           schema:
             $ref: "#/definitions/ProblemJson"
+    get:
+      operationId: GetEligibilityCheck
+      summary: GetEligibilityCheck
+      description: Read the bonus eligibility info
+      responses:
+        "200":
+          description: Get eligibility information
+          schema:
+            "$ref": "#/definitions/EligibilityCheck"
+        "202":
+          description: Orchestrator already running
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
 parameters:
   FiscalCode:
     name: fiscalcode
@@ -94,50 +109,6 @@ definitions:
       - ISEE_NOT_FOUND
       - ELIGIBILE
       - INELIGIBLE
-  FamilyMember:
-    type: object
-    properties:
-      fiscal_code:
-        $ref: '#/definitions/FiscalCode'
-      name:
-        type: string
-        minLength: 1
-      surname:
-        type: string
-        minLength: 1
-    required:
-      - name
-      - surname
-  EligibilityCheck:
-    type: object
-    title: Eligibility check
-    description: Eligibility check
-    properties:
-      id:
-        type: string
-        minLength: 1
-      status:
-        $ref: "#/definitions/EligibilityCheckStatus"
-      family_members:
-        type: array
-        items:
-          $ref: "#/definitions/FamilyMember"
-      max_amount:
-        description: Max bonus amount in euro cents
-        type: integer
-        minimum: 0
-        maximum: 50000
-      max_tax_benefit:
-        description: Max bonus tax benefit in euro cents
-        type: integer
-        minimum: 0
-        maximum: 50000
-    required:
-      - id
-      - status
-      - max_amount
-      - max_tax_benefit
-      - family_members
   BonusActivationStatus:
     type: string
     description: |
@@ -294,3 +265,30 @@ definitions:
       - CodiceFiscale
       - Cognome
       - Nome
+  EligibilityCheck:
+    type: object
+    title: Eligibility check
+    description: Eligibility check
+    properties:
+      status:
+        $ref: "#/definitions/EligibilityCheckStatus"
+      family_members:
+        type: array
+        minLength: 1
+        items:
+          $ref: "#/definitions/NucleoType"
+      max_amount:
+        description: Max bonus amount in euro cents
+        type: integer
+        minimum: 0
+        maximum: 50000
+      max_tax_benefit:
+        description: Max bonus tax benefit in euro cents
+        type: integer
+        minimum: 0
+        maximum: 50000
+    required:
+      - status
+      - max_amount
+      - family_members
+      - max_tax_benefit
