@@ -6,7 +6,7 @@
       "type": "httpTrigger",
       "direction": "in",
       "route": "v1/bonus/eligibility/{fiscalcode}",
-      "methods": ["post"]
+      "methods": ["get"]
     },
     {
       "type": "http",
@@ -19,5 +19,5 @@
       "direction": "in"
     }
   ],
-  "scriptFile": "../dist/EligibilityCheck/index.js"
+  "scriptFile": "../dist/GetEligibilityCheck/index.js"
 }
