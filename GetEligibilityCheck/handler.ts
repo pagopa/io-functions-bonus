@@ -36,18 +36,14 @@ type IGetEligibilityCheckHandler = (
 
 initTelemetryClient();
 
-function calculateBonus(familyMembers?: ReadonlyArray<NucleoType>): number {
-  return fromNullable(familyMembers)
-    .map(_1 =>
-      _1.length > 2
-        ? 50000
-        : _1.length === 2
-        ? 25000
-        : _1.length === 1
-        ? 15000
-        : 0
-    )
-    .getOrElse(0);
+function calculateBonus(familyMembers: ReadonlyArray<NucleoType>): number {
+  return familyMembers.length > 2
+    ? 50000
+    : familyMembers.length === 2
+    ? 25000
+    : familyMembers.length === 1
+    ? 15000
+    : 0;
 }
 
 // tslint:disable-next-line: cognitive-complexity
@@ -60,11 +56,13 @@ export function GetEligibilityCheckHandler(): IGetEligibilityCheckHandler {
     }
     return ActivityResultSuccess.decode(status.customStatus)
       .map(_ => {
-        const bonusValue = calculateBonus(_.data.Componente);
+        const bonusValue = fromNullable(_.data.Componente)
+          .map(calculateBonus)
+          .getOrElse(0);
         return EligibilityCheck.encode({
           family_members: _.data.Componente || [],
           max_amount: bonusValue,
-          max_tax_benefit: bonusValue, // TODO: Valorize properly this value
+          max_tax_benefit: bonusValue / 5,
           status:
             _.data.SottoSoglia === SottoSogliaEnum.SI
               ? EligibilityCheckStatusEnum.ELIGIBILE
