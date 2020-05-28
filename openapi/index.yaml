@@ -51,6 +51,8 @@ paths:
           description: Unauthorized
         "500":
           description: Internal Server Error
+          schema:
+            $ref: "#/definitions/ProblemJson"
 parameters:
   FiscalCode:
     name: fiscalcode
