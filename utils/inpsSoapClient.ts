@@ -40,7 +40,7 @@ const DEFAULT_REQUEST_TIMEOUT_MS = 5000;
 const fetchWithTimeout = setFetchTimeout(
   DEFAULT_REQUEST_TIMEOUT_MS as Millisecond,
   AbortableFetch(
-    process.env.INPS_SERIVCE_PROTOCOL === "http"
+    process.env.INPS_SERVICE_PROTOCOL === "http"
       ? agent.getHttpFetch(process.env)
       : agent.getHttpsFetch(process.env)
   )
