@@ -45,7 +45,7 @@ const fetchWithTimeout = setFetchTimeout(
       : agent.getHttpsFetch(process.env)
   )
 );
-const fetch = toFetch(fetchWithTimeout);
+const httpFetch = toFetch(fetchWithTimeout);
 
 export interface ISoapClientAsync {
   ConsultazioneSogliaIndicatore: (
@@ -66,7 +66,7 @@ export function createClient(endpoint: NonEmptyString): ISoapClientAsync {
           params.CodiceSoglia
         );
 
-        const response = await fetch(`${endpoint}`, {
+        const response = await httpFetch(`${endpoint}`, {
           body: requestPayload,
           method: "POST"
         });
