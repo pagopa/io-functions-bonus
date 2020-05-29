@@ -1,15 +1,22 @@
 import { format } from "date-fns";
 import { fromNullable, toError } from "fp-ts/lib/Either";
 import { TaskEither, tryCatch } from "fp-ts/lib/TaskEither";
+import { agent } from "italia-ts-commons";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
-import fetch from "node-fetch";
 import { DOMParser } from "xmldom";
 import {
   ConsultazioneSogliaIndicatoreInput,
   FornituraNucleoEnum
 } from "../generated/definitions/ConsultazioneSogliaIndicatoreInput";
 import { ConsultazioneSogliaIndicatoreResponse } from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
+
+import {
+  AbortableFetch,
+  setFetchTimeout,
+  toFetch
+} from "italia-ts-commons/lib/fetch";
+import { Millisecond } from "italia-ts-commons/lib/units";
 
 const getSOAPRequest = (
   dataValidita: string,
@@ -27,16 +34,26 @@ const getSOAPRequest = (
 
 const INPS_NAMESPACE = "http://inps.it/ConsultazioneISEE";
 
+// 5 seconds timeout by default
+const DEFAULT_REQUEST_TIMEOUT_MS = 5000;
+
+const fetchWithTimeout = setFetchTimeout(
+  DEFAULT_REQUEST_TIMEOUT_MS as Millisecond,
+  AbortableFetch(
+    process.env.INPS_SERIVCE_PROTOCOL === "http"
+      ? agent.getHttpFetch(process.env)
+      : agent.getHttpsFetch(process.env)
+  )
+);
+const fetch = toFetch(fetchWithTimeout);
+
 export interface ISoapClientAsync {
   ConsultazioneSogliaIndicatore: (
     params: ConsultazioneSogliaIndicatoreInput
   ) => TaskEither<Error, ConsultazioneSogliaIndicatoreResponse>;
 }
 
-export function createClient(
-  INPS_SERVICE_HOST: NonEmptyString,
-  endpoint: NonEmptyString
-): ISoapClientAsync {
+export function createClient(endpoint: NonEmptyString): ISoapClientAsync {
   return {
     ConsultazioneSogliaIndicatore: (
       params: ConsultazioneSogliaIndicatoreInput
@@ -48,7 +65,8 @@ export function createClient(
           params.FornituraNucleo,
           params.CodiceSoglia
         );
-        const response = await fetch(`${INPS_SERVICE_HOST}${endpoint}`, {
+
+        const response = await fetch(`${endpoint}`, {
           body: requestPayload,
           method: "POST"
         });
