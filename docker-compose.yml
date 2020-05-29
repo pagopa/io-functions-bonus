@@ -84,7 +84,7 @@ services:
       context: ./
       dockerfile: docker/inps/Dockerfile
     ports:
-      - ${INPS_PORT}:50777
+      - ${INPS_SERVICE_PORT}:50777
     networks:
       - io-fn
 
