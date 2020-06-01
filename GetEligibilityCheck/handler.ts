@@ -106,15 +106,23 @@ export function GetEligibilityCheckHandler(): IGetEligibilityCheckHandler {
         }
       })
       .fold<
-        | IResponseErrorInternal
-        | IResponseSuccessAccepted
-        | IResponseSuccessJson<EligibilityCheck>
+        Promise<
+          | IResponseErrorInternal
+          | IResponseSuccessAccepted
+          | IResponseSuccessJson<EligibilityCheck>
+        >
       >(
-        _ => {
+        async _ => {
           context.log.error("GetEligibilityCheck|ERROR|%s", readableReport(_));
           return ResponseErrorInternal("Invalid check status response");
         },
-        _ => ResponseSuccessJson(_)
+        async _ => {
+          // Since we're sending the result to the frontend,
+          // we stop the orchestrator here in order to avoid
+          // sending a push notification with the same result
+          await client.terminate(fiscalCode, "Success");
+          return ResponseSuccessJson(_);
+        }
       );
   };
 }
