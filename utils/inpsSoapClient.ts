@@ -17,6 +17,7 @@ import {
   toFetch
 } from "italia-ts-commons/lib/fetch";
 import { Millisecond } from "italia-ts-commons/lib/units";
+import { UrlFromString } from "italia-ts-commons/lib/url";
 
 const getSOAPRequest = (
   dataValidita: string,
@@ -37,10 +38,17 @@ const INPS_NAMESPACE = "http://inps.it/ConsultazioneISEE";
 // 5 seconds timeout by default
 const DEFAULT_REQUEST_TIMEOUT_MS = 5000;
 
+// http when developing locally
+const INPS_SERVICE_PROTOCOL = UrlFromString.decode(
+  process.env.INPS_SERVICE_ENDPOINT
+)
+  .map(url => url.protocol)
+  .getOrElse("https");
+
 const fetchWithTimeout = setFetchTimeout(
   DEFAULT_REQUEST_TIMEOUT_MS as Millisecond,
   AbortableFetch(
-    process.env.INPS_SERVICE_PROTOCOL === "http"
+    INPS_SERVICE_PROTOCOL === "http"
       ? agent.getHttpFetch(process.env)
       : agent.getHttpsFetch(process.env)
   )
@@ -98,7 +106,7 @@ export function createClient(endpoint: NonEmptyString): ISoapClientAsync {
             .chain(_ => {
               return ConsultazioneSogliaIndicatoreResponse.decode({
                 ..._,
-                Componente: Array.from(
+                Componenti: Array.from(
                   xmlDocument.getElementsByTagNameNS(
                     INPS_NAMESPACE,
                     "Componente"
