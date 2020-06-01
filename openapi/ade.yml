@@ -16,8 +16,8 @@ paths:
 
   "/api/v1/bonus/vacanze":
     post:
-      operationId: startBonusActivationProcedure
-      summary: Start bonus activation request procedure
+      operationId: activateBonus
+      summary: Activate received bonus
       consumes:
         - application/json
       parameters:
