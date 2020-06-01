@@ -1,0 +1,74 @@
+swagger: "2.0"
+info:
+  version: 1.1.0
+  title: ADE Bonus API
+  contact:
+    name: Agenzia delle Entrate
+    url: https://www.agenziaentrate.gov.it/
+  description: Specification for ADE Bonus API
+host: api.agenziaentrate.gov.it
+basePath: "/api/v1"
+schemes:
+  - https
+security:
+  - ApiKey: []
+paths:
+
+  "/api/v1/bonus/vacanze":
+    post:
+      operationId: startBonusActivationProcedure
+      summary: Start bonus activation request procedure
+      consumes:
+        - application/json
+      parameters:
+        - $ref: "#/parameters/BonusActivation"
+      responses:
+        "201":
+          description: Request created.
+          schema:
+            $ref: "#/definitions/InstanceId"
+        "202":
+          description: Processing request.
+        "401":
+          description: Wrong or missing api key.
+        "409":
+          description: |
+            Cannot activate a new bonus because another active or consumed
+            bonus related to this user was found.
+        "500":
+          description: Service unavailable.
+          schema:
+            $ref: "#/definitions/ProblemJson"
+
+parameters:
+  BonusActivation:
+    in: body
+    name: BonusActivation
+    schema:
+      $ref: "#/definitions/BonusActivation"
+
+definitions:
+  FiscalCode:
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/FiscalCode"
+  InstanceId:
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-bonus/master/openapi/index.yaml#/definitions/InstanceId"
+  ProblemJson:
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/ProblemJson"
+  MaxBonusAmount:
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-bonus/master/openapi/index.yaml#/definitions/MaxBonusAmount"
+  MaxBonusTaxBenefit:
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-bonus/master/openapi/index.yaml#/definitions/MaxBonusTaxBenefit"
+  FamilyMember:
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-bonus/master/openapi/index.yaml#/definitions/FamilyMember"
+  FamilyMembers:
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-bonus/master/openapi/index.yaml#/definitions/FamilyMembers"
+  EligibilityCheckExtra:
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-bonus/master/openapi/index.yaml#/definitions/EligibilityCheckExtra"
+  EligibilityCheckSuccessEligible:
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-bonus/master/openapi/index.yaml#/definitions/EligibilityCheckSuccess"
+  BonusActivationStatus:
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-bonus/master/openapi/index.yaml#/definitions/BonusActivationStatus"
+  BonusActivation:
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-bonus/master/openapi/index.yaml#/definitions/BonusActivation"
+  Timestamp:
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/master/openapi/definitions.yaml#/Timestamp"
