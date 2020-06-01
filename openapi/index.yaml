@@ -209,7 +209,7 @@ definitions:
   ConsultazioneSogliaIndicatoreResponse:
     type: object
     properties:
-      Componente:
+      Componenti:
         type: array
         items:
           $ref: "#/definitions/NucleoType"
