@@ -25,10 +25,7 @@ paths:
         "202":
           description: Request accepted.
           schema:
-            type: object
-            properties:
-              id:
-                $ref: "#/definitions/InstanceId"
+            $ref: "#/definitions/InstanceId"
         "401":
           description: Wrong or missing function key.
         "409":
@@ -52,10 +49,7 @@ paths:
         "202":
           description: Processing request.
           schema:
-            type: object
-            properties:
-              id:
-                $ref: "#/definitions/InstanceId"
+            $ref: "#/definitions/InstanceId"
         "401":
           description: Wrong or missing function key.
         "404":
@@ -75,10 +69,7 @@ paths:
         "202":
           description: Request accepted.
           schema:
-            type: object
-            properties:
-              id:
-                $ref: "#/definitions/InstanceId"
+            $ref: "#/definitions/InstanceId"
         "409":
           description: |
             Cannot activate a new bonus because another bonus related to this user was found.
@@ -133,10 +124,7 @@ paths:
         "202":
           description: Processing request.
           schema:
-            type: object
-            properties:
-              id:
-                $ref: "#/definitions/InstanceId"
+            $ref: "#/definitions/InstanceId"
         "200":
           description: Bonus activation details.
           schema:
