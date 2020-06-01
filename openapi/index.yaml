@@ -46,7 +46,7 @@ paths:
         - $ref: "#/parameters/FiscalCode"
       responses:
         "200":
-          description: Request processed.
+          description: Get eligibility information.
           schema:
             "$ref": "#/definitions/EligibilityCheck"
           examples:
