@@ -11,8 +11,10 @@ import {
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import {
   IResponseErrorInternal,
+  IResponseErrorNotFound,
   IResponseSuccessAccepted,
   IResponseSuccessJson,
+  IResponseSuccessRedirectToResource,
   ResponseErrorInternal,
   ResponseSuccessAccepted,
   ResponseSuccessJson
@@ -32,9 +34,11 @@ type IGetEligibilityCheckHandler = (
   context: Context,
   fiscalCode: FiscalCode
 ) => Promise<
+  // tslint:disable-next-line: max-union-size
+  | IResponseSuccessAccepted
   | IResponseSuccessJson<EligibilityCheck>
   | IResponseErrorInternal
-  | IResponseSuccessAccepted
+  | IResponseErrorNotFound
 >;
 
 initTelemetryClient();

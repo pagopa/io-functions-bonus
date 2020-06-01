@@ -22,10 +22,12 @@ paths:
       parameters:
         - $ref: "#/parameters/FiscalCode"
       responses:
-        "202":
+        "201":
           description: Request accepted.
           schema:
             $ref: "#/definitions/InstanceId"
+        "202":
+          description: Processing request.
         "401":
           description: Wrong or missing function key.
         "409":
@@ -48,8 +50,6 @@ paths:
             "$ref": "#/definitions/EligibilityCheck"
         "202":
           description: Processing request.
-          schema:
-            $ref: "#/definitions/InstanceId"
         "401":
           description: Wrong or missing function key.
         "404":
@@ -66,13 +66,16 @@ paths:
       parameters:
         - $ref: "#/parameters/FiscalCode"
       responses:
-        "202":
+        "201":
           description: Request accepted.
           schema:
             $ref: "#/definitions/InstanceId"
+        "202":
+          description: Processing request.
         "409":
           description: |
-            Cannot activate a new bonus because another bonus related to this user was found.
+            Cannot activate a new bonus because another active or consumed
+            bonus related to this user was found.
         "403":
           description: |
             Cannot activate a new bonus because the eligibility data has expired.
@@ -123,8 +126,6 @@ paths:
       responses:
         "202":
           description: Processing request.
-          schema:
-            $ref: "#/definitions/InstanceId"
         "200":
           description: Bonus activation details.
           schema:
