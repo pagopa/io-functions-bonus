@@ -23,7 +23,7 @@ paths:
         - $ref: "#/parameters/FiscalCode"
       responses:
         "201":
-          description: Request accepted.
+          description: Request created.
           schema:
             $ref: "#/definitions/InstanceId"
         "202":
@@ -67,7 +67,7 @@ paths:
         - $ref: "#/parameters/FiscalCode"
       responses:
         "201":
-          description: Request accepted.
+          description: Request created.
           schema:
             $ref: "#/definitions/InstanceId"
         "202":
