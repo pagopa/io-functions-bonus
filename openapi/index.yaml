@@ -46,7 +46,7 @@ paths:
           schema:
             "$ref": "#/definitions/EligibilityCheck"
         "202":
-          description: Orchestrator already running
+          description: Processing request
         "401":
           description: Unauthorized
         "500":
