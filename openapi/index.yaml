@@ -84,17 +84,17 @@ paths:
                 A GET request to this URL returns the request status and details.
         "202":
           description: Processing request.
-        "409":
-          description: |
-            Cannot activate a new bonus because another active or consumed
-            bonus related to this user was found.
+        "401":
+          description: Wrong or missing function key.
         "403":
           description: |
             Cannot activate a new bonus because the eligibility data has expired.
             The user must re-initiate the eligibility procedure to refresh her data
             and retry to activate the bonus within 24h since her got the result.
-        "401":
-          description: Wrong or missing function key.
+        "409":
+          description: |
+            Cannot activate a new bonus because another active or consumed
+            bonus related to this user was found.
         "500":
           description: Service unavailable.
           schema:
@@ -113,10 +113,10 @@ paths:
             or to any member of her family (former and actual)
           schema:
             $ref: "#/definitions/PaginatedBonusActivationsCollection"
-        "404":
-          description: No activation found.
         "401":
           description: Wrong or missing function key.
+        "404":
+          description: No activation found.
         "500":
           description: Service unavailable.
           schema:
@@ -136,12 +136,12 @@ paths:
           description: Bonus activation ID.
           type: string
       responses:
-        "202":
-          description: Processing request.
         "200":
           description: Bonus activation details.
           schema:
             $ref: "#/definitions/BonusActivation"
+        "202":
+          description: Processing request.
         "401":
           description: Wrong or missing function key.
         "404":
@@ -194,15 +194,6 @@ definitions:
     type: integer
     minimum: 0
     maximum: 50000
-  EligibilityCheckStatus:
-    type: string
-    description: |
-      Eligibility check status.
-      - ELIGIBLE     The user is eligible for the bonus
-      - INELIGIBLE   The user is not eligible for the bonus
-    x-extensible-enum:
-      - ELIGIBLE
-      - INELIGIBLE
   FamilyMember:
     type: object
     properties:
@@ -229,18 +220,28 @@ definitions:
       request_id:
         type: string
         minLength: 1
-        description: Internal id for the ISEE request
+        description: IdRichiesta
       isee_type:
         type: string
+        description: TipoIndicatoreType
       dsu_protocol_id:
         type: string
         minLength: 1
+        description: ProtocolloDSU
       dsu_created_at:
         type: string
         format: date
+        description: DataPresentazioneDSU
       has_discrepancies:
         type: boolean
-  EligibilityCheckSuccess:
+        description: PresenzaDifformita
+    required:
+      - request_id
+      - isee_type
+      - dsu_protocol_id
+      - dsu_created_at
+      - has_discrepancies
+  EligibilityCheckSuccessEligible:
     type: object
     title: Eligibility check success
     description: |
@@ -251,7 +252,9 @@ definitions:
         type: string
         minLength: 1
       status:
-        $ref: "#/definitions/EligibilityCheckStatus"
+        type: string
+        x-extensible-enum:
+          - ELIGIBLE
       family_members:
         $ref: "#/definitions/FamilyMembers"
       max_amount:
@@ -262,6 +265,30 @@ definitions:
       - id
       - status
       - family_members
+      - max_amount
+      - max_tax_benefit
+  EligibilityCheckSuccessIneligible:
+    type: object
+    title: Eligibility check success
+    description: |
+      Eligibility check succeeded, we can proceed and send the eligibility status.
+      Amounts are left undefined when status is INELIGIBLE
+    properties:
+      id:
+        type: string
+        minLength: 1
+      status:
+        type: string
+        x-extensible-enum:
+          - INELIGIBLE
+    required:
+      - id
+      - status
+  EligibilityCheckSuccess:
+    x-one-of: true
+    allOf:
+      - $ref: "#/definitions/EligibilityCheckSuccessEligible"
+      - $ref: "#/definitions/EligibilityCheckSuccessIneligible"
   EligibilityCheckFailure:
     type: object
     title: Eligibility check failure
@@ -310,7 +337,11 @@ definitions:
       - PROCESSING
       - ACTIVE
       - FAILED
-      - CONSUMED
+      - CONSUMED  
+  BonusActivationDsu:
+    allOf:
+      - $ref: "#/definitions/EligibilityCheckSuccessEligible"
+      - $ref: "#/definitions/EligibilityCheckExtra"
   BonusActivation:
     type: object
     title: Bonus activation
@@ -328,21 +359,15 @@ definitions:
         minLength: 1
       updated_at:
         $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/master/openapi/definitions.yaml#/Timestamp"
-      family_members:
-        $ref: "#/definitions/FamilyMembers"
-      max_amount:
-        $ref: "#/definitions/MaxBonusAmount"
-      max_tax_benefit:
-        $ref: "#/definitions/MaxBonusTaxBenefit"
+      dsu:
+        $ref: "#/definitions/BonusActivationDsu"
     required:
       - id
       - applicant_fiscal_code
       - status
       - code
       - updated_at
-      - family_members
-      - max_amount
-      - max_tax_benefit
+      - dsu
   BonusActivationItem:
     type: object
     properties:

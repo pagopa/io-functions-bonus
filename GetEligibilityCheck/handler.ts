@@ -22,7 +22,14 @@ import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { ActivityResultSuccess } from "../EligibilityCheckActivity/handler";
 import { SottoSogliaEnum } from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
 import { EligibilityCheck } from "../generated/definitions/EligibilityCheck";
-import { EligibilityCheckStatusEnum } from "../generated/definitions/EligibilityCheckStatus";
+import {
+  EligibilityCheckSuccessEligible,
+  StatusEnum as EligibleStatus
+} from "../generated/definitions/EligibilityCheckSuccessEligible";
+import {
+  EligibilityCheckSuccessIneligible,
+  StatusEnum as IneligibleStatus
+} from "../generated/definitions/EligibilityCheckSuccessIneligible";
 import { FamilyMember } from "../generated/definitions/FamilyMember";
 import { FamilyMembers } from "../generated/definitions/FamilyMembers";
 import { MaxBonusAmount } from "../generated/definitions/MaxBonusAmount";
@@ -90,18 +97,17 @@ export function GetEligibilityCheckHandler(): IGetEligibilityCheckHandler {
         // request has returned an error, see https://www.pivotaltracker.com/story/show/173106258
 
         if (data.SottoSoglia === SottoSogliaEnum.SI) {
-          return EligibilityCheck.encode({
+          return EligibilityCheckSuccessEligible.encode({
             family_members: familyMembers,
             id: (fiscalCode as unknown) as NonEmptyString,
             max_amount: bonusValue,
             max_tax_benefit: calculateMaxBonusTaxBenefit(bonusValue),
-            status: EligibilityCheckStatusEnum.ELIGIBLE
+            status: EligibleStatus.ELIGIBLE
           });
         } else {
-          return EligibilityCheck.encode({
-            family_members: familyMembers,
+          return EligibilityCheckSuccessIneligible.encode({
             id: (fiscalCode as unknown) as NonEmptyString,
-            status: EligibilityCheckStatusEnum.INELIGIBLE
+            status: IneligibleStatus.INELIGIBLE
           });
         }
       })
