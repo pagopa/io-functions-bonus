@@ -16,14 +16,13 @@ import {
   ResponseSuccessJson
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { InstanceId } from "../generated/definitions/InstanceId";
 import { initTelemetryClient } from "../utils/appinsights";
 
 type IEligibilityCheckHandler = (
   context: Context,
   fiscalCode: FiscalCode
 ) => Promise<
-  | IResponseSuccessJson<InstanceId>
+  | IResponseSuccessJson<FiscalCode>
   | IResponseErrorInternal
   | IResponseErrorConflict
 >;
@@ -33,10 +32,6 @@ initTelemetryClient();
 export function EligibilityCheckHandler(): IEligibilityCheckHandler {
   return async (context, fiscalCode) => {
     const client = df.getClient(context);
-    const response = client.createCheckStatusResponse(
-      context.bindingData.req,
-      fiscalCode
-    );
     const status = await client.getStatus(fiscalCode);
     if (status.runtimeStatus === df.OrchestrationRuntimeStatus.Running) {
       return ResponseErrorConflict("Orchestrator already running");
@@ -56,12 +51,7 @@ export function EligibilityCheckHandler(): IEligibilityCheckHandler {
         `Orchestrator error=${err} status=${status}`
       );
     }
-    return InstanceId.decode(response.body).fold<
-      IResponseErrorInternal | IResponseSuccessJson<InstanceId>
-    >(
-      _ => ResponseErrorInternal("Invalid check status response"),
-      _ => ResponseSuccessJson(_)
-    );
+    return ResponseSuccessJson(fiscalCode);
   };
 }
 

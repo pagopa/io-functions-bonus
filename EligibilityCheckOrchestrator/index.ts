@@ -25,6 +25,7 @@ const EligibilityCheckOrchestrator = df.orchestrator(function*(
     },
     context.df.getInput()
   );
+  // TODO: Decode EligibilityCheckActivity response
   context.df.setCustomStatus(eligibilityCheckResponse);
 
   // sleep before sending push notification

@@ -21,9 +21,7 @@
     "dist:zip": "zip -r dist.zip . --exclude @.funcignore --exclude .funcignore",
     "predeploy": "npm-run-all generate build dist:modules",
     "generate:definitions": "shx rm -rf ./generated/definitions && shx mkdir -p ./generated/definitions && gen-api-models --api-spec ./openapi/index.yaml --out-dir ./generated/definitions",
-    "generate": "npm-run-all generate:* generate:ts-from-yaml:*",
-    "generate:ts-from-yaml:SvcConsultazione": "shx mkdir -p generated/SvcConsultazione && rimraf generated/SvcConsultazione/* && gen-api-models --strict 0 --api-spec generated/yaml-file/SvcConsultazione.yaml --out-dir generated/SvcConsultazione",
-    "generate:yaml-from-wsdl": "shx mkdir -p generated/yaml-file && rimraf generated/yaml-file/* && node generator/yamlGenerator.js"
+    "generate": "npm-run-all generate:*"
   },
   "devDependencies": {
     "@azure/functions": "^1.0.3",
@@ -31,8 +29,9 @@
     "@types/documentdb": "^1.10.5",
     "@types/express": "^4.16.0",
     "@types/jest": "^24.0.15",
-    "@types/soap": "^0.21.0",
+    "@types/node": "10.14.1",
     "@types/vfile-message": "^2.0.0",
+    "@types/xmldom": "^0.1.29",
     "apiconnect-wsdl": "^1.8.21",
     "danger": "^4.0.2",
     "danger-plugin-digitalcitizenship": "^0.3.1",
@@ -63,8 +62,8 @@
     "io-ts": "1.8.5",
     "italia-ts-commons": "^8.1.0",
     "node-fetch": "^2.6.0",
-    "soap": "^0.31.0",
-    "winston": "^3.2.1"
+    "winston": "^3.2.1",
+    "xmldom": "^0.3.0"
   },
   "resolutions": {
     "fp-ts": "1.17.4",

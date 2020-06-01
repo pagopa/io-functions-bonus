@@ -9,7 +9,7 @@
     "noImplicitAny": true,
     "declaration": false,
     "sourceMap": false,
-    "lib": [],
+    "lib": ["dom"],
     "resolveJsonModule": true
   },
   "exclude": [
