@@ -26,6 +26,12 @@ paths:
           description: Request created.
           schema:
             $ref: "#/definitions/InstanceId"
+          headers:
+            Location:
+              type: string
+              description: |-
+                Location (URL) of created request resource.
+                A GET request to this URL returns the request status and details.
         "202":
           description: Processing request.
         "401":
@@ -70,6 +76,12 @@ paths:
           description: Request created.
           schema:
             $ref: "#/definitions/InstanceId"
+          headers:
+            Location:
+              type: string
+              description: |-
+                Location (URL) of created request resource.
+                A GET request to this URL returns the request status and details.
         "202":
           description: Processing request.
         "409":
