@@ -7,7 +7,7 @@ info:
     url: https://forum.italia.it/c/progetto-io
   x-logo:
     url: https://io.italia.it/assets/img/io-logo-blue.svg
-  description:  This is a specification for io-functions-bonus app API
+  description: This is a specification for io-functions-bonus app API
 host: api.cd.italia.it
 basePath: "/api/v1"
 schemes:
@@ -22,8 +22,8 @@ paths:
       parameters:
         - $ref: "#/parameters/FiscalCode"
       responses:
-        "200":
-          description: Orchestrator task started
+        "202":
+          description: Request accepted.
           schema:
             "$ref": "#/definitions/InstanceId"
         "401":
@@ -36,6 +36,150 @@ paths:
           description: Service unavailable.
           schema:
             $ref: "#/definitions/ProblemJson"
+    get:
+      operationId: getBonusEligibilityCheck
+      summary: et eligibility (ISEE) check information for user's bonus
+      parameters:
+        - $ref: "#/parameters/FiscalCode"
+      responses:
+        "200":
+          description: Request processed.
+          schema:
+            "$ref": "#/definitions/EligibilityCheck"
+          examples:
+            application/json:
+              id: SPNDNL80R11C522K
+              status: ELIGIBLE
+              family_members:
+                - name: "Mario"
+                  surname: "Rossi"
+                  fiscal_code: "XXXYYY80R13C555Y"
+                - name: "Piero"
+                  surname: "Rossi"
+                  fiscal_code: "ZZZYYY80R13C555Y"
+                - name: "Giulia"
+                  surname: "Rossi"
+                  fiscal_code: "WWWYYY80R13C555Y"
+              max_amount: 50000
+              max_tax_benefit: 3000
+        "202":
+          description: Request still under process.
+          schema:
+            "$ref": "#/definitions/InstanceId"
+        "401":
+          description: Bearer token null or expired.
+        "404":
+          description: Request not found.
+        "500":
+          description: Service unavailable.
+          schema:
+            $ref: "#/definitions/ProblemJson"
+
+  "/bonus/vacanze/activations/{fiscalcode}":
+    post:
+      operationId: startBonusActivationProcedure
+      summary: Start bonus activation request procedure
+      parameters:
+        - $ref: "#/parameters/FiscalCode"
+      responses:
+        "202":
+          description: Request accepted.
+          schema:
+            "$ref": "#/definitions/InstanceId"
+          headers:
+            Location:
+              type: string
+              description: |-
+                Location (URL) of created activation resource.
+                A GET request to this URL returns the request status and details.
+          examples:
+            application/json:
+              id: SOMEBONUSID
+        "409":
+          description: |
+            Cannot activate a new bonus because another bonus related to this user was found.
+        "403":
+          description: |
+            Cannot activate a new bonus because the eligibility data has expired.
+            The user must re-initiate the eligibility procedure to refresh her data
+            and retry to activate the bonus within 24h since her got the result.
+        "401":
+          description: Bearer token null or expired.
+        "500":
+          description: Service unavailable.
+          schema:
+            $ref: "#/definitions/ProblemJson"
+
+    get:
+      operationId: getAllBonusActivations
+      summary: |
+        Get all IDs of the bonus activations requested by
+        the authenticated user or by any between his family member
+      parameters:
+        - $ref: "#/parameters/FiscalCode"
+      responses:
+        "200":
+          description: |
+            List of bonus activations ID belonging to the authenticated user
+            or to any member of her family (former and actual)
+          schema:
+            $ref: "#/definitions/PaginatedBonusActivationsCollection"
+        "404":
+          description: No activation found.
+        "401":
+          description: Bearer token null or expired.
+        "500":
+          description: Service unavailable.
+          schema:
+            $ref: "#/definitions/ProblemJson"
+  "/bonus/vacanze/activations/{fiscalcode}/{bonus_id}":
+    get:
+      operationId: getLatestBonusActivationById
+      summary: |
+        Get the activation details for the latest version
+        of the bonus entity identified by the provided id
+      parameters:
+        - $ref: "#/parameters/FiscalCode"
+        - name: bonus_id
+          in: path
+          required: true
+          description: Bonus activation ID.
+          type: string
+      responses:
+        "202":
+          description: Processing still under process.
+          schema:
+            "$ref": "#/definitions/InstanceId"
+          examples:
+            application/json:
+              id: SOMEBONUSID
+        "200":
+          description: Bonus activation details.
+          schema:
+            $ref: "#/definitions/BonusActivation"
+          examples:
+            application/json:
+              id: SOMEBONUSID
+              applicant_fiscal_code: SPNDNL80R11C522K
+              code: MYSECRETCODE
+              qr_code:
+                - mime_type: "svg+xml"
+                  base64_content: "foobar"
+                - mime_type: "image/png"
+                  base64_content: "foobar"
+              max_amount: 50000
+              max_tax_benefit: 3000
+              updated_at: "2020-07-04T12:20:00.000Z"
+              status: ACTIVE
+        "401":
+          description: Bearer token null or expired.
+        "404":
+          description: No bonus found.
+        "500":
+          description: Service unavailable.
+          schema:
+            $ref: "#/definitions/ProblemJson"
+
 parameters:
   FiscalCode:
     name: fiscalcode
@@ -65,20 +209,9 @@ definitions:
       id:
         type: string
         minLength: 1
-      statusQueryGetUri:
-        type: string
-        minLength: 1
-      sendEventPostUri:
-        type: string
-        minLength: 1
-      terminatePostUri:
-        type: string
-        minLength: 1
+        description: The identifier of the created request.
     required:
       - id
-      - statusQueryGetUri
-      - sendEventPostUri
-      - terminatePostUri
   ProblemJson:
     $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/ProblemJson"
   EligibilityCheckStatus:
@@ -98,7 +231,7 @@ definitions:
     type: object
     properties:
       fiscal_code:
-        $ref: '#/definitions/FiscalCode'
+        $ref: "#/definitions/FiscalCode"
       name:
         type: string
         minLength: 1
@@ -161,7 +294,7 @@ definitions:
         type: string
         minLength: 1
       applicant_fiscal_code:
-        $ref: '#/definitions/FiscalCode'
+        $ref: "#/definitions/FiscalCode"
       status:
         $ref: "#/definitions/BonusActivationStatus"
       code:
@@ -208,7 +341,6 @@ definitions:
     required:
       - items
   PaginatedBonusActivationsCollection:
-    allOf: 
+    allOf:
       - $ref: "#/definitions/BonusActivationCollection"
-      - $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/PaginationResponse"         
-
+      - $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/PaginationResponse"
