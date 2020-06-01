@@ -37,7 +37,7 @@ paths:
           schema:
             $ref: "#/definitions/ProblemJson"
     get:
-      operationId: GetEligibilityCheck
+      operationId: getEligibilityCheck
       summary: GetEligibilityCheck
       description: Read the bonus eligibility info
       responses:
