@@ -14,7 +14,6 @@ import {
   IResponseErrorNotFound,
   IResponseSuccessAccepted,
   IResponseSuccessJson,
-  IResponseSuccessRedirectToResource,
   ResponseErrorInternal,
   ResponseSuccessAccepted,
   ResponseSuccessJson

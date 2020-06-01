@@ -17,7 +17,6 @@ import {
   ResponseSuccessRedirectToResource
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
-import { EligibilityCheck as ApiEligibilityCheck } from "../generated/definitions/EligibilityCheck";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { initTelemetryClient } from "../utils/appinsights";
 
