@@ -56,11 +56,11 @@ export function GetEligibilityCheckHandler(): IGetEligibilityCheckHandler {
     }
     return ActivityResultSuccess.decode(status.customStatus)
       .map(_ => {
-        const bonusValue = fromNullable(_.data.Componente)
+        const bonusValue = fromNullable(_.data.Componenti)
           .map(calculateBonus)
           .getOrElse(0);
         return EligibilityCheck.encode({
-          family_members: _.data.Componente || [],
+          family_members: _.data.Componenti || [],
           max_amount: bonusValue,
           max_tax_benefit: bonusValue / 5,
           status:
