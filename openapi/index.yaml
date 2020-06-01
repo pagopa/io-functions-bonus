@@ -25,7 +25,10 @@ paths:
         "200":
           description: Orchestrator task started
           schema:
-            "$ref": "#/definitions/InstanceId"
+            type: object
+            properties:
+              id:
+                $ref: "#/definitions/FiscalCode"
         "401":
           description: Bearer token null or expired.
         "409":
@@ -76,26 +79,6 @@ securityDefinitions:
 definitions:
   FiscalCode:
     $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/FiscalCode"
-  InstanceId:
-    type: object
-    properties:
-      id:
-        type: string
-        minLength: 1
-      statusQueryGetUri:
-        type: string
-        minLength: 1
-      sendEventPostUri:
-        type: string
-        minLength: 1
-      terminatePostUri:
-        type: string
-        minLength: 1
-    required:
-      - id
-      - statusQueryGetUri
-      - sendEventPostUri
-      - terminatePostUri
   ProblemJson:
     $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/ProblemJson"
   EligibilityCheckStatus:
