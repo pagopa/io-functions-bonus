@@ -2,7 +2,6 @@ import { Context } from "@azure/functions";
 import * as df from "durable-functions";
 import * as express from "express";
 import { rights } from "fp-ts/lib/Array";
-import { fromNullable } from "fp-ts/lib/Option";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import { FiscalCodeMiddleware } from "io-functions-commons/dist/src/utils/middlewares/fiscalcode";
 import {
@@ -27,7 +26,6 @@ import { FamilyMember } from "../generated/definitions/FamilyMember";
 import { FamilyMembers } from "../generated/definitions/FamilyMembers";
 import { MaxBonusAmount } from "../generated/definitions/MaxBonusAmount";
 import { MaxBonusTaxBenefit } from "../generated/definitions/MaxBonusTaxBenefit";
-import { NucleoType } from "../generated/definitions/NucleoType";
 import { initTelemetryClient } from "../utils/appinsights";
 
 type IGetEligibilityCheckHandler = (
@@ -41,19 +39,19 @@ type IGetEligibilityCheckHandler = (
 
 initTelemetryClient();
 
-function calculateBonusMaxAmount(
-  familyMembers: ReadonlyArray<NucleoType>
+function calculateMaxBonusAmount(
+  numberOfFamilyMembers: number
 ): MaxBonusAmount {
-  return (familyMembers.length > 2
+  return (numberOfFamilyMembers > 2
     ? 50000
-    : familyMembers.length === 2
+    : numberOfFamilyMembers === 2
     ? 25000
-    : familyMembers.length === 1
+    : numberOfFamilyMembers === 1
     ? 15000
     : 0) as MaxBonusAmount;
 }
 
-function calculateBonuxMaxTaxBenefit(
+function calculateMaxBonusTaxBenefit(
   maxBonusAmount: MaxBonusAmount
 ): MaxBonusTaxBenefit {
   return (maxBonusAmount / 5) as MaxBonusTaxBenefit;
@@ -68,14 +66,14 @@ export function GetEligibilityCheckHandler(): IGetEligibilityCheckHandler {
       return ResponseSuccessAccepted("Orchestrator already running");
     }
     return ActivityResultSuccess.decode(status.customStatus)
-      .map(_ => {
-        const bonusValue = fromNullable(_.data.Componenti)
-          .map(calculateBonusMaxAmount)
-          .getOrElse(0 as MaxBonusAmount);
+      .map(({ data }) => {
+        const bonusValue = calculateMaxBonusAmount(
+          data.Componenti ? data.Componenti.length : 0
+        );
 
-        const familyMembers: FamilyMembers = _.data.Componenti
+        const familyMembers: FamilyMembers = data.Componenti
           ? rights(
-              _.data.Componenti.map(c =>
+              data.Componenti.map(c =>
                 FamilyMember.decode({
                   fiscal_code: c.CodiceFiscale,
                   name: c.Nome,
@@ -88,12 +86,12 @@ export function GetEligibilityCheckHandler(): IGetEligibilityCheckHandler {
         // TODO: return EligibilityCheckFailure in case the INPS / ISEE
         // request has returned an error, see https://www.pivotaltracker.com/story/show/173106258
 
-        if (_.data.SottoSoglia === SottoSogliaEnum.SI) {
+        if (data.SottoSoglia === SottoSogliaEnum.SI) {
           return EligibilityCheck.encode({
             family_members: familyMembers,
             id: (fiscalCode as unknown) as NonEmptyString,
             max_amount: bonusValue,
-            max_tax_benefit: calculateBonuxMaxTaxBenefit(bonusValue),
+            max_tax_benefit: calculateMaxBonusTaxBenefit(bonusValue),
             status: EligibilityCheckStatusEnum.ELIGIBLE
           });
         } else {
