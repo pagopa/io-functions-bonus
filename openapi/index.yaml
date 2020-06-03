@@ -232,8 +232,7 @@ definitions:
         minLength: 1
         description: ProtocolloDSU
       dsu_created_at:
-        type: string
-        format: date
+        $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/master/openapi/definitions.yaml#/Timestamp"
         description: DataPresentazioneDSU
       has_discrepancies:
         type: boolean
