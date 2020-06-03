@@ -303,13 +303,15 @@ definitions:
       error:
         type: string
         description: |
-          - INVALID_REQUEST
-          - INTERNAL_ERROR
-          - DATA_NOT_FOUND  ISEE data not found in INPS database
+          - INVALID_REQUEST     Request malformed
+          - INTERNAL_ERROR      Caller must retry after some timeout
+          - DATA_NOT_FOUND      ISEE data not found in INPS database
+          - DATABASE_OFFLINE    Caller must retry after some timeout
         x-extensible-enum:
           - INVALID_REQUEST
           - INTERNAL_ERROR
           - DATA_NOT_FOUND
+          - DATABASE_OFFLINE
       error_description:
         type: string
     required:
