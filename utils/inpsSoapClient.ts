@@ -1,15 +1,21 @@
 import { format } from "date-fns";
-import { fromNullable, toError } from "fp-ts/lib/Either";
+import {
+  fromNullable as fromNullableEither,
+  fromPredicate,
+  toError
+} from "fp-ts/lib/Either";
+import { fromNullable as fromNullableOption } from "fp-ts/lib/Option";
 import { TaskEither, tryCatch } from "fp-ts/lib/TaskEither";
 import { agent } from "italia-ts-commons";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { DOMParser } from "xmldom";
+import { ConsultazioneSogliaIndicatoreInput } from "../generated/definitions/ConsultazioneSogliaIndicatoreInput";
 import {
-  ConsultazioneSogliaIndicatoreInput,
-  FornituraNucleoEnum
-} from "../generated/definitions/ConsultazioneSogliaIndicatoreInput";
-import { ConsultazioneSogliaIndicatoreResponse } from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
+  ConsultazioneSogliaIndicatoreResponse,
+  EsitoEnum
+} from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
+import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
 
 import {
   AbortableFetch,
@@ -19,17 +25,34 @@ import {
 import { Millisecond } from "italia-ts-commons/lib/units";
 import { UrlFromString } from "italia-ts-commons/lib/url";
 
+// TODO: Handle the inps:Identity element content
 const getSOAPRequest = (
   dataValidita: string,
   fiscalCode: string,
-  fornituraNucleo: FornituraNucleoEnum,
+  fornituraNucleo: SiNoTypeEnum,
   codiceSoglia: string
 ) => `<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:con="http://inps.it/ConsultazioneISEE">
-<soapenv:Header/>
+<soapenv:Header>
+  <wsa:MessageID xmlns:wsa="http://www.w3.org/2005/08/addressing">7e6416bf-f86b-495b-8f89-2d8e208aaf4c</wsa:MessageID>
+  <wsa:To xmlns:wsa="http://www.w3.org/2005/08/addressing">http://msws2.svil.inps:80/WSServiziISEE/SvcConsultazione.svc</wsa:To>
+  <wsa:Action xmlns:wsa="http://www.w3.org/2005/08/addressing">http://inps.it/ConsultazioneISEE/ISvcConsultazione/ConsultazioneSogliaIndicatore</wsa:Action>
+  <inps:Identity xmlns:inps="http://inps.it/">
+    <UserId>CiccioGraziani</UserId>
+    <AppName>DPDMZ</AppName>
+    <AppKey>**********</AppKey>
+    <IdentityProvider>EXT</IdentityProvider>
+    <SessionId>129777ed-54b4-404b-9bb2-ff1055345db5</SessionId>
+    <SequenceId>1</SequenceId>
+    <OperationContextId>000000000000</OperationContextId>
+    <PeerHost>172.16.15.40</PeerHost>
+    <CodiceUfficio>0001</CodiceUfficio>
+    <CodiceEnte>SPSPAGOPA</CodiceEnte>
+  </inps:Identity>
+</soapenv:Header>
 <soapenv:Body>
-  <con:ConsultazioneSogliaIndicatoreRequest>
-    <con:Richiesta DataValidita="${dataValidita}" CodiceFiscale="${fiscalCode}" FornituraNucleo="${fornituraNucleo}" CodiceSoglia="${codiceSoglia}"/>
-  </con:ConsultazioneSogliaIndicatoreRequest>
+  <con:ConsultazioneSogliaIndicatore>
+    <con:request CodiceFiscale="${fiscalCode}" CodiceSoglia="${codiceSoglia}" FornituraNucleo="${fornituraNucleo}" DataValidita="${dataValidita}"/>
+  </con:ConsultazioneSogliaIndicatore>
 </soapenv:Body>
 </soapenv:Envelope>`;
 
@@ -84,7 +107,7 @@ export function createClient(endpoint: NonEmptyString): ISoapClientAsync {
             responseBody,
             "text/xml"
           );
-          return fromNullable(
+          return fromNullableEither(
             new Error("Missing ConsultazioneSogliaIndicatoreResult")
           )(
             xmlDocument
@@ -95,35 +118,78 @@ export function createClient(endpoint: NonEmptyString): ISoapClientAsync {
               .item(0)
           )
             .map(_ => ({
-              DataPresentazioneDSU: _.getAttribute("DataPresentazioneDSU"),
+              IdRichiesta: _.getElementsByTagNameNS(
+                INPS_NAMESPACE,
+                "IdRichiesta"
+              )
+                .item(0)
+                ?.textContent?.trim(),
 
-              ProtocolloDSU: _.getAttribute("ProtocolloDSU"),
+              Esito: _.getElementsByTagNameNS(INPS_NAMESPACE, "Esito")
+                .item(0)
+                ?.textContent?.trim(),
 
-              SottoSoglia: _.getAttribute("SottoSoglia"),
+              DescrizioneErrore: _.getElementsByTagNameNS(
+                INPS_NAMESPACE,
+                "DescrizioneErrore"
+              )
+                .item(0)
+                ?.textContent?.trim(),
 
-              TipoIndicatore: _.getAttribute("TipoIndicatore")
+              DatiIndicatore: fromNullableOption(
+                _.getElementsByTagNameNS(INPS_NAMESPACE, "DatiIndicatore").item(
+                  0
+                )
+              )
+                .map(DatiIndicatore => ({
+                  DataPresentazioneDSU: DatiIndicatore.getAttribute(
+                    "DataPresentazioneDSU"
+                  ),
+
+                  ProtocolloDSU: DatiIndicatore.getAttribute("ProtocolloDSU"),
+
+                  SottoSoglia: DatiIndicatore.getAttribute("SottoSoglia"),
+
+                  TipoIndicatore: DatiIndicatore.getAttribute("TipoIndicatore")
+                }))
+                .toUndefined()
             }))
             .chain(_ => {
               return ConsultazioneSogliaIndicatoreResponse.decode({
                 ..._,
-                Componenti: Array.from(
-                  xmlDocument.getElementsByTagNameNS(
-                    INPS_NAMESPACE,
-                    "Componente"
-                  )
-                ).map(familyMemberElement => ({
-                  CodiceFiscale: familyMemberElement.getAttribute(
-                    "CodiceFiscale"
-                  ),
-                  Cognome: familyMemberElement.getAttribute("Cognome"),
-                  Nome: familyMemberElement.getAttribute("Nome")
-                }))
+                DatiIndicatore: {
+                  ..._.DatiIndicatore,
+                  Componenti: Array.from(
+                    xmlDocument.getElementsByTagNameNS(
+                      INPS_NAMESPACE,
+                      "Componente"
+                    )
+                  ).map(familyMemberElement => ({
+                    CodiceFiscale: familyMemberElement.getAttribute(
+                      "CodiceFiscale"
+                    ),
+                    Cognome: familyMemberElement.getAttribute("Cognome"),
+                    Nome: familyMemberElement.getAttribute("Nome")
+                  }))
+                }
               }).mapLeft(error => {
                 return new Error(
                   `Unexpected response: [Error: ${readableReport(error)}]`
                 );
               });
             })
+            .chain(
+              fromPredicate(
+                _ =>
+                  _.Esito === EsitoEnum.OK ||
+                  _.Esito === EsitoEnum.DATI_NON_TROVATI ||
+                  _.Esito === EsitoEnum.RICHIESTA_INVALIDA,
+                err =>
+                  new Error(
+                    `INPS SOAP Error: [Esito:${err.Esito}|Message:${err.DescrizioneErrore}]`
+                  )
+              )
+            )
             .fold(
               _ => Promise.reject(_),
               _ => Promise.resolve(_)

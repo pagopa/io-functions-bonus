@@ -20,8 +20,12 @@ import {
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { ActivityResultSuccess } from "../EligibilityCheckActivity/handler";
-import { SottoSogliaEnum } from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
+import { EsitoEnum } from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
 import { EligibilityCheck } from "../generated/definitions/EligibilityCheck";
+import {
+  EligibilityCheckFailure,
+  ErrorEnum
+} from "../generated/definitions/EligibilityCheckFailure";
 import {
   EligibilityCheckSuccessEligible,
   StatusEnum as EligibleStatus
@@ -34,6 +38,7 @@ import { FamilyMember } from "../generated/definitions/FamilyMember";
 import { FamilyMembers } from "../generated/definitions/FamilyMembers";
 import { MaxBonusAmount } from "../generated/definitions/MaxBonusAmount";
 import { MaxBonusTaxBenefit } from "../generated/definitions/MaxBonusTaxBenefit";
+import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
 import { initTelemetryClient } from "../utils/appinsights";
 
 type IGetEligibilityCheckHandler = (
@@ -78,12 +83,14 @@ export function GetEligibilityCheckHandler(): IGetEligibilityCheckHandler {
     return ActivityResultSuccess.decode(status.customStatus)
       .map(({ data }) => {
         const bonusValue = calculateMaxBonusAmount(
-          data.Componenti ? data.Componenti.length : 0
+          data.DatiIndicatore?.Componenti
+            ? data.DatiIndicatore.Componenti.length
+            : 0
         );
 
-        const familyMembers: FamilyMembers = data.Componenti
+        const familyMembers: FamilyMembers = data.DatiIndicatore?.Componenti
           ? rights(
-              data.Componenti.map(c =>
+              data.DatiIndicatore.Componenti.map(c =>
                 FamilyMember.decode({
                   fiscal_code: c.CodiceFiscale,
                   name: c.Nome,
@@ -93,10 +100,21 @@ export function GetEligibilityCheckHandler(): IGetEligibilityCheckHandler {
             )
           : [];
 
-        // TODO: return EligibilityCheckFailure in case the INPS / ISEE
-        // request has returned an error, see https://www.pivotaltracker.com/story/show/173106258
+        if (data.Esito !== EsitoEnum.OK) {
+          return EligibilityCheckFailure.encode({
+            error:
+              data.Esito === EsitoEnum.DATI_NON_TROVATI
+                ? ErrorEnum.DATA_NOT_FOUND
+                : data.Esito === EsitoEnum.RICHIESTA_INVALIDA
+                ? ErrorEnum.INVALID_REQUEST
+                : ErrorEnum.INTERNAL_ERROR,
+            error_description:
+              data.DescrizioneErrore || "Esito value is not OK",
+            id: (fiscalCode as unknown) as NonEmptyString
+          });
+        }
 
-        if (data.SottoSoglia === SottoSogliaEnum.SI) {
+        if (data.DatiIndicatore?.SottoSoglia === SiNoTypeEnum.SI) {
           return EligibilityCheckSuccessEligible.encode({
             family_members: familyMembers,
             id: (fiscalCode as unknown) as NonEmptyString,

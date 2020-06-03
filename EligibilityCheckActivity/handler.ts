@@ -3,8 +3,8 @@ import { fromEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "io-functions-commons/dist/generated/definitions/FiscalCode";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
-import { FornituraNucleoEnum } from "../generated/definitions/ConsultazioneSogliaIndicatoreInput";
 import { ConsultazioneSogliaIndicatoreResponse } from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
+import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
 import { ISoapClientAsync } from "../utils/inpsSoapClient";
 
 // Activity result
@@ -44,7 +44,7 @@ export const getEligibilityCheckActivityHandler = (
         return soapClientAsync.ConsultazioneSogliaIndicatore({
           CodiceFiscale: fiscalCode,
           CodiceSoglia: "BVAC01", // Value for `Bonus Vacanze 2020` @see https://docs.google.com/document/d/1k-oWVK7Qs-c42b5HW4ild6rzpbQFDJ-f
-          FornituraNucleo: FornituraNucleoEnum.SI
+          FornituraNucleo: SiNoTypeEnum.SI
         });
       })
       .mapLeft(err => {
