@@ -132,7 +132,7 @@ paths:
       operationId: getLatestBonusActivationById
       summary: |
         Get the activation details for the latest version
-        of the bonus entity identified by the provided id
+        of the bonus entity identified by the provided id and fiscal code
       parameters:
         - $ref: "#/parameters/FiscalCode"
         - name: bonus_id
