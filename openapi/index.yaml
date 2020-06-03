@@ -36,6 +36,10 @@ paths:
           description: Processing request.
         "401":
           description: Wrong or missing function key.
+        "403":
+          description: |
+            Cannot request a new check since there's already
+            an active bonus related to this user
         "409":
           description: "Conflict: pending request found."
           schema:
@@ -88,9 +92,10 @@ paths:
           description: Wrong or missing function key.
         "403":
           description: |
-            Cannot activate a new bonus because the eligibility data has expired.
-            The user must re-initiate the eligibility procedure to refresh her data
-            and retry to activate the bonus within 24h since her got the result.
+            Cannot activate a new bonus because the eligibility data has expired
+            or the user is ineligible to get the bonus.
+            She must re-initiate the eligibility procedure to refresh her data
+            and retry to activate the bonus within 24h since she got the result.
         "409":
           description: |
             Cannot activate a new bonus because another active or consumed
@@ -127,7 +132,7 @@ paths:
       operationId: getLatestBonusActivationById
       summary: |
         Get the activation details for the latest version
-        of the bonus entity identified by the provided id
+        of the bonus entity identified by the provided id and fiscal code
       parameters:
         - $ref: "#/parameters/FiscalCode"
         - name: bonus_id
@@ -140,8 +145,6 @@ paths:
           description: Bonus activation details.
           schema:
             $ref: "#/definitions/BonusActivation"
-        "202":
-          description: Processing request.
         "401":
           description: Wrong or missing function key.
         "404":
@@ -300,13 +303,15 @@ definitions:
       error:
         type: string
         description: |
-          - INVALID_REQUEST
-          - INTERNAL_ERROR
-          - DATA_NOT_FOUND  ISEE data not found in INPS database
+          - INVALID_REQUEST     Request malformed
+          - INTERNAL_ERROR      Caller must retry after some timeout
+          - DATA_NOT_FOUND      ISEE data not found in INPS database
+          - DATABASE_OFFLINE    Caller must retry after some timeout
         x-extensible-enum:
           - INVALID_REQUEST
           - INTERNAL_ERROR
           - DATA_NOT_FOUND
+          - DATABASE_OFFLINE
       error_description:
         type: string
     required:
@@ -359,7 +364,7 @@ definitions:
         minLength: 1
       updated_at:
         $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/master/openapi/definitions.yaml#/Timestamp"
-      dsu:
+      dsu_request:
         $ref: "#/definitions/BonusActivationDsu"
     required:
       - id
@@ -367,7 +372,7 @@ definitions:
       - status
       - code
       - updated_at
-      - dsu
+      - dsu_request
   BonusActivationItem:
     type: object
     properties:
