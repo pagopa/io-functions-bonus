@@ -36,18 +36,6 @@ const getSOAPRequest = (
   <wsa:MessageID xmlns:wsa="http://www.w3.org/2005/08/addressing">7e6416bf-f86b-495b-8f89-2d8e208aaf4c</wsa:MessageID>
   <wsa:To xmlns:wsa="http://www.w3.org/2005/08/addressing">http://msws2.svil.inps:80/WSServiziISEE/SvcConsultazione.svc</wsa:To>
   <wsa:Action xmlns:wsa="http://www.w3.org/2005/08/addressing">http://inps.it/ConsultazioneISEE/ISvcConsultazione/ConsultazioneSogliaIndicatore</wsa:Action>
-  <inps:Identity xmlns:inps="http://inps.it/">
-    <UserId>CiccioGraziani</UserId>
-    <AppName>DPDMZ</AppName>
-    <AppKey>**********</AppKey>
-    <IdentityProvider>EXT</IdentityProvider>
-    <SessionId>129777ed-54b4-404b-9bb2-ff1055345db5</SessionId>
-    <SequenceId>1</SequenceId>
-    <OperationContextId>000000000000</OperationContextId>
-    <PeerHost>172.16.15.40</PeerHost>
-    <CodiceUfficio>0001</CodiceUfficio>
-    <CodiceEnte>SPSPAGOPA</CodiceEnte>
-  </inps:Identity>
 </soapenv:Header>
 <soapenv:Body>
   <con:ConsultazioneSogliaIndicatore>
