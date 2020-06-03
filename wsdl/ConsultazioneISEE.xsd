@@ -1,47 +1,49 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- edited with XMLSpy v2008 sp1 (http://www.altova.com) by ste (ste) -->
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:tns="http://inps.it/ConsultazioneISEE" targetNamespace="http://inps.it/ConsultazioneISEE" elementFormDefault="qualified">
-	<xs:element name="ConsultazioneSogliaIndicatoreRequest">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+	xmlns:tns="http://inps.it/ConsultazioneISEE" targetNamespace="http://inps.it/ConsultazioneISEE" elementFormDefault="qualified">
+	<xs:element name="ConsultazioneSogliaIndicatore">
 		<xs:complexType>
 			<xs:sequence>
-				<xs:element name="Richiesta" type="tns:ConsultazioneSogliaIndicatoreRequestType"/>
+				<xs:element name="request" type="tns:ConsultazioneSogliaIndicatoreRequestType"/>
 			</xs:sequence>
 		</xs:complexType>
 	</xs:element>
 	<xs:complexType name="ConsultazioneSogliaIndicatoreRequestType">
 		<xs:attribute name="CodiceFiscale" type="tns:CodiceFiscaleType" use="required"/>
 		<xs:attribute name="CodiceSoglia" type="tns:CodiceSogliaType" use="required"/>
-		<xs:attribute name="FornituraNucleo" type="tns:FornituraNucleoEnum" use="required"/>
+		<xs:attribute name="FornituraNucleo" type="tns:SiNoEnum" use="required"/>
 		<xs:attribute name="DataValidita" type="xs:date"/>
 	</xs:complexType>
-	<xs:simpleType name="FornituraNucleoEnum">
+	<xs:simpleType name="SiNoEnum">
 		<xs:restriction base="xs:string">
-			<xs:enumeration value="SI"/>
 			<xs:enumeration value="NO"/>
+			<xs:enumeration value="SI"/>
 		</xs:restriction>
 	</xs:simpleType>
-	<xs:complexType name="DatiRichiestaType" mixed="false">
-		<xs:complexContent mixed="false">
-			<xs:extension base="tns:ConsultazioneSogliaIndicatoreRequestType">
-				<xs:attribute name="ValoreSoglia" type="xs:decimal" use="required"/>
-			</xs:extension>
-		</xs:complexContent>
-	</xs:complexType>
 	<xs:element name="ConsultazioneSogliaIndicatoreResponse">
 		<xs:complexType>
 			<xs:sequence>
-				<xs:element name="ConsultazioneSogliaIndicatoreResult" type="tns:ConsultazioneSogliaIndicatoreResponseType" minOccurs="0"/>
+				<xs:element name="ConsultazioneSogliaIndicatoreResult" type="tns:ConsultazioneSogliaIndicatoreResponseType"/>
 			</xs:sequence>
 		</xs:complexType>
 	</xs:element>
 	<xs:complexType name="ConsultazioneSogliaIndicatoreResponseType">
 		<xs:sequence>
+			<xs:element name="IdRichiesta" type="xs:int"/>
+			<xs:element name="Esito" type="tns:EsitoEnum"/>
+			<xs:element name="DescrizioneErrore" type="xs:string" minOccurs="0"/>
+			<xs:element name="DatiIndicatore" type="tns:DatiIndicatoreType" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="DatiIndicatoreType">
+		<xs:sequence>
 			<xs:element name="Componente" type="tns:NucleoType" nillable="true" minOccurs="0" maxOccurs="unbounded"/>
 		</xs:sequence>
-		<xs:attribute name="TipoIndicatore" type="tns:TipoIndicatoreType" use="required"/>
-		<xs:attribute name="SottoSoglia" type="tns:FornituraNucleoEnum" use="required"/>
+		<xs:attribute name="TipoIndicatore" type="tns:TipoIndicatoreEnum" use="required"/>
+		<xs:attribute name="SottoSoglia" type="tns:SiNoEnum" use="required"/>
 		<xs:attribute name="ProtocolloDSU" type="tns:ProtocolloType" use="required"/>
 		<xs:attribute name="DataPresentazioneDSU" type="xs:date" use="required"/>
+		<xs:attribute name="PresenzaDifformita" type="tns:SiNoEnum" use="required"/>
 	</xs:complexType>
 	<xs:complexType name="NucleoType">
 		<xs:attribute name="CodiceFiscale" type="tns:CodiceFiscaleType" use="required"/>
@@ -69,9 +71,9 @@
 			<xs:pattern value="[A-Za-z]{4}[0-9]{2}"/>
 		</xs:restriction>
 	</xs:simpleType>
-	<xs:simpleType name="TipoIndicatoreType">
+	<xs:simpleType name="TipoIndicatoreEnum">
 		<xs:restriction base="xs:string">
-			<xs:enumeration value="ISEE Standard"/>
+			<xs:enumeration value="ISEE Ordinario"/>
 			<xs:enumeration value="ISEE Minorenne ordinario"/>
 			<xs:enumeration value="ISEE Minorenne con componente aggiuntiva"/>
 			<xs:enumeration value="ISEE Minorenne con componente attratta"/>
@@ -87,6 +89,15 @@
 			<xs:enumeration value="ISEE Residenziale standard con figli aggiuntivi"/>
 			<xs:enumeration value="ISEE Residenziale ridotto senza figli aggiuntivi"/>
 			<xs:enumeration value="ISEE Residenziale ridotto con figli aggiuntivi"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="EsitoEnum">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="OK"/>
+			<xs:enumeration value="RICHIESTA_INVALIDA"/>
+			<xs:enumeration value="DATI_NON_TROVATI"/>
+			<xs:enumeration value="DATABASE_OFFLINE"/>
+			<xs:enumeration value="ERRORE_INTERNO"/>
 		</xs:restriction>
 	</xs:simpleType>
 </xs:schema>
