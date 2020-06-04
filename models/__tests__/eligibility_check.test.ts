@@ -1,13 +1,13 @@
 import * as DocumentDb from "documentdb";
-import { isRight, isLeft } from "fp-ts/lib/Either";
+import { isLeft, isRight } from "fp-ts/lib/Either";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { EligibilityCheckStatusEnum } from "../../generated/definitions/EligibilityCheckStatus";
 import { EligibilityCheckSuccess } from "../../generated/definitions/EligibilityCheckSuccess";
 import {
-  EligibilityCheckModel,
-  RetrievedEligibilityCheck,
   ELIGIBILITY_CHECK_COLLECTION_NAME,
-  NewEligibilityCheck
+  EligibilityCheckModel,
+  NewEligibilityCheck,
+  RetrievedEligibilityCheck
 } from "../eligibility_check";
 
 import * as DocumentDbUtils from "io-functions-commons/dist/src/utils/documentdb";
