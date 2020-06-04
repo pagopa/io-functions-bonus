@@ -8,12 +8,11 @@ import {
   wrapRequestHandler
 } from "io-functions-commons/dist/src/utils/request_middleware";
 import {
-  IResponseErrorConflict,
   IResponseErrorInternal,
   IResponseSuccessAccepted,
   IResponseSuccessRedirectToResource,
-  ResponseErrorConflict,
   ResponseErrorInternal,
+  ResponseSuccessAccepted,
   ResponseSuccessRedirectToResource
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
@@ -24,11 +23,9 @@ type IEligibilityCheckHandler = (
   context: Context,
   fiscalCode: FiscalCode
 ) => Promise<
-  // tslint:disable-next-line: max-union-size
   | IResponseSuccessRedirectToResource<InstanceId, InstanceId>
   | IResponseSuccessAccepted
   | IResponseErrorInternal
-  | IResponseErrorConflict
 >;
 
 initTelemetryClient();
@@ -36,15 +33,16 @@ initTelemetryClient();
 export function EligibilityCheckHandler(): IEligibilityCheckHandler {
   return async (context, fiscalCode) => {
     const client = df.getClient(context);
-    const status = await client.getStatus(fiscalCode);
-    if (status.runtimeStatus === df.OrchestrationRuntimeStatus.Running) {
-      return ResponseErrorConflict("Orchestrator already running");
+    const status = await client.getStatus(`${fiscalCode}-BV01DSU`);
+    // TODO: If a bonus request is running return status 403
+    if (status.customStatus === "RUNNING") {
+      return ResponseSuccessAccepted("Orchestrator already running");
     }
     try {
       await client.startNew(
         "EligibilityCheckOrchestrator",
         fiscalCode,
-        fiscalCode
+        `${fiscalCode}-BV01DSU`
       );
     } catch (err) {
       context.log.error(
@@ -59,7 +57,6 @@ export function EligibilityCheckHandler(): IEligibilityCheckHandler {
       id: (fiscalCode as unknown) as NonEmptyString
     };
 
-    // TODO: generate EligibilityCheck and return it here
     return ResponseSuccessRedirectToResource(
       instanceId,
       `/api/v1/bonus/vacanze/eligibility/${fiscalCode}`,

@@ -76,8 +76,8 @@ function calculateMaxBonusTaxBenefit(
 export function GetEligibilityCheckHandler(): IGetEligibilityCheckHandler {
   return async (context, fiscalCode) => {
     const client = df.getClient(context);
-    const status = await client.getStatus(fiscalCode);
-    if (status.runtimeStatus === df.OrchestrationRuntimeStatus.Running) {
+    const status = await client.getStatus(`${fiscalCode}-BV01DSU`);
+    if (status.customStatus === "RUNNING") {
       return ResponseSuccessAccepted("Orchestrator already running");
     }
     return ActivityResultSuccess.decode(status.customStatus)
@@ -144,7 +144,7 @@ export function GetEligibilityCheckHandler(): IGetEligibilityCheckHandler {
           // Since we're sending the result to the frontend,
           // we stop the orchestrator here in order to avoid
           // sending a push notification with the same result
-          await client.terminate(fiscalCode, "Success");
+          await client.terminate(`${fiscalCode}-BV01DSU`, "Success");
           return ResponseSuccessJson(_);
         }
       );
