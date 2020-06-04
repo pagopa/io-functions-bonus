@@ -106,12 +106,12 @@ export function createClient(endpoint: NonEmptyString): ISoapClientAsync {
               .item(0)
           )
             .map(_ => ({
-              IdRichiesta: _.getElementsByTagNameNS(
-                INPS_NAMESPACE,
-                "IdRichiesta"
+              IdRichiesta: fromNullableOption(
+                _.getElementsByTagNameNS(INPS_NAMESPACE, "IdRichiesta").item(0)
               )
-                .item(0)
-                ?.textContent?.trim(),
+                .mapNullable(id => id.textContent?.trim())
+                .map<number | string>(id => parseInt(id, 10))
+                .toUndefined(),
 
               Esito: _.getElementsByTagNameNS(INPS_NAMESPACE, "Esito")
                 .item(0)
@@ -138,7 +138,11 @@ export function createClient(endpoint: NonEmptyString): ISoapClientAsync {
 
                   SottoSoglia: DatiIndicatore.getAttribute("SottoSoglia"),
 
-                  TipoIndicatore: DatiIndicatore.getAttribute("TipoIndicatore")
+                  TipoIndicatore: DatiIndicatore.getAttribute("TipoIndicatore"),
+
+                  PresenzaDifformita: DatiIndicatore.getAttribute(
+                    "PresenzaDifformita"
+                  )
                 }))
                 .toUndefined()
             }))
