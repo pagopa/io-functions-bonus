@@ -1,74 +1,86 @@
-swagger: "2.0"
+swagger: '2.0'
 info:
-  version: 1.1.0
-  title: ADE Bonus API
-  contact:
-    name: Agenzia delle Entrate
-    url: https://www.agenziaentrate.gov.it/
-  description: Specification for ADE Bonus API
-host: api.agenziaentrate.gov.it
-basePath: "/api/v1"
+  version: 0.0.1
+  title: Monitoraggio RestServices
+  description: |
+    **Servizi per allineamento PagoPa AE **
+host: '127.0.0.1:80'
+basePath: /BonusVacanzeWeb/rest
 schemes:
+  - http
   - https
-security:
-  - ApiKey: []
+consumes:
+  - application/json
+produces:
+  - application/json
 paths:
-
-  "/api/v1/bonus/vacanze":
+ /richiestaBonus:
     post:
-      operationId: activateBonus
-      summary: Activate received bonus
-      consumes:
-        - application/json
+      description: servizio di allineamento PagoPa, Agenzia Entrate
       parameters:
-        - $ref: "#/parameters/BonusActivation"
+        - name: richiestaBonus
+          in: body
+          required: true
+          schema:
+              $ref: '#/definitions/BonusVacanzaBase'
       responses:
-        "201":
-          description: Request created.
+        200:
+          description: esito corretto
           schema:
-            $ref: "#/definitions/InstanceId"
-        "202":
-          description: Processing request.
-        "401":
-          description: Wrong or missing api key.
-        "409":
-          description: |
-            Cannot activate a new bonus because another active or consumed
-            bonus related to this user was found.
-        "500":
-          description: Service unavailable.
+              $ref: '#/definitions/RestResultRichiesta'
+        400:
+          description: richiesta non valida
           schema:
-            $ref: "#/definitions/ProblemJson"
-
-parameters:
-  BonusActivation:
-    in: body
-    name: BonusActivation
-    schema:
-      $ref: "#/definitions/BonusActivation"
-
+              $ref: '#/definitions/BonusVacanzaError'
+        404:
+          description: dati non trovati
+          schema:
+              $ref: '#/definitions/BonusVacanzaError'
+        500:
+          description: errore di sistema
+          schema:
+              $ref: '#/definitions/BonusVacanzaError'
 definitions:
-  FiscalCode:
-    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/FiscalCode"
-  InstanceId:
-    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-bonus/master/openapi/index.yaml#/definitions/InstanceId"
-  ProblemJson:
-    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/ProblemJson"
-  MaxBonusAmount:
-    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-bonus/master/openapi/index.yaml#/definitions/MaxBonusAmount"
-  MaxBonusTaxBenefit:
-    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-bonus/master/openapi/index.yaml#/definitions/MaxBonusTaxBenefit"
-  FamilyMember:
-    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-bonus/master/openapi/index.yaml#/definitions/FamilyMember"
-  FamilyMembers:
-    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-bonus/master/openapi/index.yaml#/definitions/FamilyMembers"
-  EligibilityCheckExtra:
-    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-bonus/master/openapi/index.yaml#/definitions/EligibilityCheckExtra"
-  EligibilityCheckSuccessEligible:
-    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-bonus/master/openapi/index.yaml#/definitions/EligibilityCheckSuccess"
-  BonusActivationStatus:
-    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-bonus/master/openapi/index.yaml#/definitions/BonusActivationStatus"
-  BonusActivation:
-    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-bonus/master/openapi/index.yaml#/definitions/BonusActivation"
-  Timestamp:
-    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/master/openapi/definitions.yaml#/Timestamp"
+  RestResultRichiesta:
+    type: object
+    properties:
+      result:
+        $ref: '#/definitions/BonusVacanzaBase'
+  BonusVacanzaBase:
+    type: object
+    properties:
+      codiceBuono:
+        type: string
+        description: identificativo univoco del buono
+      codiceFiscaleDichiarante:
+        type: string
+        description: codice fiscale di colui che ha fatto la richiesta di bonus
+      importoMassimo:
+        type: number
+        description: importo del bonus richiesto
+      flagDifformitaIsee:
+        type: integer
+        description: valori 0 non difforme, 1 difforme
+      dataGenerazione:
+        type: string
+        format: date
+        description: data di generazione del bonus
+      nucleoFamiliare:
+        type: array
+        items:
+          $ref: '#/definitions/NucleoFamiliareElem'
+  NucleoFamiliareElem:
+    type: object
+    properties:
+      codiceFiscale:
+        type: string
+        description: codice fiscale del componente del nucleo
+  BonusVacanzaError:
+    type: object
+    properties:
+      errorCode:
+        type: string
+        description: codice di errore
+      errorMessage:
+        type: string
+        description: descrizione dell'errore
