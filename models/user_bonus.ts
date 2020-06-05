@@ -7,7 +7,7 @@ import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { tag } from "italia-ts-commons/lib/types";
 
 export const USER_BONUS_COLLECTION_NAME = "user-bonuses";
-export const USER_BONUS_MODEL_PK_FIELD = "fiscal_code";
+export const USER_BONUS_MODEL_PK_FIELD = "fiscalCode";
 
 const UserBonus = t.interface({
   // Id of the Bonus available to the user

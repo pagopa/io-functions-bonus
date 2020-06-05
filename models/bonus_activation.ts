@@ -8,7 +8,7 @@ import { pick, tag } from "italia-ts-commons/lib/types";
 import { BonusActivation } from "../generated/definitions/BonusActivation";
 import { keys } from "../utils/types";
 
-export const BONUS_ACTIVATION_COLLECTION_NAME = "eligibility-checks";
+export const BONUS_ACTIVATION_COLLECTION_NAME = "bonus-activations";
 export const BONUS_ACTIVATION_MODEL_PK_FIELD = "id";
 
 interface IRetrievedBonusActivation {
