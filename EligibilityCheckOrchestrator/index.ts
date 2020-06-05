@@ -6,27 +6,39 @@
 
 import { addSeconds } from "date-fns";
 import * as df from "durable-functions";
+import { ActivityResult } from "../EligibilityCheckActivity/handler";
 
 const NOTIFICATION_DELAY_SECONDS = 10;
 
 const EligibilityCheckOrchestrator = df.orchestrator(function*(
   context: IOrchestrationFunctionContext
-  // tslint:disable-next-line: no-any
 ): Generator<TaskSet | Task> {
-  context.df.setCustomStatus({});
-  const eligibilityCheckResponse = yield context.df.callActivityWithRetry(
+  const retryOptions = {
+    backoffCoefficient: 1.5,
+    firstRetryIntervalInMilliseconds: 1000,
+    maxNumberOfAttempts: 10,
+    maxRetryIntervalInMilliseconds: 3600 * 100,
+    retryTimeoutInMilliseconds: 3600 * 1000
+  };
+  // TODO: Delete dsu record if exists
+  context.df.setCustomStatus("RUNNING");
+  const undecodedEligibilityCheckResponse = yield context.df.callActivityWithRetry(
     "EligibilityCheckActivity",
-    {
-      backoffCoefficient: 1.5,
-      firstRetryIntervalInMilliseconds: 1000,
-      maxNumberOfAttempts: 10,
-      maxRetryIntervalInMilliseconds: 3600 * 100,
-      retryTimeoutInMilliseconds: 3600 * 1000
-    },
+    retryOptions,
     context.df.getInput()
   );
-  // TODO: Decode EligibilityCheckActivity response
-  context.df.setCustomStatus(eligibilityCheckResponse);
+  const eligibilityCheckResponse = ActivityResult.decode(
+    undecodedEligibilityCheckResponse
+  ).getOrElse({
+    kind: "FAILURE",
+    reason: " ActivityResult decoding error"
+  });
+  yield context.df.callActivityWithRetry(
+    "SaveDSUActivity",
+    retryOptions,
+    eligibilityCheckResponse
+  );
+  context.df.setCustomStatus("COMPLETED");
 
   // sleep before sending push notification
   // so we can let the get operation stop the flow here
@@ -36,7 +48,7 @@ const EligibilityCheckOrchestrator = df.orchestrator(function*(
 
   // send push notification with eligibility details
   yield context.df.callActivity(
-    "NotifyEligibilityCheck",
+    "NotifyEligibilityCheckActivity",
     eligibilityCheckResponse
   );
 

@@ -447,6 +447,9 @@ definitions:
         type: string
       DatiIndicatore:
         $ref: "#/definitions/DatiIndicatore"
+    required:
+      - IdRichiesta
+      - Esito
   DatiIndicatore:
     type: object
     properties:
