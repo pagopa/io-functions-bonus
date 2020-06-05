@@ -30,8 +30,8 @@ import {
 } from "../../../generated/definitions/EligibilityCheckSuccessIneligible";
 import { EligibilityCheck } from "../../../types/EligibilityCheck";
 import {
-  EligibilityCheckFromApiObject,
-  EligibilityCheckToApiObject
+  ApiEligibilityCheckFromModel,
+  ModelEligibilityCheckFromApi
 } from "../eligibility_check_codecs";
 
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
@@ -92,11 +92,11 @@ const aFailureDomainObject: EligibilityCheckFailure = {
   id: (aFiscalCode as unknown) as NonEmptyString
 };
 
-describe("EligibilityCheckFromApiObject", () => {
+describe("ModelEligibilityCheckFromApi", () => {
   it("should not decode an invalid api object", () => {
     const apiObject = {};
     // @ts-ignore needed to test an unrepresentable type assignment
-    const result = EligibilityCheckFromApiObject.decode(apiObject);
+    const result = ModelEligibilityCheckFromApi.decode(apiObject);
     expect(isLeft(result)).toBeTruthy();
   });
 
@@ -106,7 +106,7 @@ describe("EligibilityCheckFromApiObject", () => {
     ${"eligible api object"}   | ${anElibigleApiObject}
     ${"ineligible api object"} | ${anInelibigleApiObject}
   `("should decode $name", ({ apiObject }) => {
-    const result = EligibilityCheckFromApiObject.decode(apiObject);
+    const result = ModelEligibilityCheckFromApi.decode(apiObject);
     if (isRight(result)) {
       expect(EligibilityCheck.is(result.value)).toBeTruthy();
     } else {
@@ -120,8 +120,8 @@ describe("EligibilityCheckFromApiObject", () => {
     ${"eligible api object"}   | ${anElibigleApiObject}
     ${"ineligible api object"} | ${anInelibigleApiObject}
   `("should reverse on $name", ({ apiObject }) => {
-    EligibilityCheckFromApiObject.decode(apiObject)
-      .chain(obj => EligibilityCheckToApiObject.decode(obj))
+    ModelEligibilityCheckFromApi.decode(apiObject)
+      .chain(obj => ApiEligibilityCheckFromModel.decode(obj))
       .fold(
         _ => {
           fail("Valid api object must be decoded");
@@ -133,11 +133,11 @@ describe("EligibilityCheckFromApiObject", () => {
   });
 });
 
-describe("EligibilityCheckToApiObject", () => {
+describe("ApiEligibilityCheckFromModel", () => {
   it("should not decode an invalid domain object", () => {
     const invalidDomainObject = {};
     // @ts-ignore needed to test an unrepresentable type assignment
-    const result = EligibilityCheckToApiObject.decode(invalidDomainObject);
+    const result = ApiEligibilityCheckFromModel.decode(invalidDomainObject);
     expect(isLeft(result)).toBeTruthy();
   });
 
@@ -147,7 +147,7 @@ describe("EligibilityCheckToApiObject", () => {
     ${"eligible domain object"}   | ${anEligibleDomainObject}
     ${"ineligible domain object"} | ${anIneligibleDomainObject}
   `("should decode $name", ({ domainObject }) => {
-    const result = EligibilityCheckToApiObject.decode(domainObject);
+    const result = ApiEligibilityCheckFromModel.decode(domainObject);
     if (isRight(result)) {
       expect(EligibilityCheckApi.is(result.value)).toBeTruthy();
     } else {
@@ -161,8 +161,8 @@ describe("EligibilityCheckToApiObject", () => {
     ${"eligible domain object"}   | ${anEligibleDomainObject}
     ${"ineligible domain object"} | ${anIneligibleDomainObject}
   `("should reverse on $name", ({ domainObject }) => {
-    EligibilityCheckToApiObject.decode(domainObject)
-      .chain(obj => EligibilityCheckFromApiObject.decode(obj))
+    ApiEligibilityCheckFromModel.decode(domainObject)
+      .chain(obj => ModelEligibilityCheckFromApi.decode(obj))
       .fold(
         _ => {
           fail("Valid domain object must be decoded");

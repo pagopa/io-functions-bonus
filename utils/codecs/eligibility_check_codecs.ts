@@ -34,33 +34,17 @@ import {
 
 import { EligibilityCheck as EligibilityCheckApi } from "../../generated/definitions/EligibilityCheck";
 import { EligibilityCheck } from "../../types/EligibilityCheck";
-
-/**
- * Utility to perform exhaustive checks. It behaves as an identity function
- * @param input the value to be checked
- * @param retValue optional, if valued overrides the returned value
- *
- * @returns the passed value if not overridden, the override otherwise
- */
-const unhandledValue = (input: never, retValue = input) => retValue;
-
-/**
- * Utility to perform exhaustive checks. It just throws, that means the path should not be possible
- * @param input the value to be checked
- */
-const assertNever = (input: never) => {
-  throw new Error(`Unhandled value`);
-};
+import { assertNever, unhandledValue } from "../types";
 
 /**
  * Maps EligibilityCheck api object into a EligibilityCheck domain object
  */
-const EligibilityCheckSuccessEligibleFromApiObject = new t.Type<
+const ModelEligibilityCheckSuccessEligibleFromApi = new t.Type<
   EligibilityCheckSuccessEligible,
   EligibilityCheckSuccessEligible,
   EligibilityCheckSuccessEligibleApi
 >(
-  "EligibilityCheckFromApiObject",
+  "ModelEligibilityCheckSuccessEligibleFromApi",
   EligibilityCheckSuccessEligible.is,
   (apiObject: EligibilityCheckSuccessEligibleApi, c) => {
     try {
@@ -90,12 +74,12 @@ const EligibilityCheckSuccessEligibleFromApiObject = new t.Type<
 /**
  * Maps EligibilityCheckSuccessEligible domain object into a EligibilityCheckSuccessEligible api object
  */
-const EligibilityCheckSuccessEligibleToApiObject = new t.Type<
+const ApiEligibilityCheckSuccessEligibleFromModel = new t.Type<
   EligibilityCheckSuccessEligibleApi,
   EligibilityCheckSuccessEligibleApi,
   EligibilityCheckSuccessEligible
 >(
-  "EligibilityCheckSuccessEligibleToApiObject",
+  "ApiEligibilityCheckSuccessEligibleFromModel",
   EligibilityCheckSuccessEligibleApi.is,
   (domainObject, c) => {
     try {
@@ -125,12 +109,12 @@ const EligibilityCheckSuccessEligibleToApiObject = new t.Type<
 /**
  * Maps EligibilityCheckSuccessIneligible api object into a EligibilityCheckSuccessIneligible domain object
  */
-const EligibilityCheckSuccessIneligibleFromApiObject = new t.Type<
+const ModelEligibilityCheckSuccessIneligibleFromApi = new t.Type<
   EligibilityCheckSuccessIneligible,
   EligibilityCheckSuccessIneligible,
   EligibilityCheckSuccessIneligibleApi
 >(
-  "EligibilityCheckFromApiObject",
+  "ModelEligibilityCheckSuccessIneligibleFromApi",
   EligibilityCheckSuccessIneligible.is,
   (apiObject: EligibilityCheckSuccessIneligibleApi, c) => {
     try {
@@ -152,12 +136,12 @@ const EligibilityCheckSuccessIneligibleFromApiObject = new t.Type<
 /**
  * Maps EligibilityCheckSuccessIneligible domain object into a EligibilityCheckSuccessIneligible api object
  */
-const EligibilityCheckSuccessIneligibleToApiObject = new t.Type<
+const ApiEligibilityCheckSuccessIneligibleFromModel = new t.Type<
   EligibilityCheckSuccessIneligibleApi,
   EligibilityCheckSuccessIneligibleApi,
   EligibilityCheckSuccessIneligible
 >(
-  "EligibilityCheckSuccessIneligibleToApiObject",
+  "ApiEligibilityCheckSuccessIneligibleFromModel",
   EligibilityCheckSuccessIneligibleApi.is,
   (domainObject, c) => {
     try {
@@ -179,12 +163,12 @@ const EligibilityCheckSuccessIneligibleToApiObject = new t.Type<
 /**
  * Maps EligibilityCheckFailure api object into a EligibilityCheckFailure domain object
  */
-const EligibilityCheckFailureFromApiObject = new t.Type<
+const ModelEligibilityCheckFailureFromApi = new t.Type<
   EligibilityCheckFailure,
   EligibilityCheckFailure,
   EligibilityCheckFailureApi
 >(
-  "EligibilityCheckFromApiObject",
+  "ModelEligibilityCheckFailureFromApi",
   EligibilityCheckFailure.is,
   (apiObject: EligibilityCheckFailureApi, c) => {
     try {
@@ -220,12 +204,12 @@ const EligibilityCheckFailureFromApiObject = new t.Type<
 /**
  * Maps EligibilityCheckFailure domain object into a EligibilityCheckFailure api object
  */
-const EligibilityCheckFailureToApiObject = new t.Type<
+const ApiEligibilityCheckFailureFromModel = new t.Type<
   EligibilityCheckFailureApi,
   EligibilityCheckFailureApi,
   EligibilityCheckFailure
 >(
-  "EligibilityCheckFailureToApiObject",
+  "ApiEligibilityCheckFailureFromModel",
   EligibilityCheckFailureApi.is,
   (domainObject, c) => {
     try {
@@ -261,21 +245,21 @@ const EligibilityCheckFailureToApiObject = new t.Type<
 /**
  * Maps EligibilityCheck api object into a EligibilityCheck domain object
  */
-export const EligibilityCheckFromApiObject = new t.Type<
+export const ModelEligibilityCheckFromApi = new t.Type<
   EligibilityCheck,
   EligibilityCheck,
   EligibilityCheckApi
 >(
-  "EligibilityCheckFromApiObject",
+  "ModelEligibilityCheckFromApi",
   EligibilityCheck.is,
   (apiObject: EligibilityCheckApi, c) => {
     try {
       return EligibilityCheckSuccessEligibleApi.is(apiObject)
-        ? EligibilityCheckSuccessEligibleFromApiObject.decode(apiObject)
+        ? ModelEligibilityCheckSuccessEligibleFromApi.decode(apiObject)
         : EligibilityCheckSuccessIneligibleApi.is(apiObject)
-        ? EligibilityCheckSuccessIneligibleFromApiObject.decode(apiObject)
+        ? ModelEligibilityCheckSuccessIneligibleFromApi.decode(apiObject)
         : EligibilityCheckFailureApi.is(apiObject)
-        ? EligibilityCheckFailureFromApiObject.decode(apiObject)
+        ? ModelEligibilityCheckFailureFromApi.decode(apiObject)
         : assertNever(apiObject);
     } catch (error) {
       return t.failure(apiObject, c);
@@ -287,7 +271,7 @@ export const EligibilityCheckFromApiObject = new t.Type<
 /**
  * Maps EligibilityCheck domain object into a EligibilityCheck api object
  */
-export const EligibilityCheckToApiObject = new t.Type<
+export const ApiEligibilityCheckFromModel = new t.Type<
   EligibilityCheckApi,
   EligibilityCheckApi,
   EligibilityCheck
@@ -297,11 +281,11 @@ export const EligibilityCheckToApiObject = new t.Type<
   (domainObject, c) => {
     try {
       return EligibilityCheckSuccessEligible.is(domainObject)
-        ? EligibilityCheckSuccessEligibleToApiObject.decode(domainObject)
+        ? ApiEligibilityCheckSuccessEligibleFromModel.decode(domainObject)
         : EligibilityCheckSuccessIneligible.is(domainObject)
-        ? EligibilityCheckSuccessIneligibleToApiObject.decode(domainObject)
+        ? ApiEligibilityCheckSuccessIneligibleFromModel.decode(domainObject)
         : EligibilityCheckFailure.is(domainObject)
-        ? EligibilityCheckFailureToApiObject.decode(domainObject)
+        ? ApiEligibilityCheckFailureFromModel.decode(domainObject)
         : assertNever(domainObject);
     } catch (error) {
       return t.failure(domainObject, c);

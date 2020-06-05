@@ -10,12 +10,11 @@ import * as DocumentDbUtils from "io-functions-commons/dist/src/utils/documentdb
 import { DocumentDbModel } from "io-functions-commons/dist/src/utils/documentdb_model";
 import * as t from "io-ts";
 import { pick, tag } from "italia-ts-commons/lib/types";
-import {
-  EligibilityCheck,
-  EligibilityCheckFailure,
-  EligibilityCheckSuccess
-} from "../types/EligibilityCheck";
-import { keys } from "../utils/types";
+import { EligibilityCheck } from "../types/EligibilityCheck";
+import { keys, assertNever } from "../utils/types";
+import { EligibilityCheckSuccessEligible } from "../types/EligibilityCheckSuccessEligible";
+import { EligibilityCheckFailure } from "../types/EligibilityCheckFailure";
+import { EligibilityCheckSuccessIneligible } from "../types/EligibilityCheckSuccessIneligible";
 
 export const ELIGIBILITY_CHECK_COLLECTION_NAME = "eligibility-checks";
 export const ELIGIBILITY_CHECK_MODEL_PK_FIELD = "id";
@@ -49,12 +48,14 @@ function toRetrieved(
 
 function toBaseType(o: RetrievedEligibilityCheck): EligibilityCheck {
   // removes attributes of RetrievedEligibilityCheck which aren't of EligibilityCheck
-  // TODO: try to use EligibilityCheck.encode(o)
-  const keysOfSuccess = keys(EligibilityCheckSuccess._A);
-  const keysOfFailure = keys(EligibilityCheckFailure._A);
-  return EligibilityCheckSuccess.is(o)
-    ? pick(keysOfSuccess, o)
-    : pick(keysOfFailure, o);
+  // TODO: try to use t.exact(EligibilityCheck).encode(o)
+  return EligibilityCheckSuccessEligible.is(o)
+    ? pick(keys(EligibilityCheckSuccessEligible._A), o)
+    : EligibilityCheckSuccessIneligible.is(o)
+    ? pick(keys(EligibilityCheckSuccessIneligible._A), o)
+    : EligibilityCheckFailure.is(o)
+    ? pick(keys(EligibilityCheckFailure._A), o)
+    : assertNever(o);
 }
 
 export class EligibilityCheckModel extends DocumentDbModel<
