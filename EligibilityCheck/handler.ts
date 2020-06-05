@@ -10,19 +10,23 @@ import {
 import {
   IResponseErrorConflict,
   IResponseErrorInternal,
-  IResponseSuccessJson,
+  IResponseSuccessAccepted,
+  IResponseSuccessRedirectToResource,
   ResponseErrorConflict,
   ResponseErrorInternal,
-  ResponseSuccessJson
+  ResponseSuccessRedirectToResource
 } from "italia-ts-commons/lib/responses";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import { InstanceId } from "../generated/definitions/InstanceId";
 import { initTelemetryClient } from "../utils/appinsights";
 
 type IEligibilityCheckHandler = (
   context: Context,
   fiscalCode: FiscalCode
 ) => Promise<
-  | IResponseSuccessJson<FiscalCode>
+  // tslint:disable-next-line: max-union-size
+  | IResponseSuccessRedirectToResource<InstanceId, InstanceId>
+  | IResponseSuccessAccepted
   | IResponseErrorInternal
   | IResponseErrorConflict
 >;
@@ -51,7 +55,16 @@ export function EligibilityCheckHandler(): IEligibilityCheckHandler {
         `Orchestrator error=${err} status=${status}`
       );
     }
-    return ResponseSuccessJson(fiscalCode);
+    const instanceId: InstanceId = {
+      id: (fiscalCode as unknown) as NonEmptyString
+    };
+
+    // TODO: generate EligibilityCheck and return it here
+    return ResponseSuccessRedirectToResource(
+      instanceId,
+      `/api/v1/bonus/vacanze/eligibility/${fiscalCode}`,
+      instanceId
+    );
   };
 }
 

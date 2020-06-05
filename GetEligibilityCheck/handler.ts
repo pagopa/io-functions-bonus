@@ -11,6 +11,7 @@ import {
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import {
   IResponseErrorInternal,
+  IResponseErrorNotFound,
   IResponseSuccessAccepted,
   IResponseSuccessJson,
   ResponseErrorInternal,
@@ -19,22 +20,36 @@ import {
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { ActivityResultSuccess } from "../EligibilityCheckActivity/handler";
-import { SottoSogliaEnum } from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
+import { EsitoEnum } from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
 import { EligibilityCheck } from "../generated/definitions/EligibilityCheck";
-import { EligibilityCheckStatusEnum } from "../generated/definitions/EligibilityCheckStatus";
+import {
+  EligibilityCheckFailure,
+  ErrorEnum
+} from "../generated/definitions/EligibilityCheckFailure";
+import {
+  EligibilityCheckSuccessEligible,
+  StatusEnum as EligibleStatus
+} from "../generated/definitions/EligibilityCheckSuccessEligible";
+import {
+  EligibilityCheckSuccessIneligible,
+  StatusEnum as IneligibleStatus
+} from "../generated/definitions/EligibilityCheckSuccessIneligible";
 import { FamilyMember } from "../generated/definitions/FamilyMember";
 import { FamilyMembers } from "../generated/definitions/FamilyMembers";
 import { MaxBonusAmount } from "../generated/definitions/MaxBonusAmount";
 import { MaxBonusTaxBenefit } from "../generated/definitions/MaxBonusTaxBenefit";
+import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
 import { initTelemetryClient } from "../utils/appinsights";
 
 type IGetEligibilityCheckHandler = (
   context: Context,
   fiscalCode: FiscalCode
 ) => Promise<
+  // tslint:disable-next-line: max-union-size
+  | IResponseSuccessAccepted
   | IResponseSuccessJson<EligibilityCheck>
   | IResponseErrorInternal
-  | IResponseSuccessAccepted
+  | IResponseErrorNotFound
 >;
 
 initTelemetryClient();
@@ -68,12 +83,14 @@ export function GetEligibilityCheckHandler(): IGetEligibilityCheckHandler {
     return ActivityResultSuccess.decode(status.customStatus)
       .map(({ data }) => {
         const bonusValue = calculateMaxBonusAmount(
-          data.Componenti ? data.Componenti.length : 0
+          data.DatiIndicatore?.Componenti
+            ? data.DatiIndicatore.Componenti.length
+            : 0
         );
 
-        const familyMembers: FamilyMembers = data.Componenti
+        const familyMembers: FamilyMembers = data.DatiIndicatore?.Componenti
           ? rights(
-              data.Componenti.map(c =>
+              data.DatiIndicatore.Componenti.map(c =>
                 FamilyMember.decode({
                   fiscal_code: c.CodiceFiscale,
                   name: c.Nome,
@@ -83,35 +100,53 @@ export function GetEligibilityCheckHandler(): IGetEligibilityCheckHandler {
             )
           : [];
 
-        // TODO: return EligibilityCheckFailure in case the INPS / ISEE
-        // request has returned an error, see https://www.pivotaltracker.com/story/show/173106258
+        if (data.Esito !== EsitoEnum.OK) {
+          return EligibilityCheckFailure.encode({
+            error:
+              data.Esito === EsitoEnum.DATI_NON_TROVATI
+                ? ErrorEnum.DATA_NOT_FOUND
+                : data.Esito === EsitoEnum.RICHIESTA_INVALIDA
+                ? ErrorEnum.INVALID_REQUEST
+                : ErrorEnum.INTERNAL_ERROR,
+            error_description:
+              data.DescrizioneErrore || "Esito value is not OK",
+            id: (fiscalCode as unknown) as NonEmptyString
+          });
+        }
 
-        if (data.SottoSoglia === SottoSogliaEnum.SI) {
-          return EligibilityCheck.encode({
+        if (data.DatiIndicatore?.SottoSoglia === SiNoTypeEnum.SI) {
+          return EligibilityCheckSuccessEligible.encode({
             family_members: familyMembers,
             id: (fiscalCode as unknown) as NonEmptyString,
             max_amount: bonusValue,
             max_tax_benefit: calculateMaxBonusTaxBenefit(bonusValue),
-            status: EligibilityCheckStatusEnum.ELIGIBLE
+            status: EligibleStatus.ELIGIBLE
           });
         } else {
-          return EligibilityCheck.encode({
-            family_members: familyMembers,
+          return EligibilityCheckSuccessIneligible.encode({
             id: (fiscalCode as unknown) as NonEmptyString,
-            status: EligibilityCheckStatusEnum.INELIGIBLE
+            status: IneligibleStatus.INELIGIBLE
           });
         }
       })
       .fold<
-        | IResponseErrorInternal
-        | IResponseSuccessAccepted
-        | IResponseSuccessJson<EligibilityCheck>
+        Promise<
+          | IResponseErrorInternal
+          | IResponseSuccessAccepted
+          | IResponseSuccessJson<EligibilityCheck>
+        >
       >(
-        _ => {
+        async _ => {
           context.log.error("GetEligibilityCheck|ERROR|%s", readableReport(_));
           return ResponseErrorInternal("Invalid check status response");
         },
-        _ => ResponseSuccessJson(_)
+        async _ => {
+          // Since we're sending the result to the frontend,
+          // we stop the orchestrator here in order to avoid
+          // sending a push notification with the same result
+          await client.terminate(fiscalCode, "Success");
+          return ResponseSuccessJson(_);
+        }
       );
   };
 }

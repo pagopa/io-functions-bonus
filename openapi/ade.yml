@@ -1,0 +1,86 @@
+swagger: '2.0'
+info:
+  version: 0.0.1
+  title: Monitoraggio RestServices
+  description: |
+    **Servizi per allineamento PagoPa AE **
+host: '127.0.0.1:80'
+basePath: /BonusVacanzeWeb/rest
+schemes:
+  - http
+  - https
+consumes:
+  - application/json
+produces:
+  - application/json
+paths:
+ /richiestaBonus:
+    post:
+      description: servizio di allineamento PagoPa, Agenzia Entrate
+      parameters:
+        - name: richiestaBonus
+          in: body
+          required: true
+          schema:
+              $ref: '#/definitions/BonusVacanzaBase'
+      responses:
+        200:
+          description: esito corretto
+          schema:
+              $ref: '#/definitions/RestResultRichiesta'
+        400:
+          description: richiesta non valida
+          schema:
+              $ref: '#/definitions/BonusVacanzaError'
+        404:
+          description: dati non trovati
+          schema:
+              $ref: '#/definitions/BonusVacanzaError'
+        500:
+          description: errore di sistema
+          schema:
+              $ref: '#/definitions/BonusVacanzaError'
+definitions:
+  RestResultRichiesta:
+    type: object
+    properties:
+      result:
+        $ref: '#/definitions/BonusVacanzaBase'
+  BonusVacanzaBase:
+    type: object
+    properties:
+      codiceBuono:
+        type: string
+        description: identificativo univoco del buono
+      codiceFiscaleDichiarante:
+        type: string
+        description: codice fiscale di colui che ha fatto la richiesta di bonus
+      importoMassimo:
+        type: number
+        description: importo del bonus richiesto
+      flagDifformitaIsee:
+        type: integer
+        description: valori 0 non difforme, 1 difforme
+      dataGenerazione:
+        type: string
+        format: date
+        description: data di generazione del bonus
+      nucleoFamiliare:
+        type: array
+        items:
+          $ref: '#/definitions/NucleoFamiliareElem'
+  NucleoFamiliareElem:
+    type: object
+    properties:
+      codiceFiscale:
+        type: string
+        description: codice fiscale del componente del nucleo
+  BonusVacanzaError:
+    type: object
+    properties:
+      errorCode:
+        type: string
+        description: codice di errore
+      errorMessage:
+        type: string
+        description: descrizione dell'errore
