@@ -7,18 +7,20 @@
 import * as t from "io-ts";
 import { NonEmptyString, FiscalCode } from "italia-ts-commons/lib/strings";
 
-export type FamilyMember = t.TypeOf<typeof FamilyMember>;
+// required attributes
+const FamilyMemberR = t.interface({
+  name: NonEmptyString,
+
+  surname: NonEmptyString
+});
+
+// optional attributes
+const FamilyMemberO = t.partial({
+  fiscalCode: FiscalCode
+});
+
 export const FamilyMember = t.exact(
-  t.intersection(
-    [
-      t.interface({
-        name: NonEmptyString,
-        surname: NonEmptyString
-      }),
-      t.partial({
-        fiscalCode: FiscalCode
-      })
-    ],
-    "FamilyMember"
-  )
+  t.intersection([FamilyMemberR, FamilyMemberO], "FamilyMember")
 );
+
+export type FamilyMember = t.TypeOf<typeof FamilyMember>;

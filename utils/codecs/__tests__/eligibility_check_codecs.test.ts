@@ -1,29 +1,46 @@
 // tslint:disable: no-duplicate-string
 
-import { isRight } from "fp-ts/lib/Either";
+import { isLeft, isRight } from "fp-ts/lib/Either";
 import { EligibilityCheck as EligibilityCheckApi } from "../../../generated/definitions/EligibilityCheck";
+
+import {
+  EligibilityCheckFailure,
+  ErrorEnum as EligibilityCheckFailureErrorEnum
+} from "../../../types/EligibilityCheckFailure";
+import {
+  EligibilityCheckSuccessEligible,
+  StatusEnum as EligibilityCheckSuccessEligibleStatusEnum
+} from "../../../types/EligibilityCheckSuccessEligible";
+import {
+  EligibilityCheckSuccessIneligible,
+  StatusEnum as EligibilityCheckSuccessIneligibleStatusEnum
+} from "../../../types/EligibilityCheckSuccessIneligible";
+
 import {
   EligibilityCheckFailure as EligibilityCheckFailureApi,
   ErrorEnum as EligibilityCheckFailureErrorEnumApi
 } from "../../../generated/definitions/EligibilityCheckFailure";
-import { EligibilityCheckSuccess as EligibilityCheckSuccessApi } from "../../../generated/definitions/EligibilityCheckSuccess";
 import {
-  EligibilityCheck,
-  EligibilityCheckErrorEnum,
-  EligibilityCheckFailure,
-  EligibilityCheckSuccess
-} from "../../../types/EligibilityCheck";
+  EligibilityCheckSuccessEligible as EligibilityCheckSuccessEligibleApi,
+  StatusEnum as EligibilityCheckSuccessEligibleEnumApi
+} from "../../../generated/definitions/EligibilityCheckSuccessEligible";
+import {
+  EligibilityCheckSuccessIneligible as EligibilityCheckSuccessIneligibleApi,
+  StatusEnum as EligibilityCheckSuccessIneligibleEnumApi
+} from "../../../generated/definitions/EligibilityCheckSuccessIneligible";
+import { EligibilityCheck } from "../../../types/EligibilityCheck";
 import {
   EligibilityCheckFromApiObject,
   EligibilityCheckToApiObject
 } from "../eligibility_check_codecs";
 
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
-import { EligibilityCheckStatusEnum as EligibilityCheckStatusEnumApi } from "../../../generated/definitions/EligibilityCheckStatus";
+import { MaxBonusAmount } from "../../../generated/definitions/MaxBonusAmount";
+import { MaxBonusTaxBenefit } from "../../../generated/definitions/MaxBonusTaxBenefit";
 
 const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
 
-const aSuccessApiObject: EligibilityCheckSuccessApi = {
+const anElibigleApiObject: EligibilityCheckSuccessEligibleApi = {
   family_members: [
     {
       fiscal_code: aFiscalCode,
@@ -32,7 +49,15 @@ const aSuccessApiObject: EligibilityCheckSuccessApi = {
     }
   ],
   id: (aFiscalCode as unknown) as NonEmptyString,
-  status: EligibilityCheckStatusEnumApi.ELIGIBLE
+  max_amount: 200 as MaxBonusAmount,
+  max_tax_benefit: 50 as MaxBonusTaxBenefit,
+  status: EligibilityCheckSuccessEligibleEnumApi.ELIGIBLE,
+  valid_before: new Date()
+};
+
+const anInelibigleApiObject: EligibilityCheckSuccessIneligibleApi = {
+  id: (aFiscalCode as unknown) as NonEmptyString,
+  status: EligibilityCheckSuccessIneligibleEnumApi.INELIGIBLE
 };
 
 const aFailureApiObject: EligibilityCheckFailureApi = {
@@ -41,7 +66,7 @@ const aFailureApiObject: EligibilityCheckFailureApi = {
   id: (aFiscalCode as unknown) as NonEmptyString
 };
 
-const aSuccessDomainObject: EligibilityCheckSuccess = {
+const anEligibleDomainObject: EligibilityCheckSuccessEligible = {
   familyMembers: [
     {
       fiscalCode: aFiscalCode,
@@ -50,47 +75,50 @@ const aSuccessDomainObject: EligibilityCheckSuccess = {
     }
   ],
   id: (aFiscalCode as unknown) as NonEmptyString,
-  status: EligibilityCheckStatusEnumApi.ELIGIBLE
+  maxAmount: 200 as MaxBonusAmount,
+  maxTaxBenefit: 50 as MaxBonusTaxBenefit,
+  status: EligibilityCheckSuccessEligibleStatusEnum.ELIGIBLE,
+  validBefore: new Date()
+};
+
+const anIneligibleDomainObject: EligibilityCheckSuccessIneligible = {
+  id: (aFiscalCode as unknown) as NonEmptyString,
+  status: EligibilityCheckSuccessIneligibleStatusEnum.INELIGIBLE
 };
 
 const aFailureDomainObject: EligibilityCheckFailure = {
-  error: EligibilityCheckErrorEnum.INTERNAL_ERROR,
+  error: EligibilityCheckFailureErrorEnum.INTERNAL_ERROR,
   errorDescription: "lorem ipsum",
   id: (aFiscalCode as unknown) as NonEmptyString
 };
 
 describe("EligibilityCheckFromApiObject", () => {
-  it("should decode a success api object", () => {
-    const result = EligibilityCheckFromApiObject.decode(aSuccessApiObject);
-    if (isRight(result)) {
-      expect(EligibilityCheck.is(result.value)).toBeTruthy();
-    } else {
-      fail("Valid api object must be decoded");
-    }
-  });
-
-  it("should decode a failure api object", () => {
-    const result = EligibilityCheckFromApiObject.decode(aFailureApiObject);
-    if (isRight(result)) {
-      expect(EligibilityCheck.is(result.value)).toBeTruthy();
-    } else {
-      fail("Valid api object must be decoded");
-    }
-  });
-
   it("should not decode an invalid api object", () => {
     const apiObject = {};
     // @ts-ignore needed to test an unrepresentable type assignment
     const result = EligibilityCheckFromApiObject.decode(apiObject);
+    expect(isLeft(result)).toBeTruthy();
+  });
+
+  it.each`
+    name                       | apiObject
+    ${"failure api object"}    | ${aFailureApiObject}
+    ${"eligible api object"}   | ${anElibigleApiObject}
+    ${"ineligible api object"} | ${anInelibigleApiObject}
+  `("should decode $name", ({ apiObject }) => {
+    const result = EligibilityCheckFromApiObject.decode(apiObject);
     if (isRight(result)) {
-      fail("Invalid api object must not be decoded");
+      expect(EligibilityCheck.is(result.value)).toBeTruthy();
+    } else {
+      fail("Valid api object must be decoded");
     }
   });
 
   it.each`
-    name                    | apiObject
-    ${"failure api object"} | ${aFailureApiObject}
-    ${"success api object"} | ${aSuccessApiObject}
+    name                       | apiObject
+    ${"failure api object"}    | ${aFailureApiObject}
+    ${"eligible api object"}   | ${anElibigleApiObject}
+    ${"ineligible api object"} | ${anInelibigleApiObject}
   `("should reverse on $name", ({ apiObject }) => {
     EligibilityCheckFromApiObject.decode(apiObject)
       .chain(obj => EligibilityCheckToApiObject.decode(obj))
@@ -106,46 +134,41 @@ describe("EligibilityCheckFromApiObject", () => {
 });
 
 describe("EligibilityCheckToApiObject", () => {
-  it("should decode a success domain object", () => {
-    const result = EligibilityCheckToApiObject.decode(aSuccessDomainObject);
-    if (isRight(result)) {
-      expect(EligibilityCheckApi.is(result.value)).toBeTruthy();
-    } else {
-      fail("Valid api object must be decoded");
-    }
-  });
-
-  it("should decode a failure domain object", () => {
-    const result = EligibilityCheckToApiObject.decode(aFailureDomainObject);
-    if (isRight(result)) {
-      expect(EligibilityCheckApi.is(result.value)).toBeTruthy();
-    } else {
-      fail("Valid api object must be decoded");
-    }
-  });
-
   it("should not decode an invalid domain object", () => {
     const invalidDomainObject = {};
     // @ts-ignore needed to test an unrepresentable type assignment
     const result = EligibilityCheckToApiObject.decode(invalidDomainObject);
+    expect(isLeft(result)).toBeTruthy();
+  });
+
+  it.each`
+    name                          | domainObject
+    ${"failure domain object"}    | ${aFailureDomainObject}
+    ${"eligible domain object"}   | ${anEligibleDomainObject}
+    ${"ineligible domain object"} | ${anIneligibleDomainObject}
+  `("should decode $name", ({ domainObject }) => {
+    const result = EligibilityCheckToApiObject.decode(domainObject);
     if (isRight(result)) {
-      fail("Invalid domain object must not be decoded");
+      expect(EligibilityCheckApi.is(result.value)).toBeTruthy();
+    } else {
+      fail("Valid domain object must be decoded");
     }
   });
 
   it.each`
-    name                       | apiObject
-    ${"failure domain object"} | ${aFailureDomainObject}
-    ${"success domain object"} | ${aSuccessDomainObject}
-  `("should reverse on $name", ({ apiObject }) => {
-    EligibilityCheckToApiObject.decode(apiObject)
+    name                          | domainObject
+    ${"failure domain object"}    | ${aFailureDomainObject}
+    ${"eligible domain object"}   | ${anEligibleDomainObject}
+    ${"ineligible domain object"} | ${anIneligibleDomainObject}
+  `("should reverse on $name", ({ domainObject }) => {
+    EligibilityCheckToApiObject.decode(domainObject)
       .chain(obj => EligibilityCheckFromApiObject.decode(obj))
       .fold(
         _ => {
           fail("Valid domain object must be decoded");
         },
         value => {
-          expect(value).toEqual(apiObject);
+          expect(value).toEqual(domainObject);
         }
       );
   });
