@@ -1,16 +1,19 @@
 import { Context } from "@azure/functions";
+import { addHours } from "date-fns";
 import { fromEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "io-functions-commons/dist/generated/definitions/FiscalCode";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { ConsultazioneSogliaIndicatoreResponse } from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
 import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
+import { Timestamp } from "../generated/definitions/Timestamp";
 import { ISoapClientAsync } from "../utils/inpsSoapClient";
 
 // Activity result
 export const ActivityResultSuccess = t.interface({
   data: ConsultazioneSogliaIndicatoreResponse,
-  kind: t.literal("SUCCESS")
+  kind: t.literal("SUCCESS"),
+  validBefore: Timestamp
 });
 
 export type ActivityResultSuccess = t.TypeOf<typeof ActivityResultSuccess>;
@@ -63,12 +66,12 @@ export const getEligibilityCheckActivityHandler = (
             })
           ),
         _ =>
-          Promise.resolve(
-            ActivityResultSuccess.encode({
-              data: _,
-              kind: "SUCCESS"
-            })
-          )
+          // TODO: Check casting below
+          Promise.resolve(({
+            data: _,
+            kind: "SUCCESS",
+            validBefore: addHours(new Date(), 24)
+          } as unknown) as ActivityResultSuccess)
       )
       .run();
   };

@@ -36,6 +36,11 @@ const getSOAPRequest = (
   <wsa:MessageID xmlns:wsa="http://www.w3.org/2005/08/addressing">7e6416bf-f86b-495b-8f89-2d8e208aaf4c</wsa:MessageID>
   <wsa:To xmlns:wsa="http://www.w3.org/2005/08/addressing">http://msws2.svil.inps:80/WSServiziISEE/SvcConsultazione.svc</wsa:To>
   <wsa:Action xmlns:wsa="http://www.w3.org/2005/08/addressing">http://inps.it/ConsultazioneISEE/ISvcConsultazione/ConsultazioneSogliaIndicatore</wsa:Action>
+  <inps:Identity xmlns:inps="http://inps.it/">
+    <UserId>PAGOPA</UserId>
+    <CodiceUfficio>0001</CodiceUfficio>
+    <CodiceEnte>SPSPAGOPA</CodiceEnte>
+  </inps:Identity>
 </soapenv:Header>
 <soapenv:Body>
   <con:ConsultazioneSogliaIndicatore>
@@ -106,12 +111,12 @@ export function createClient(endpoint: NonEmptyString): ISoapClientAsync {
               .item(0)
           )
             .map(_ => ({
-              IdRichiesta: _.getElementsByTagNameNS(
-                INPS_NAMESPACE,
-                "IdRichiesta"
+              IdRichiesta: fromNullableOption(
+                _.getElementsByTagNameNS(INPS_NAMESPACE, "IdRichiesta").item(0)
               )
-                .item(0)
-                ?.textContent?.trim(),
+                .mapNullable(id => id.textContent?.trim())
+                .map<number | string>(id => parseInt(id, 10))
+                .toUndefined(),
 
               Esito: _.getElementsByTagNameNS(INPS_NAMESPACE, "Esito")
                 .item(0)
@@ -138,7 +143,11 @@ export function createClient(endpoint: NonEmptyString): ISoapClientAsync {
 
                   SottoSoglia: DatiIndicatore.getAttribute("SottoSoglia"),
 
-                  TipoIndicatore: DatiIndicatore.getAttribute("TipoIndicatore")
+                  TipoIndicatore: DatiIndicatore.getAttribute("TipoIndicatore"),
+
+                  PresenzaDifformita: DatiIndicatore.getAttribute(
+                    "PresenzaDifformita"
+                  )
                 }))
                 .toUndefined()
             }))
