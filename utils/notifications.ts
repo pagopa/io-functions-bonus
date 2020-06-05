@@ -2,7 +2,7 @@ import { NewMessage } from "io-functions-commons/dist/generated/definitions/NewM
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 
 /**
- * Send message to the user with the provided fiscal code
+ * Send a message to the user that matches the provided fiscal code
  * using the IO Notification API (REST).
  */
 export async function sendMessage(
