@@ -5,8 +5,8 @@
       "name": "req",
       "type": "httpTrigger",
       "direction": "in",
-      "route": "api/v1/bonus/vacanze/eligibility/{fiscalcode}",
-      "methods": ["get"]
+      "route": "api/v1/bonus/vacanze/activations/{fiscalcode}",
+      "methods": ["post"]
     },
     {
       "type": "http",
@@ -19,5 +19,5 @@
       "direction": "in"
     }
   ],
-  "scriptFile": "../dist/GetEligibilityCheck/index.js"
+  "scriptFile": "../dist/StartBonusActivation/index.js"
 }
