@@ -4,7 +4,6 @@ import { fromEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "io-functions-commons/dist/generated/definitions/FiscalCode";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
-import { PatternString } from "italia-ts-commons/lib/strings";
 import { ConsultazioneSogliaIndicatoreResponse } from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
 import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
 import { Timestamp } from "../generated/definitions/Timestamp";
