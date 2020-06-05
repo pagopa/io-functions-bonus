@@ -192,13 +192,13 @@ definitions:
   MaxBonusAmount:
     description: Max bonus amount in euro cents
     type: integer
-    minimum: 0
-    maximum: 50000
+    minimum: 150
+    maximum: 500
   MaxBonusTaxBenefit:
     description: Max bonus tax benefit in euro cents
     type: integer
-    minimum: 0
-    maximum: 50000
+    minimum: 150
+    maximum: 500
   FamilyMember:
     type: object
     properties:
