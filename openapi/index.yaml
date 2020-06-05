@@ -190,15 +190,15 @@ definitions:
   ProblemJson:
     $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/ProblemJson"
   MaxBonusAmount:
-    description: Max bonus amount in euro cents
+    description: Max bonus amount in euro
     type: integer
-    minimum: 0
-    maximum: 50000
+    minimum: 150
+    maximum: 500
   MaxBonusTaxBenefit:
-    description: Max bonus tax benefit in euro cents
+    description: Max bonus tax benefit in euro
     type: integer
-    minimum: 0
-    maximum: 50000
+    minimum: 30
+    maximum: 100
   FamilyMember:
     type: object
     properties:
@@ -447,6 +447,9 @@ definitions:
         type: string
       DatiIndicatore:
         $ref: "#/definitions/DatiIndicatore"
+    required:
+      - IdRichiesta
+      - Esito
   DatiIndicatore:
     type: object
     properties:
