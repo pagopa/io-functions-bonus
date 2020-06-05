@@ -1,8 +1,6 @@
 import * as DocumentDb from "documentdb";
 import { isLeft, isRight } from "fp-ts/lib/Either";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
-import { EligibilityCheckStatusEnum } from "../../generated/definitions/EligibilityCheckStatus";
-import { EligibilityCheckSuccess } from "../../generated/definitions/EligibilityCheckSuccess";
 import {
   ELIGIBILITY_CHECK_COLLECTION_NAME,
   EligibilityCheckModel,
@@ -11,7 +9,11 @@ import {
 } from "../eligibility_check";
 
 import * as DocumentDbUtils from "io-functions-commons/dist/src/utils/documentdb";
-import { EligibilityCheck } from "../../generated/definitions/EligibilityCheck";
+import {
+  EligibilityCheck,
+  EligibilityCheckStatusEnum,
+  EligibilityCheckSuccess
+} from "../../types/EligibilityCheck";
 
 const aDatabaseUri = DocumentDbUtils.getDatabaseUri("mockdb" as NonEmptyString);
 const aCollectionUri = DocumentDbUtils.getCollectionUri(
@@ -22,9 +24,9 @@ const aCollectionUri = DocumentDbUtils.getCollectionUri(
 const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
 
 const aEligibilityCheckSuccess: EligibilityCheckSuccess = {
-  family_members: [
+  familyMembers: [
     {
-      fiscal_code: aFiscalCode,
+      fiscalCode: aFiscalCode,
       name: "Mario" as NonEmptyString,
       surname: "Rossi" as NonEmptyString
     }
