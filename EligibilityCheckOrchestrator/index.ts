@@ -48,7 +48,7 @@ const EligibilityCheckOrchestrator = df.orchestrator(function*(
 
   // send push notification with eligibility details
   yield context.df.callActivity(
-    "NotifyEligibilityCheck",
+    "NotifyEligibilityCheckActivity",
     eligibilityCheckResponse
   );
 
