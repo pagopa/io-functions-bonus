@@ -5,9 +5,9 @@ import { enumType } from "italia-ts-commons/lib/types";
 import { FamilyMember } from "./FamilyMember";
 
 export enum EligibilityCheckErrorEnum {
-  "INVALID_REQUEST",
-  "INTERNAL_ERROR",
-  "DATA_NOT_FOUND"
+  "INVALID_REQUEST" = "INVALID_REQUEST",
+  "INTERNAL_ERROR" = "INTERNAL_ERROR",
+  "DATA_NOT_FOUND" = "DATA_NOT_FOUND"
 }
 export type EligibilityCheckError = t.TypeOf<typeof EligibilityCheckError>;
 export const EligibilityCheckError = enumType<EligibilityCheckErrorEnum>(
