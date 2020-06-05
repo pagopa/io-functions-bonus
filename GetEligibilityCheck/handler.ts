@@ -147,6 +147,7 @@ export function GetEligibilityCheckHandler(): IGetEligibilityCheckHandler {
           // we stop the orchestrator here in order to avoid
           // sending a push notification with the same result
           await client.terminate(`${fiscalCode}-BV01DSU`, "Success");
+          // TODO: Check casting below
           return ResponseSuccessJson(_ as EligibilityCheck);
         }
       );

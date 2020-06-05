@@ -66,6 +66,7 @@ export const getEligibilityCheckActivityHandler = (
             })
           ),
         _ =>
+          // TODO: Check casting below
           Promise.resolve(({
             data: _,
             kind: "SUCCESS",
