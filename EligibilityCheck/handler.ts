@@ -41,8 +41,8 @@ export function EligibilityCheckHandler(): IEligibilityCheckHandler {
     try {
       await client.startNew(
         "EligibilityCheckOrchestrator",
-        fiscalCode,
-        `${fiscalCode}-BV01DSU`
+        `${fiscalCode}-BV01DSU`,
+        fiscalCode
       );
     } catch (err) {
       context.log.error(

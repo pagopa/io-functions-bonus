@@ -80,8 +80,9 @@ export function GetEligibilityCheckHandler(): IGetEligibilityCheckHandler {
     if (status.customStatus === "RUNNING") {
       return ResponseSuccessAccepted("Orchestrator already running");
     }
+    // TODO: Read DSU from cosmos
     return ActivityResultSuccess.decode(status.customStatus)
-      .map(({ data }) => {
+      .map(({ data, validBefore }) => {
         const bonusValue = calculateMaxBonusAmount(
           data.DatiIndicatore?.Componenti
             ? data.DatiIndicatore.Componenti.length
@@ -120,7 +121,8 @@ export function GetEligibilityCheckHandler(): IGetEligibilityCheckHandler {
             id: (fiscalCode as unknown) as NonEmptyString,
             max_amount: bonusValue,
             max_tax_benefit: calculateMaxBonusTaxBenefit(bonusValue),
-            status: EligibleStatus.ELIGIBLE
+            status: EligibleStatus.ELIGIBLE,
+            valid_before: validBefore
           });
         } else {
           return EligibilityCheckSuccessIneligible.encode({
@@ -145,7 +147,7 @@ export function GetEligibilityCheckHandler(): IGetEligibilityCheckHandler {
           // we stop the orchestrator here in order to avoid
           // sending a push notification with the same result
           await client.terminate(`${fiscalCode}-BV01DSU`, "Success");
-          return ResponseSuccessJson(_);
+          return ResponseSuccessJson(_ as EligibilityCheck);
         }
       );
   };
