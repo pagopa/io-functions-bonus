@@ -197,8 +197,8 @@ definitions:
   MaxBonusTaxBenefit:
     description: Max bonus tax benefit in euro cents
     type: integer
-    minimum: 150
-    maximum: 500
+    minimum: 30
+    maximum: 100
   FamilyMember:
     type: object
     properties:
