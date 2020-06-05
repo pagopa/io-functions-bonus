@@ -36,6 +36,7 @@ export function SendBonusActivationHandler(): ISendBonusActivationHandler {
     context: Context,
     input: unknown
   ): Promise<SendBonusActivationResult> => {
+    context.log.info(`SendBonusActivationActivity|INFO|Input: ${input}`);
     return await fromEither(
       FiscalCode.decode(input).mapLeft(
         err => new Error(`Error: [${readableReport(err)}]`)

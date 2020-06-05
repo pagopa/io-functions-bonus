@@ -1,10 +1,11 @@
 import { Context } from "@azure/functions";
 
-const UnlockBonusActivation = async (
+const UnlockBonusActivationActivity = async (
   context: Context,
   input: unknown
 ): Promise<unknown> => {
+  context.log.info(`UnlockBonusActivationActivity|INFO|Input: ${input}`);
   return true;
 };
 
-export default UnlockBonusActivation;
+export default UnlockBonusActivationActivity;
