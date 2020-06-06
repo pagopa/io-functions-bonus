@@ -21,6 +21,6 @@ export const unhandledValue = (input: never, retValue = input) => retValue;
  * Utility to perform exhaustive checks. It just throws, that means the path should not be possible
  * @param input the value to be checked
  */
-export const assertNever = (input: never) => {
+export const assertNever = (_: never) => {
   throw new Error(`Unhandled value`);
 };

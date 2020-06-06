@@ -11,10 +11,10 @@ import { DocumentDbModel } from "io-functions-commons/dist/src/utils/documentdb_
 import * as t from "io-ts";
 import { pick, tag } from "italia-ts-commons/lib/types";
 import { EligibilityCheck } from "../types/EligibilityCheck";
-import { keys, assertNever } from "../utils/types";
-import { EligibilityCheckSuccessEligible } from "../types/EligibilityCheckSuccessEligible";
 import { EligibilityCheckFailure } from "../types/EligibilityCheckFailure";
+import { EligibilityCheckSuccessEligible } from "../types/EligibilityCheckSuccessEligible";
 import { EligibilityCheckSuccessIneligible } from "../types/EligibilityCheckSuccessIneligible";
+import { assertNever, keys } from "../utils/types";
 
 export const ELIGIBILITY_CHECK_COLLECTION_NAME = "eligibility-checks";
 export const ELIGIBILITY_CHECK_MODEL_PK_FIELD = "id";
