@@ -6,8 +6,8 @@ import { either } from "fp-ts/lib/Either";
 import * as t from "io-ts";
 
 import {
-  EligibilityCheckSuccessEligible as EligibilityCheckSuccessEligibleApi,
-  StatusEnum as EligibilityCheckSuccessEligibleStatusEnumApi
+  EligibilityCheckSuccessEligible as ApiEligibilityCheckSuccessEligible,
+  StatusEnum as ApiEligibilityCheckSuccessEligibleStatusEnum
 } from "../../generated/definitions/EligibilityCheckSuccessEligible";
 import {
   EligibilityCheckSuccessEligible,
@@ -15,8 +15,8 @@ import {
 } from "../../generated/models/EligibilityCheckSuccessEligible";
 
 import {
-  EligibilityCheckSuccessIneligible as EligibilityCheckSuccessIneligibleApi,
-  StatusEnum as EligibilityCheckSuccessIneligibleStatusEnumApi
+  EligibilityCheckSuccessIneligible as ApiEligibilityCheckSuccessIneligible,
+  StatusEnum as ApiEligibilityCheckSuccessIneligibleStatusEnum
 } from "../../generated/definitions/EligibilityCheckSuccessIneligible";
 import {
   EligibilityCheckSuccessIneligible,
@@ -24,15 +24,15 @@ import {
 } from "../../generated/models/EligibilityCheckSuccessIneligible";
 
 import {
-  EligibilityCheckFailure as EligibilityCheckFailureApi,
-  ErrorEnum as EligibilityCheckFailureErrorEnumApi
+  EligibilityCheckFailure as ApiEligibilityCheckFailure,
+  ErrorEnum as ApiEligibilityCheckFailureErrorEnum
 } from "../../generated/definitions/EligibilityCheckFailure";
 import {
   EligibilityCheckFailure,
   ErrorEnum as EligibilityCheckFailureErrorEnum
 } from "../../generated/models/EligibilityCheckFailure";
 
-import { EligibilityCheck as EligibilityCheckApi } from "../../generated/definitions/EligibilityCheck";
+import { EligibilityCheck as ApiEligibilityCheck } from "../../generated/definitions/EligibilityCheck";
 import { EligibilityCheck } from "../../generated/models/EligibilityCheck";
 import { assertNever, unhandledValue } from "../types";
 
@@ -42,11 +42,11 @@ import { assertNever, unhandledValue } from "../types";
 const ModelEligibilityCheckSuccessEligibleFromApi = new t.Type<
   EligibilityCheckSuccessEligible,
   EligibilityCheckSuccessEligible,
-  EligibilityCheckSuccessEligibleApi
+  ApiEligibilityCheckSuccessEligible
 >(
   "ModelEligibilityCheckSuccessEligibleFromApi",
   EligibilityCheckSuccessEligible.is,
-  (apiObject: EligibilityCheckSuccessEligibleApi, c) => {
+  (apiObject: ApiEligibilityCheckSuccessEligible, c) => {
     try {
       const fromApiObject: EligibilityCheckSuccessEligible = {
         familyMembers: apiObject.family_members.map(fm => ({
@@ -75,15 +75,15 @@ const ModelEligibilityCheckSuccessEligibleFromApi = new t.Type<
  * Maps EligibilityCheckSuccessEligible domain object into a EligibilityCheckSuccessEligible api object
  */
 const ApiEligibilityCheckSuccessEligibleFromModel = new t.Type<
-  EligibilityCheckSuccessEligibleApi,
-  EligibilityCheckSuccessEligibleApi,
+  ApiEligibilityCheckSuccessEligible,
+  ApiEligibilityCheckSuccessEligible,
   EligibilityCheckSuccessEligible
 >(
   "ApiEligibilityCheckSuccessEligibleFromModel",
-  EligibilityCheckSuccessEligibleApi.is,
+  ApiEligibilityCheckSuccessEligible.is,
   (domainObject, c) => {
     try {
-      const fromDomainObject: EligibilityCheckSuccessEligibleApi = {
+      const fromDomainObject: ApiEligibilityCheckSuccessEligible = {
         family_members: domainObject.familyMembers.map(fm => ({
           fiscal_code: fm.fiscalCode,
           name: fm.name,
@@ -92,11 +92,11 @@ const ApiEligibilityCheckSuccessEligibleFromModel = new t.Type<
         id: domainObject.id,
         max_amount: domainObject.maxAmount,
         max_tax_benefit: domainObject.maxTaxBenefit,
-        status: EligibilityCheckSuccessEligibleStatusEnumApi.ELIGIBLE,
+        status: ApiEligibilityCheckSuccessEligibleStatusEnum.ELIGIBLE,
         valid_before: domainObject.validBefore
       };
       return either.chain(
-        EligibilityCheckSuccessEligibleApi.validate(fromDomainObject, c),
+        ApiEligibilityCheckSuccessEligible.validate(fromDomainObject, c),
         decoded => t.success(decoded)
       );
     } catch (error) {
@@ -112,11 +112,11 @@ const ApiEligibilityCheckSuccessEligibleFromModel = new t.Type<
 const ModelEligibilityCheckSuccessIneligibleFromApi = new t.Type<
   EligibilityCheckSuccessIneligible,
   EligibilityCheckSuccessIneligible,
-  EligibilityCheckSuccessIneligibleApi
+  ApiEligibilityCheckSuccessIneligible
 >(
   "ModelEligibilityCheckSuccessIneligibleFromApi",
   EligibilityCheckSuccessIneligible.is,
-  (apiObject: EligibilityCheckSuccessIneligibleApi, c) => {
+  (apiObject: ApiEligibilityCheckSuccessIneligible, c) => {
     try {
       const fromApiObject: EligibilityCheckSuccessIneligible = {
         id: apiObject.id,
@@ -137,20 +137,20 @@ const ModelEligibilityCheckSuccessIneligibleFromApi = new t.Type<
  * Maps EligibilityCheckSuccessIneligible domain object into a EligibilityCheckSuccessIneligible api object
  */
 const ApiEligibilityCheckSuccessIneligibleFromModel = new t.Type<
-  EligibilityCheckSuccessIneligibleApi,
-  EligibilityCheckSuccessIneligibleApi,
+  ApiEligibilityCheckSuccessIneligible,
+  ApiEligibilityCheckSuccessIneligible,
   EligibilityCheckSuccessIneligible
 >(
   "ApiEligibilityCheckSuccessIneligibleFromModel",
-  EligibilityCheckSuccessIneligibleApi.is,
+  ApiEligibilityCheckSuccessIneligible.is,
   (domainObject, c) => {
     try {
-      const fromDomainObject: EligibilityCheckSuccessIneligibleApi = {
+      const fromDomainObject: ApiEligibilityCheckSuccessIneligible = {
         id: domainObject.id,
-        status: EligibilityCheckSuccessIneligibleStatusEnumApi.INELIGIBLE
+        status: ApiEligibilityCheckSuccessIneligibleStatusEnum.INELIGIBLE
       };
       return either.chain(
-        EligibilityCheckSuccessIneligibleApi.validate(fromDomainObject, c),
+        ApiEligibilityCheckSuccessIneligible.validate(fromDomainObject, c),
         decoded => t.success(decoded)
       );
     } catch (error) {
@@ -166,25 +166,25 @@ const ApiEligibilityCheckSuccessIneligibleFromModel = new t.Type<
 const ModelEligibilityCheckFailureFromApi = new t.Type<
   EligibilityCheckFailure,
   EligibilityCheckFailure,
-  EligibilityCheckFailureApi
+  ApiEligibilityCheckFailure
 >(
   "ModelEligibilityCheckFailureFromApi",
   EligibilityCheckFailure.is,
-  (apiObject: EligibilityCheckFailureApi, c) => {
+  (apiObject: ApiEligibilityCheckFailure, c) => {
     try {
       const fromApiObject: EligibilityCheckFailure = {
         error:
           apiObject.error ===
-          EligibilityCheckFailureErrorEnumApi.DATABASE_OFFLINE
+          ApiEligibilityCheckFailureErrorEnum.DATABASE_OFFLINE
             ? EligibilityCheckFailureErrorEnum.DATABASE_OFFLINE
             : apiObject.error ===
-              EligibilityCheckFailureErrorEnumApi.DATA_NOT_FOUND
+              ApiEligibilityCheckFailureErrorEnum.DATA_NOT_FOUND
             ? EligibilityCheckFailureErrorEnum.DATA_NOT_FOUND
             : apiObject.error ===
-              EligibilityCheckFailureErrorEnumApi.INTERNAL_ERROR
+              ApiEligibilityCheckFailureErrorEnum.INTERNAL_ERROR
             ? EligibilityCheckFailureErrorEnum.INTERNAL_ERROR
             : apiObject.error ===
-              EligibilityCheckFailureErrorEnumApi.INVALID_REQUEST
+              ApiEligibilityCheckFailureErrorEnum.INVALID_REQUEST
             ? EligibilityCheckFailureErrorEnum.INVALID_REQUEST
             : unhandledValue(apiObject.error),
         errorDescription: apiObject.error_description,
@@ -205,34 +205,34 @@ const ModelEligibilityCheckFailureFromApi = new t.Type<
  * Maps EligibilityCheckFailure domain object into a EligibilityCheckFailure api object
  */
 const ApiEligibilityCheckFailureFromModel = new t.Type<
-  EligibilityCheckFailureApi,
-  EligibilityCheckFailureApi,
+  ApiEligibilityCheckFailure,
+  ApiEligibilityCheckFailure,
   EligibilityCheckFailure
 >(
   "ApiEligibilityCheckFailureFromModel",
-  EligibilityCheckFailureApi.is,
+  ApiEligibilityCheckFailure.is,
   (domainObject, c) => {
     try {
-      const fromDomainObject: EligibilityCheckFailureApi = {
+      const fromDomainObject: ApiEligibilityCheckFailure = {
         error:
           domainObject.error ===
           EligibilityCheckFailureErrorEnum.DATABASE_OFFLINE
-            ? EligibilityCheckFailureErrorEnumApi.DATABASE_OFFLINE
+            ? ApiEligibilityCheckFailureErrorEnum.DATABASE_OFFLINE
             : domainObject.error ===
               EligibilityCheckFailureErrorEnum.DATA_NOT_FOUND
-            ? EligibilityCheckFailureErrorEnumApi.DATA_NOT_FOUND
+            ? ApiEligibilityCheckFailureErrorEnum.DATA_NOT_FOUND
             : domainObject.error ===
               EligibilityCheckFailureErrorEnum.INTERNAL_ERROR
-            ? EligibilityCheckFailureErrorEnumApi.INTERNAL_ERROR
+            ? ApiEligibilityCheckFailureErrorEnum.INTERNAL_ERROR
             : domainObject.error ===
               EligibilityCheckFailureErrorEnum.INVALID_REQUEST
-            ? EligibilityCheckFailureErrorEnumApi.INVALID_REQUEST
+            ? ApiEligibilityCheckFailureErrorEnum.INVALID_REQUEST
             : unhandledValue(domainObject.error),
         error_description: domainObject.errorDescription,
         id: domainObject.id
       };
       return either.chain(
-        EligibilityCheckFailureApi.validate(fromDomainObject, c),
+        ApiEligibilityCheckFailure.validate(fromDomainObject, c),
         decoded => t.success(decoded)
       );
     } catch (error) {
@@ -248,17 +248,17 @@ const ApiEligibilityCheckFailureFromModel = new t.Type<
 export const ModelEligibilityCheckFromApi = new t.Type<
   EligibilityCheck,
   EligibilityCheck,
-  EligibilityCheckApi
+  ApiEligibilityCheck
 >(
   "ModelEligibilityCheckFromApi",
   EligibilityCheck.is,
-  (apiObject: EligibilityCheckApi, c) => {
+  (apiObject: ApiEligibilityCheck, c) => {
     try {
-      return EligibilityCheckSuccessEligibleApi.is(apiObject)
+      return ApiEligibilityCheckSuccessEligible.is(apiObject)
         ? ModelEligibilityCheckSuccessEligibleFromApi.decode(apiObject)
-        : EligibilityCheckSuccessIneligibleApi.is(apiObject)
+        : ApiEligibilityCheckSuccessIneligible.is(apiObject)
         ? ModelEligibilityCheckSuccessIneligibleFromApi.decode(apiObject)
-        : EligibilityCheckFailureApi.is(apiObject)
+        : ApiEligibilityCheckFailure.is(apiObject)
         ? ModelEligibilityCheckFailureFromApi.decode(apiObject)
         : assertNever(apiObject);
     } catch (error) {
@@ -272,12 +272,12 @@ export const ModelEligibilityCheckFromApi = new t.Type<
  * Maps EligibilityCheck domain object into a EligibilityCheck api object
  */
 export const ApiEligibilityCheckFromModel = new t.Type<
-  EligibilityCheckApi,
-  EligibilityCheckApi,
+  ApiEligibilityCheck,
+  ApiEligibilityCheck,
   EligibilityCheck
 >(
   "EligibilityCheckToApiObject",
-  EligibilityCheckApi.is,
+  ApiEligibilityCheck.is,
   (domainObject, c) => {
     try {
       return EligibilityCheckSuccessEligible.is(domainObject)
