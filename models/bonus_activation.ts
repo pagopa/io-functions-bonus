@@ -64,21 +64,4 @@ export class BonusActivationModel extends DocumentDbModel<
   ) {
     super(dbClient, collectionUrl, toBaseType, toRetrieved);
   }
-
-  public deleteOneById(
-    documentId: BonusActivation["id"]
-  ): Promise<Either<DocumentDb.QueryError, string>> {
-    const documentUri = DocumentDbUtils.getDocumentUri(
-      this.collectionUri,
-      documentId
-    );
-    return new Promise(resolve =>
-      this.dbClient.deleteDocument(
-        documentUri.uri,
-        { partitionKey: documentId },
-        (err: DocumentDb.QueryError) =>
-          resolve(err ? left(err) : right(documentId))
-      )
-    );
-  }
 }
