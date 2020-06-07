@@ -6,15 +6,15 @@ import { EligibilityCheck as EligibilityCheckApi } from "../../../generated/defi
 import {
   EligibilityCheckFailure,
   ErrorEnum as EligibilityCheckFailureErrorEnum
-} from "../../../types/EligibilityCheckFailure";
+} from "../../../generated/models/EligibilityCheckFailure";
 import {
   EligibilityCheckSuccessEligible,
   StatusEnum as EligibilityCheckSuccessEligibleStatusEnum
-} from "../../../types/EligibilityCheckSuccessEligible";
+} from "../../../generated/models/EligibilityCheckSuccessEligible";
 import {
   EligibilityCheckSuccessIneligible,
   StatusEnum as EligibilityCheckSuccessIneligibleStatusEnum
-} from "../../../types/EligibilityCheckSuccessIneligible";
+} from "../../../generated/models/EligibilityCheckSuccessIneligible";
 
 import {
   EligibilityCheckFailure as EligibilityCheckFailureApi,
@@ -28,7 +28,7 @@ import {
   EligibilityCheckSuccessIneligible as EligibilityCheckSuccessIneligibleApi,
   StatusEnum as EligibilityCheckSuccessIneligibleEnumApi
 } from "../../../generated/definitions/EligibilityCheckSuccessIneligible";
-import { EligibilityCheck } from "../../../types/EligibilityCheck";
+import { EligibilityCheck } from "../../../generated/models/EligibilityCheck";
 import {
   ApiEligibilityCheckFromModel,
   ModelEligibilityCheckFromApi

@@ -9,11 +9,11 @@ import {
 } from "../eligibility_check";
 
 import * as DocumentDbUtils from "io-functions-commons/dist/src/utils/documentdb";
-import {
-  EligibilityCheck,
-  EligibilityCheckStatusEnum,
-  EligibilityCheckSuccess
-} from "../../types/EligibilityCheck";
+import { EligibilityCheck } from "../../generated/models/EligibilityCheck";
+import { EligibilityCheckSuccess } from "../../generated/models/EligibilityCheckSuccess";
+import { StatusEnum as EligibilityCheckSuccessEligibleStatus } from "../../generated/models/EligibilityCheckSuccessEligible";
+import { MaxBonusAmount } from "../../generated/models/MaxBonusAmount";
+import { MaxBonusTaxBenefit } from "../../generated/models/MaxBonusTaxBenefit";
 
 const aDatabaseUri = DocumentDbUtils.getDatabaseUri("mockdb" as NonEmptyString);
 const aCollectionUri = DocumentDbUtils.getCollectionUri(
@@ -32,7 +32,10 @@ const aEligibilityCheckSuccess: EligibilityCheckSuccess = {
     }
   ],
   id: (aFiscalCode as unknown) as NonEmptyString,
-  status: EligibilityCheckStatusEnum.ELIGIBLE
+  maxAmount: 100 as MaxBonusAmount,
+  maxTaxBenefit: 10 as MaxBonusTaxBenefit,
+  status: EligibilityCheckSuccessEligibleStatus.ELIGIBLE,
+  validBefore: new Date()
 };
 
 const aEligibilityCheck: EligibilityCheck = aEligibilityCheckSuccess;
