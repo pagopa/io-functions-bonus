@@ -640,6 +640,13 @@
   dependencies:
     jest-diff "^24.3.0"
 
+"@types/kind-of@^6.0.0":
+  version "6.0.0"
+  resolved "https://registry.yarnpkg.com/@types/kind-of/-/kind-of-6.0.0.tgz#593c38a268b203a9b736a1c3a32e902a91b6db24"
+  integrity sha512-OBts6MHCrq558cvND5nsWhoThwJaNu5lmGnSp3H0gFzQQc5QYM9p7HajIdS+2bgDquGX1qLZCPlyuYSxMDffAg==
+  dependencies:
+    "@types/node" "*"
+
 "@types/lodash@^4.14.119":
   version "4.14.152"
   resolved "https://registry.yarnpkg.com/@types/lodash/-/lodash-4.14.152.tgz#7e7679250adce14e749304cdb570969f77ec997c"
@@ -4482,10 +4489,10 @@ italia-tslint-rules@*:
     tslint-sonarts "^1.9.0"
     typestrict "^1.0.2"
 
-italia-utils@^4.1.0:
-  version "4.1.0"
-  resolved "https://registry.yarnpkg.com/italia-utils/-/italia-utils-4.1.0.tgz#1f610776cfbdc56651b6e7c2b36bcb3a6666e5de"
-  integrity sha512-Qg3ydl2DnGwRp+4JahflkyfPD35oXtUh3y/R54qjNV7xQ2FJEwDnXyG743F71KTG1LF8Gw2hTSqo6yAf336iwA==
+italia-utils@^4.2.0:
+  version "4.2.0"
+  resolved "https://registry.yarnpkg.com/italia-utils/-/italia-utils-4.2.0.tgz#dffcbb66c896c06f6b4d17bf6090a478736c7736"
+  integrity sha512-C6Pbyz7AUdFIMQ85+vxyRu/lfkG7trVrf6U6YzScnLeHssJCWCpf7OffQ33qCtp78B6roQr5Tdl+SyGDCD/4/w==
   dependencies:
     fs-extra "^6.0.0"
     italia-ts-commons "^5.0.1"
@@ -5412,7 +5419,7 @@ kind-of@^5.0.0:
   resolved "https://registry.yarnpkg.com/kind-of/-/kind-of-5.1.0.tgz#729c91e2d857b7a419a1f9aa65685c4c33f5845d"
   integrity sha512-NGEErnH6F2vUuXDh+OlbcKW7/wOcfdRHaZ7VWtqCztfHri/++YKmP51OdWeGPuqCOba6kk2OTe5d02VmTB80Pw==
 
-kind-of@^6.0.0, kind-of@^6.0.2:
+kind-of@^6.0.0, kind-of@^6.0.2, kind-of@^6.0.3:
   version "6.0.3"
   resolved "https://registry.yarnpkg.com/kind-of/-/kind-of-6.0.3.tgz#07c05034a6c349fa06e24fa35aa76db4580ce4dd"
   integrity sha512-dcS1ul+9tmeD95T+x28/ehLgd9mENa3LsvDTtzm3vyBEO7RPptvAD+t44WVXaUjTBRcrpFeFlC8WCruUR456hw==

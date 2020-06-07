@@ -13,7 +13,9 @@
     "start": "func start --javascript",
     "predev": "npm-run-all generate build",
     "dev": "npm-run-all --parallel start watch",
+    "pretest": "npm-run-all generate:*",
     "test": "jest",
+    "pretest:coverage": "npm-run-all generate:*",
     "test:coverage": "jest --coverage",
     "lint": "tslint -p .",
     "lint-api": "oval validate -p openapi/index.yaml",
@@ -21,6 +23,7 @@
     "dist:zip": "zip -r dist.zip . --exclude @.funcignore --exclude .funcignore",
     "predeploy": "npm-run-all generate build dist:modules",
     "generate:definitions": "shx rm -rf ./generated/definitions && shx mkdir -p ./generated/definitions && gen-api-models --request-types --api-spec ./openapi/index.yaml --out-dir ./generated/definitions",
+    "generate:models": "shx rm -rf ./generated/models && shx mkdir -p ./generated/models && gen-api-models --camel-cased --api-spec ./openapi/index.yaml --out-dir ./generated/models",
     "generate": "npm-run-all generate:*"
   },
   "devDependencies": {
@@ -36,7 +39,7 @@
     "danger": "^4.0.2",
     "danger-plugin-digitalcitizenship": "^0.3.1",
     "italia-tslint-rules": "*",
-    "italia-utils": "^4.1.0",
+    "italia-utils": "^4.2.0",
     "jest": "^24.8.0",
     "jest-mock-express": "^0.1.1",
     "js-yaml": "^3.14.0",
