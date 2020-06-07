@@ -10,10 +10,10 @@ import * as DocumentDbUtils from "io-functions-commons/dist/src/utils/documentdb
 import { DocumentDbModel } from "io-functions-commons/dist/src/utils/documentdb_model";
 import * as t from "io-ts";
 import { pick, tag } from "italia-ts-commons/lib/types";
-import { EligibilityCheck } from "../types/EligibilityCheck";
-import { EligibilityCheckFailure } from "../types/EligibilityCheckFailure";
-import { EligibilityCheckSuccessEligible } from "../types/EligibilityCheckSuccessEligible";
-import { EligibilityCheckSuccessIneligible } from "../types/EligibilityCheckSuccessIneligible";
+import { EligibilityCheck } from "../generated/models/EligibilityCheck";
+import { EligibilityCheckFailure } from "../generated/models/EligibilityCheckFailure";
+import { EligibilityCheckSuccessEligible } from "../generated/models/EligibilityCheckSuccessEligible";
+import { EligibilityCheckSuccessIneligible } from "../generated/models/EligibilityCheckSuccessIneligible";
 import { assertNever, keys } from "../utils/types";
 
 export const ELIGIBILITY_CHECK_COLLECTION_NAME = "eligibility-checks";

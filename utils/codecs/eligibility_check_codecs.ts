@@ -12,7 +12,7 @@ import {
 import {
   EligibilityCheckSuccessEligible,
   StatusEnum as EligibilityCheckSuccessEligibleStatusEnum
-} from "../../types/EligibilityCheckSuccessEligible";
+} from "../../generated/models/EligibilityCheckSuccessEligible";
 
 import {
   EligibilityCheckSuccessIneligible as EligibilityCheckSuccessIneligibleApi,
@@ -21,7 +21,7 @@ import {
 import {
   EligibilityCheckSuccessIneligible,
   StatusEnum as EligibilityCheckSuccessIneligibleStatusEnum
-} from "../../types/EligibilityCheckSuccessIneligible";
+} from "../../generated/models/EligibilityCheckSuccessIneligible";
 
 import {
   EligibilityCheckFailure as EligibilityCheckFailureApi,
@@ -30,10 +30,10 @@ import {
 import {
   EligibilityCheckFailure,
   ErrorEnum as EligibilityCheckFailureErrorEnum
-} from "../../types/EligibilityCheckFailure";
+} from "../../generated/models/EligibilityCheckFailure";
 
 import { EligibilityCheck as EligibilityCheckApi } from "../../generated/definitions/EligibilityCheck";
-import { EligibilityCheck } from "../../types/EligibilityCheck";
+import { EligibilityCheck } from "../../generated/models/EligibilityCheck";
 import { assertNever, unhandledValue } from "../types";
 
 /**
