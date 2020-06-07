@@ -1,16 +1,19 @@
-﻿import { AzureFunction, Context } from "@azure/functions";
+import { AzureFunction, Context } from "@azure/functions";
 import * as express from "express";
 import { secureExpressApp } from "io-functions-commons/dist/src/utils/express";
 import { setAppContext } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import createAzureFunctionHandler from "io-functions-express/dist/src/createAzureFunctionsHandler";
-import { EligibilityCheck } from "./handler";
+import { StartBonusActivation } from "./handler";
 
 // Setup Express
 const app = express();
 secureExpressApp(app);
 
 // Add express route
-app.post("/api/v1/bonus/vacanze/eligibility/:fiscalcode", EligibilityCheck());
+app.post(
+  "/api/v1/bonus/vacanze/activations/:fiscalcode",
+  StartBonusActivation()
+);
 
 const azureFunctionHandler = createAzureFunctionHandler(app);
 
