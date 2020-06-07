@@ -5,7 +5,7 @@ import { DocumentDbModel } from "io-functions-commons/dist/src/utils/documentdb_
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { pick, tag } from "italia-ts-commons/lib/types";
-import { BonusActivation } from "../generated/definitions/BonusActivation";
+import { BonusActivation } from "../generated/models/BonusActivation";
 import { keys } from "../utils/types";
 
 export const BONUS_ACTIVATION_COLLECTION_NAME = "bonus-activations";
