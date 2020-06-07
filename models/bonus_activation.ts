@@ -1,5 +1,4 @@
 import * as DocumentDb from "documentdb";
-import { Either, left, right } from "fp-ts/lib/Either";
 import * as DocumentDbUtils from "io-functions-commons/dist/src/utils/documentdb";
 import { DocumentDbModel } from "io-functions-commons/dist/src/utils/documentdb_model";
 import * as t from "io-ts";
@@ -9,6 +8,10 @@ import { BonusActivation } from "../generated/models/BonusActivation";
 import { keys } from "../utils/types";
 
 export const BONUS_ACTIVATION_COLLECTION_NAME = "bonus-activations";
+
+// familyUID = hash(CF1, CF2, ..., "BVC01")
+// computed on all family members as returned from the eligibility check
+// when successfull and user is eligible
 export const BONUS_ACTIVATION_MODEL_PK_FIELD = "id";
 
 interface IRetrievedBonusActivation {
