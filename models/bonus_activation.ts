@@ -9,9 +9,7 @@ import { keys } from "../utils/types";
 
 export const BONUS_ACTIVATION_COLLECTION_NAME = "bonus-activations";
 
-// familyUID = hash(CF1, CF2, ..., "BVC01")
-// computed on all family members as returned from the eligibility check
-// when successfull and user is eligible
+// 12 characters unique ID
 export const BONUS_ACTIVATION_MODEL_PK_FIELD = "id";
 
 interface IRetrievedBonusActivation {
