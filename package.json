@@ -13,6 +13,7 @@
     "start": "func start --javascript",
     "predev": "npm-run-all generate build",
     "dev": "npm-run-all --parallel start watch",
+    "pretest": "npm-run-all generate:*",
     "test": "jest",
     "test:coverage": "jest --coverage",
     "lint": "tslint -p .",
