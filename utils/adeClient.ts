@@ -1,3 +1,7 @@
+/**
+ * Http client to interact with ADE API
+ */
+
 import {
   ApiHeaderJson,
   createFetchRequestForApi,
