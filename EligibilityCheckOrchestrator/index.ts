@@ -6,6 +6,7 @@
 
 import { addSeconds } from "date-fns";
 import * as df from "durable-functions";
+import { ActivityResult as DeleteEligibilityCheckActivityResult } from "../DeleteEligibilityCheckActivity/handler";
 import { ActivityResult } from "../EligibilityCheckActivity/handler";
 
 const NOTIFICATION_DELAY_SECONDS = 10;
@@ -20,8 +21,20 @@ const EligibilityCheckOrchestrator = df.orchestrator(function*(
     maxRetryIntervalInMilliseconds: 3600 * 100,
     retryTimeoutInMilliseconds: 3600 * 1000
   };
-  // TODO: Delete dsu record if exists
   context.df.setCustomStatus("RUNNING");
+  const deleteEligibilityCheckResponse = yield context.df.callActivity(
+    "DeleteEligibilityCheckActivity",
+    context.df.getInput()
+  );
+
+  DeleteEligibilityCheckActivityResult.decode(
+    deleteEligibilityCheckResponse
+  ).map(_ => {
+    if (_.kind === "FAILURE") {
+      context.log.error(`EligibilityCheckOrchestrator|ERROR|${_.reason}`);
+    }
+  });
+
   const undecodedEligibilityCheckResponse = yield context.df.callActivityWithRetry(
     "EligibilityCheckActivity",
     retryOptions,
@@ -31,10 +44,10 @@ const EligibilityCheckOrchestrator = df.orchestrator(function*(
     undecodedEligibilityCheckResponse
   ).getOrElse({
     kind: "FAILURE",
-    reason: " ActivityResult decoding error"
+    reason: "ActivityResult decoding error"
   });
   yield context.df.callActivityWithRetry(
-    "SaveDSUActivity",
+    "SaveEligibilityCheckActivity",
     retryOptions,
     eligibilityCheckResponse
   );

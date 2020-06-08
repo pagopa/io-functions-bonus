@@ -19,6 +19,7 @@ import {
   ResponseSuccessJson
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import { eligibilityCheckOrchestratorSuffix } from "../EligibilityCheck/handler";
 import { ActivityResultSuccess } from "../EligibilityCheckActivity/handler";
 import { EsitoEnum } from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
 import { EligibilityCheck } from "../generated/definitions/EligibilityCheck";
@@ -76,7 +77,9 @@ function calculateMaxBonusTaxBenefit(
 export function GetEligibilityCheckHandler(): IGetEligibilityCheckHandler {
   return async (context, fiscalCode) => {
     const client = df.getClient(context);
-    const status = await client.getStatus(`${fiscalCode}-BV01DSU`);
+    const status = await client.getStatus(
+      `${fiscalCode}${eligibilityCheckOrchestratorSuffix}`
+    );
     if (status.customStatus === "RUNNING") {
       return ResponseSuccessAccepted("Orchestrator already running");
     }
@@ -153,7 +156,10 @@ export function GetEligibilityCheckHandler(): IGetEligibilityCheckHandler {
           // Since we're sending the result to the frontend,
           // we stop the orchestrator here in order to avoid
           // sending a push notification with the same result
-          await client.terminate(`${fiscalCode}-BV01DSU`, "Success");
+          await client.terminate(
+            `${fiscalCode}${eligibilityCheckOrchestratorSuffix}`,
+            "Success"
+          );
           // TODO: Check casting below
           return ResponseSuccessJson(_ as EligibilityCheck);
         }

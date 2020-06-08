@@ -29,13 +29,15 @@ type IStartBonusActivationHandler = (
   | IResponseErrorConflict
 >;
 
-export const orchestratorSuffix = "-BV01ACTIVATION";
+export const activationOrchestratorSuffix = "-BV01ACTIVATION";
 
 export function StartBonusActivationHandler(): IStartBonusActivationHandler {
   return async (context, fiscalCode) => {
     // TODO: Add implementation
     const client = df.getClient(context);
-    const status = await client.getStatus(`${fiscalCode}${orchestratorSuffix}`);
+    const status = await client.getStatus(
+      `${fiscalCode}${activationOrchestratorSuffix}`
+    );
     if (status.runtimeStatus === df.OrchestrationRuntimeStatus.Running) {
       return ResponseSuccessAccepted();
     }
