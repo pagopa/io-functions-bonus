@@ -98,7 +98,7 @@ paths:
             and retry to activate the bonus within 24h since she got the result.
         "409":
           description: |
-            Cannot activate a new bonus because another active or consumed
+            Cannot activate a new bonus because another active or redeemed
             bonus related to this user was found.
         "500":
           description: Service unavailable.
@@ -342,13 +342,13 @@ definitions:
       - ACTIVE      The bonus has been successfully activated;
                     the bonus activtion procedure can't be restarted anymore
       - FAILED      The bonus activation procedure failed and can be restarted
-      - CONSUMED    The bonus is redeemed by the user or by any member of the family;
+      - REDEEMED    The bonus is redeemed by the user or by any member of the family;
                     the bonus activtion procedure can't be restarted anymore
     x-extensible-enum:
       - PROCESSING
       - ACTIVE
       - FAILED
-      - CONSUMED
+      - REDEEMED
   BonusActivationDsu:
     allOf:
       - $ref: "#/definitions/EligibilityCheckSuccessEligible"
