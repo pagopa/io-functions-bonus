@@ -2,7 +2,6 @@ import * as DocumentDb from "documentdb";
 import * as DocumentDbUtils from "io-functions-commons/dist/src/utils/documentdb";
 import { DocumentDbModel } from "io-functions-commons/dist/src/utils/documentdb_model";
 import * as t from "io-ts";
-import { readableReport } from "italia-ts-commons/lib/reporters";
 import { pick, tag } from "italia-ts-commons/lib/types";
 import { BonusActivation } from "../generated/models/BonusActivation";
 import { keys } from "../utils/types";
@@ -33,18 +32,14 @@ export type NewBonusActivation = t.TypeOf<typeof NewBonusActivation>;
 function toRetrieved(
   result: DocumentDb.RetrievedDocument
 ): RetrievedBonusActivation {
-  return RetrievedBonusActivation.decode(result).getOrElseL(errs => {
-    throw new Error(
-      `Retrieved result wasn't a RetrievedBonusActivation: ${readableReport(
-        errs
-      )}`
-    );
-  });
+  return {
+    ...result,
+    kind: "IRetrievedBonusActivation"
+  } as RetrievedBonusActivation;
 }
 
 function toBaseType(o: RetrievedBonusActivation): BonusActivation {
   // removes attributes of RetrievedBonusActivation which aren't of BonusActivation
-  // TODO: try to use BonusActivation.encode(o)
   return pick(keys(BonusActivation._A), o);
 }
 
