@@ -16,6 +16,7 @@ produces:
 paths:
  /richiestaBonus:
     post:
+      operationId: richiestaBonus
       description: servizio di allineamento PagoPa, Agenzia Entrate
       parameters:
         - name: richiestaBonus
