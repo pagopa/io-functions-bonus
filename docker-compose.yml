@@ -78,13 +78,13 @@ services:
     env_file:
       - .env
     environment: 
-      - PORT=50777
+      - PORT=3003
       - HOST=0.0.0.0
     build:
       context: ./
       dockerfile: docker/inps/Dockerfile
     ports:
-      - 50777:50777
+      - 3003:3003
     networks:
       - io-fn
 
