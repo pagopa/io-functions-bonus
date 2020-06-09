@@ -117,10 +117,17 @@ export function GetEligibilityCheckHandler(): IGetEligibilityCheckHandler {
 
         if (data.DatiIndicatore?.SottoSoglia === SiNoTypeEnum.SI) {
           return EligibilityCheckSuccessEligible.encode({
+            dsu_created_at: data.DatiIndicatore.DataPresentazioneDSU,
+            dsu_protocol_id: (data.DatiIndicatore.ProtocolloDSU ||
+              "") as NonEmptyString,
             family_members: familyMembers,
+            has_discrepancies:
+              data.DatiIndicatore.PresenzaDifformita === SiNoTypeEnum.SI,
             id: (fiscalCode as unknown) as NonEmptyString,
+            isee_type: data.DatiIndicatore.TipoIndicatore,
             max_amount: bonusValue,
             max_tax_benefit: calculateMaxBonusTaxBenefit(bonusValue),
+            request_id: data.IdRichiesta.toString() as NonEmptyString,
             status: EligibleStatus.ELIGIBLE,
             valid_before: validBefore
           });
