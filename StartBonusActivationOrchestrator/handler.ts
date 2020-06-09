@@ -6,14 +6,14 @@ import {
 import { isLeft } from "fp-ts/lib/Either";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { BonusActivation } from "../generated/models/BonusActivation";
 import { SendBonusActivationFailure } from "../SendBonusActivationActivity/handler";
+import { toApiBonusVacanzaBase } from "../utils/conversions";
 
 export const OrchestratorInput = t.interface({
-  familyUID: t.string,
-  fiscalCode: FiscalCode
+  bonusActivationRequest: BonusActivation,
+  familyUID: t.string
 });
-
 export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
 
 export const handler = function*(
@@ -34,6 +34,20 @@ export const handler = function*(
     );
     return false;
   }
+  const errorOrBonusVacanzaBase = toApiBonusVacanzaBase(
+    errorOrStartBonusActivationOrchestratorInput.value.bonusActivationRequest
+  );
+  if (isLeft(errorOrBonusVacanzaBase)) {
+    context.log.error(`${logPrefix}|Error decoding bonus activation request`);
+    context.log.verbose(
+      `${logPrefix}|Error decoding bonus activation request|ERROR=${readableReport(
+        errorOrBonusVacanzaBase.value
+      )}`
+    );
+    return false;
+  }
+
+  // Send bonus details to ADE rest service
   const undecodedSendBonusActivation = yield context.df.callActivityWithRetry(
     "SendBonusActivationActivity",
     {
@@ -43,8 +57,9 @@ export const handler = function*(
       maxRetryIntervalInMilliseconds: 3600 * 100,
       retryTimeoutInMilliseconds: 3600 * 1000
     },
-    errorOrStartBonusActivationOrchestratorInput.value
+    errorOrBonusVacanzaBase.value
   );
+
   if (SendBonusActivationFailure.is(undecodedSendBonusActivation)) {
     yield context.df.callActivity(
       "FailedBonusActivationActivity",

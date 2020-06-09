@@ -3,7 +3,8 @@
  */
 
 import { Either } from "fp-ts/lib/Either";
-import { Errors } from "io-ts";
+import * as t from "io-ts";
+import { BonusVacanzaBase as ApiBonusVacanzaBase } from "../generated/ade/BonusVacanzaBase";
 import { BonusActivation as ApiBonusActivation } from "../generated/definitions/BonusActivation";
 import { EligibilityCheck as ApiEligibilityCheck } from "../generated/definitions/EligibilityCheck";
 import { BonusActivation } from "../generated/models/BonusActivation";
@@ -16,7 +17,7 @@ import { camelCaseToSnakeCase, snakeCaseToCamelCase } from "./strings";
  */
 export const toModelEligibilityCheck = (
   apiObj: ApiEligibilityCheck
-): Either<Errors, EligibilityCheck> => {
+): Either<t.Errors, EligibilityCheck> => {
   const camelCasedUntypedObj = renameObjectKeys(apiObj, k =>
     snakeCaseToCamelCase(k)
   );
@@ -28,7 +29,7 @@ export const toModelEligibilityCheck = (
  */
 export const toApiEligibilityCheck = (
   domainObj: EligibilityCheck
-): Either<Errors, ApiEligibilityCheck> => {
+): Either<t.Errors, ApiEligibilityCheck> => {
   const snakeCasedUntypedObj = renameObjectKeys(domainObj, k =>
     camelCaseToSnakeCase(k)
   );
@@ -40,7 +41,7 @@ export const toApiEligibilityCheck = (
  */
 export const toModelBonusActivation = (
   apiObj: ApiBonusActivation
-): Either<Errors, BonusActivation> => {
+): Either<t.Errors, BonusActivation> => {
   const camelCasedUntypedObj = renameObjectKeys(apiObj, k =>
     snakeCaseToCamelCase(k)
   );
@@ -52,9 +53,27 @@ export const toModelBonusActivation = (
  */
 export const toApiBonusActivation = (
   domainObj: BonusActivation
-): Either<Errors, ApiBonusActivation> => {
+): Either<t.Errors, ApiBonusActivation> => {
   const snakeCasedUntypedObj = renameObjectKeys(domainObj, k =>
     camelCaseToSnakeCase(k)
   );
   return ApiBonusActivation.decode(snakeCasedUntypedObj);
+};
+
+/**
+ * Maps BonusActivation domain object into an ADE BonusVacanzaBase API object
+ */
+export const toApiBonusVacanzaBase = (
+  domainObject: BonusActivation
+): Either<t.Errors, ApiBonusVacanzaBase> => {
+  return ApiBonusVacanzaBase.decode({
+    codiceBuono: domainObject.code,
+    codiceFiscaleDichiarante: domainObject.applicantFiscalCode,
+    dataGenerazione: domainObject.updatedAt.toISOString(),
+    flagDifformitaIsee: domainObject.dsuRequest.hasDiscrepancies ? 1 : 0,
+    importoMassimo: domainObject.dsuRequest.maxAmount,
+    nucleoFamiliare: domainObject.dsuRequest.familyMembers.map(_ => ({
+      codiceFiscale: _.fiscalCode
+    }))
+  });
 };
