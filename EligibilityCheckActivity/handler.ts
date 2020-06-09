@@ -4,6 +4,7 @@ import { fromEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "io-functions-commons/dist/generated/definitions/FiscalCode";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
+import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { ConsultazioneSogliaIndicatoreResponse } from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
 import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
 import { Timestamp } from "../generated/definitions/Timestamp";
@@ -12,6 +13,7 @@ import { ISoapClientAsync } from "../utils/inpsSoapClient";
 // Activity result
 export const ActivityResultSuccess = t.interface({
   data: ConsultazioneSogliaIndicatoreResponse,
+  fiscalCode: NonEmptyString,
   kind: t.literal("SUCCESS"),
   validBefore: Timestamp
 });
@@ -44,34 +46,35 @@ export const getEligibilityCheckActivityHandler = (
       )
     )
       .chain(fiscalCode => {
-        return soapClientAsync.ConsultazioneSogliaIndicatore({
-          CodiceFiscale: fiscalCode,
-          CodiceSoglia: "BVAC01", // Value for `Bonus Vacanze 2020` @see https://docs.google.com/document/d/1k-oWVK7Qs-c42b5HW4ild6rzpbQFDJ-f
-          FornituraNucleo: SiNoTypeEnum.SI
-        });
+        return soapClientAsync
+          .ConsultazioneSogliaIndicatore({
+            CodiceFiscale: fiscalCode,
+            CodiceSoglia: "BVAC01", // Value for `Bonus Vacanze 2020` @see https://docs.google.com/document/d/1k-oWVK7Qs-c42b5HW4ild6rzpbQFDJ-f
+            FornituraNucleo: SiNoTypeEnum.SI
+          })
+          .map(_ => ({ dsu: _, fiscalCode }));
       })
       .mapLeft(err => {
-        const errorMessage = `EligibilityCheckActivity|ERROR|${err}`;
-        context.log.error(errorMessage);
-        return errorMessage;
+        context.log.error(`EligibilityCheckActivity|ERROR|${err}`);
+        return err;
       })
       .fold(
-        errorMessage =>
+        err =>
           // Reject fail the Activity execution
           // If called with `callActivityWithRetry` the execution will be restarted
           Promise.reject(
             ActivityResultFailure.encode({
               kind: "FAILURE",
-              reason: errorMessage
+              reason: err.message
             })
           ),
         _ =>
-          // TODO: Check casting below
-          Promise.resolve(({
-            data: _,
-            kind: "SUCCESS",
+          Promise.resolve({
+            data: _.dsu,
+            fiscalCode: (_.fiscalCode as unknown) as NonEmptyString,
+            kind: "SUCCESS" as "SUCCESS",
             validBefore: addHours(new Date(), 24)
-          } as unknown) as ActivityResultSuccess)
+          })
       )
       .run();
   };

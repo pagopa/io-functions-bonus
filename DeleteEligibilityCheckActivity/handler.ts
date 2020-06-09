@@ -1,6 +1,8 @@
 import { Context } from "@azure/functions";
+import { left, right } from "fp-ts/lib/Either";
 import { fromEither, tryCatch } from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
+import { readableReport } from "italia-ts-commons/lib/reporters";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { EligibilityCheckModel } from "../models/eligibility_check";
 
@@ -25,43 +27,48 @@ export const ActivityResult = t.taggedUnion("kind", [
 export type ActivityResult = t.TypeOf<typeof ActivityResult>;
 
 /**
- * Call INPS webservice to read the ISEE information
+ * Delete Eligibility Check from cosmos
  */
 export const getDeleteEligibilityCheckActivityHandler = (
   eligibilityCheckModel: EligibilityCheckModel
 ) => {
   return async (context: Context, input: unknown): Promise<ActivityResult> => {
-    const fiscalCode = NonEmptyString.decode(input).fold(
-      e => {
-        throw e;
-      },
-      _ => _
-    );
-    // TODO: Read first delete is required?
-    return tryCatch(
-      () => eligibilityCheckModel.deleteOneById(fiscalCode),
-      err => new Error(`Error deleting EligibilityCheck: [${err}]`)
-    )
-      .chain(_ =>
-        fromEither(_).mapLeft(err => new Error(`QueryError: [${err}]`))
+    return fromEither(
+      NonEmptyString.decode(input).mapLeft(
+        err => new Error(`Invalid Activity input: [${readableReport(err)}]`)
       )
-      .fold<Promise<ActivityResult>>(
-        errorMessage =>
-          // Reject fail the Activity execution
-          // If called with `callActivityWithRetry` the execution will be restarted
-          Promise.resolve(
-            ActivityResultFailure.encode({
-              kind: "FAILURE",
-              reason: errorMessage.message
-            })
-          ),
-        _ =>
-          // TODO: Check casting below
-          Promise.resolve(
-            ActivityResultSuccess.encode({
-              kind: "SUCCESS"
-            })
+    )
+      .chain(fiscalCode =>
+        tryCatch(
+          () => eligibilityCheckModel.deleteOneById(fiscalCode),
+          err => new Error(`Error deleting EligibilityCheck: [${err}]`)
+        ).chain(_ =>
+          fromEither(_).foldTaskEither(
+            err => {
+              if (err.code === 404) {
+                return fromEither(right("NOT FOUND"));
+              }
+              return fromEither(left(new Error(`QueryError: [${err}]`)));
+            },
+            id => fromEither(right(id))
           )
+        )
+      )
+      .fold<ActivityResult>(
+        error => {
+          context.log.error(
+            "DeleteEligibilityCheckActivity|ERROR|%s",
+            error.message
+          );
+          return ActivityResultFailure.encode({
+            kind: "FAILURE",
+            reason: error.message
+          });
+        },
+        _ =>
+          ActivityResultSuccess.encode({
+            kind: "SUCCESS"
+          })
       )
       .run();
   };
