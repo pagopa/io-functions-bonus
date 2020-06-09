@@ -178,10 +178,16 @@ securityDefinitions:
     in: header
     description: The API key to access this function app.
 definitions:
+
   Timestamp:
     $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/Timestamp"
   FiscalCode:
     $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/FiscalCode"
+  ProblemJson:
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/ProblemJson"
+  PaginationResponse:
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/PaginationResponse"
+
   InstanceId:
     type: object
     properties:
@@ -191,8 +197,6 @@ definitions:
         description: The identifier of the created request.
     required:
       - id
-  ProblemJson:
-    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/ProblemJson"
   MaxBonusAmount:
     description: Max bonus amount in euro
     type: integer
@@ -368,17 +372,19 @@ definitions:
       code:
         type: string
         minLength: 1
-      updated_at:
-        $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/master/openapi/definitions.yaml#/Timestamp"
       dsu_request:
         $ref: "#/definitions/Dsu"
+      updated_at:
+        $ref: "#/definitions/Timestamp"
+      redeemed_at:
+        $ref: "#/definitions/Timestamp"
     required:
       - id
       - applicant_fiscal_code
       - status
       - code
-      - updated_at
       - dsu_request
+      - updated_at
   BonusActivationItem:
     type: object
     properties:
@@ -408,7 +414,7 @@ definitions:
   PaginatedBonusActivationsCollection:
     allOf:
       - $ref: "#/definitions/BonusActivationCollection"
-      - $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/PaginationResponse"
+      - $ref: "#/definitions/PaginationResponse"
 
   #
   # INPS (ISEE) SOAP SERVICE XML RELATED TYPES
