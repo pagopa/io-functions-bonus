@@ -218,35 +218,6 @@ definitions:
     type: array
     items:
       $ref: "#/definitions/FamilyMember"
-  # According to UX prototype it looks like the following fields,
-  # which are anyway stored into the entity, aren't needed by the IO frontend
-  EligibilityCheckExtra:
-    type: object
-    properties:
-      request_id:
-        type: string
-        minLength: 1
-        description: IdRichiesta
-      isee_type:
-        type: string
-        description: TipoIndicatoreType
-      dsu_protocol_id:
-        type: string
-        minLength: 1
-        description: ProtocolloDSU
-      dsu_created_at:
-        type: string
-        format: date
-        description: DataPresentazioneDSU
-      has_discrepancies:
-        type: boolean
-        description: PresenzaDifformita
-    required:
-      - request_id
-      - isee_type
-      - dsu_protocol_id
-      - dsu_created_at
-      - has_discrepancies
   EligibilityCheckSuccessEligible:
     type: object
     title: Eligibility check success
@@ -269,6 +240,24 @@ definitions:
         $ref: "#/definitions/MaxBonusTaxBenefit"
       valid_before:
         $ref: "#/definitions/Timestamp"
+      request_id:
+        type: string
+        minLength: 1
+        description: IdRichiesta
+      isee_type:
+        type: string
+        description: TipoIndicatoreType
+      dsu_protocol_id:
+        type: string
+        minLength: 1
+        description: ProtocolloDSU
+      dsu_created_at:
+        type: string
+        format: date
+        description: DataPresentazioneDSU
+      has_discrepancies:
+        type: boolean
+        description: PresenzaDifformita
     required:
       - id
       - status
@@ -276,6 +265,11 @@ definitions:
       - max_amount
       - max_tax_benefit
       - valid_before
+      - request_id
+      - isee_type
+      - dsu_protocol_id
+      - dsu_created_at
+      - has_discrepancies
   EligibilityCheckSuccessIneligible:
     type: object
     title: Eligibility check success
@@ -350,9 +344,7 @@ definitions:
       - FAILED
       - REDEEMED
   BonusActivationDsu:
-    allOf:
-      - $ref: "#/definitions/EligibilityCheckSuccessEligible"
-      - $ref: "#/definitions/EligibilityCheckExtra"
+    $ref: "#/definitions/EligibilityCheckSuccessEligible"
   BonusActivation:
     type: object
     title: Bonus activation
