@@ -24,6 +24,8 @@ const aCollectionUri = DocumentDbUtils.getCollectionUri(
 const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
 
 const aEligibilityCheckSuccess: EligibilityCheckSuccess = {
+  dsuCreatedAt: new Date().toString(),
+  dsuProtocolId: "123" as NonEmptyString,
   familyMembers: [
     {
       fiscalCode: aFiscalCode,
@@ -31,9 +33,12 @@ const aEligibilityCheckSuccess: EligibilityCheckSuccess = {
       surname: "Rossi" as NonEmptyString
     }
   ],
+  hasDiscrepancies: true,
   id: (aFiscalCode as unknown) as NonEmptyString,
-  maxAmount: 100 as MaxBonusAmount,
-  maxTaxBenefit: 10 as MaxBonusTaxBenefit,
+  iseeType: "some isee type",
+  maxAmount: 200 as MaxBonusAmount,
+  maxTaxBenefit: 50 as MaxBonusTaxBenefit,
+  requestId: "123" as NonEmptyString,
   status: EligibilityCheckSuccessEligibleStatus.ELIGIBLE,
   validBefore: new Date()
 };

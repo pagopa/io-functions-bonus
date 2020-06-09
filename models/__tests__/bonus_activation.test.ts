@@ -35,10 +35,6 @@ const aBonusActivation: BonusActivation = {
   updatedAt: new Date(),
 
   dsuRequest: {
-    id: (aFiscalCode as unknown) as NonEmptyString,
-
-    status: StatusEnum.ELIGIBLE,
-
     familyMembers: [
       {
         fiscalCode: aFiscalCode,
@@ -50,8 +46,6 @@ const aBonusActivation: BonusActivation = {
     maxAmount: (200 as unknown) as IWithinRangeIntegerTag<150, 501> & number,
 
     maxTaxBenefit: (100 as unknown) as IWithinRangeIntegerTag<30, 101> & number,
-
-    validBefore: new Date(),
 
     requestId: "aRequestId" as NonEmptyString,
 

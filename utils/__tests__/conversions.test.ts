@@ -54,6 +54,8 @@ const aFiscalCode = "SPNDNL80R13C523K" as FiscalCode;
 //// Api objects
 
 const anElibigleApiObject: ApiEligibilityCheckSuccessEligible = {
+  dsu_created_at: new Date().toString(),
+  dsu_protocol_id: "123" as NonEmptyString,
   family_members: [
     {
       fiscal_code: aFiscalCode,
@@ -61,9 +63,12 @@ const anElibigleApiObject: ApiEligibilityCheckSuccessEligible = {
       surname: "Rossi" as NonEmptyString
     }
   ],
+  has_discrepancies: true,
   id: (aFiscalCode as unknown) as NonEmptyString,
+  isee_type: "some isee type" as NonEmptyString,
   max_amount: 200 as MaxBonusAmount,
   max_tax_benefit: 50 as MaxBonusTaxBenefit,
+  request_id: "123" as NonEmptyString,
   status: ApiEligibilityCheckSuccessEligibleEnum.ELIGIBLE,
   valid_before: new Date()
 };
@@ -82,6 +87,8 @@ const aFailureApiObject: ApiEligibilityCheckFailure = {
 //// Domain objects
 
 const anEligibleDomainObject: EligibilityCheckSuccessEligible = {
+  dsuCreatedAt: new Date().toString(),
+  dsuProtocolId: "123" as NonEmptyString,
   familyMembers: [
     {
       fiscalCode: aFiscalCode,
@@ -89,9 +96,12 @@ const anEligibleDomainObject: EligibilityCheckSuccessEligible = {
       surname: "Rossi" as NonEmptyString
     }
   ],
+  hasDiscrepancies: true,
   id: (aFiscalCode as unknown) as NonEmptyString,
+  iseeType: "some isee type",
   maxAmount: 200 as MaxBonusAmount,
   maxTaxBenefit: 50 as MaxBonusTaxBenefit,
+  requestId: "123" as NonEmptyString,
   status: EligibilityCheckSuccessEligibleStatusEnum.ELIGIBLE,
   validBefore: new Date()
 };
@@ -119,10 +129,6 @@ const aBonusActivationDomainObject: BonusActivation = {
   updatedAt: new Date(),
 
   dsuRequest: {
-    id: (aFiscalCode as unknown) as NonEmptyString,
-
-    status: EligibilityCheckSuccessEligibleStatusEnum.ELIGIBLE,
-
     familyMembers: [
       {
         fiscalCode: aFiscalCode,
@@ -134,8 +140,6 @@ const aBonusActivationDomainObject: BonusActivation = {
     maxAmount: (200 as unknown) as IWithinRangeIntegerTag<150, 501> & number,
 
     maxTaxBenefit: (100 as unknown) as IWithinRangeIntegerTag<30, 101> & number,
-
-    validBefore: new Date(),
 
     requestId: "aRequestId" as NonEmptyString,
 
@@ -161,10 +165,6 @@ const aBonusActivationApiObject: ApiBonusActivation = {
   updated_at: new Date(),
 
   dsu_request: {
-    id: (aFiscalCode as unknown) as NonEmptyString,
-
-    status: ApiEligibilityCheckSuccessEligibleEnum.ELIGIBLE,
-
     family_members: [
       {
         fiscal_code: aFiscalCode,
@@ -177,8 +177,6 @@ const aBonusActivationApiObject: ApiBonusActivation = {
 
     max_tax_benefit: (100 as unknown) as IWithinRangeIntegerTag<30, 101> &
       number,
-
-    valid_before: new Date(),
 
     request_id: "aRequestId" as NonEmptyString,
 
