@@ -145,6 +145,10 @@ paths:
           description: Bonus activation details.
           schema:
             $ref: "#/definitions/BonusActivation"
+        "202":
+          description: Processing request.
+          schema:
+            $ref: "#/definitions/InstanceId"
         "401":
           description: Wrong or missing function key.
         "404":
