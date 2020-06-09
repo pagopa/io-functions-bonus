@@ -92,9 +92,9 @@ export const BonusVacanzaCodeAlreadyPresentError = t.intersection(
 );
 
 export type BonusVacanzaRequestedByRequestedByOtherFamilyMemberError = t.TypeOf<
-  typeof BonusVacanzaRequestedByRequestedByOtherFamilyMemberError
+  typeof BonusVacanzaRequestedByOtherFamilyMemberError
 >;
-export const BonusVacanzaRequestedByRequestedByOtherFamilyMemberError = t.intersection(
+export const BonusVacanzaRequestedByOtherFamilyMemberError = t.intersection(
   [
     BonusVacanzaError,
     t.interface({
@@ -163,7 +163,7 @@ export type BonusVacanzaInvalidRequestError = t.TypeOf<
 export const BonusVacanzaInvalidRequestError = t.union(
   [
     BonusVacanzaCodeAlreadyPresentError,
-    BonusVacanzaRequestedByRequestedByOtherFamilyMemberError,
+    BonusVacanzaRequestedByOtherFamilyMemberError,
     BonusVacanzaEmptyFamilyError,
     BonusVacanzaNoFiscalCodeProvidedProvidedError,
     BonusVacanzaNoGenerationDateProvidedProvidedError

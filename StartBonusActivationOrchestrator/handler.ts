@@ -46,6 +46,8 @@ export const handler = function*(
     );
     return false;
   }
+
+  // Send bonus details to ADE rest service
   const undecodedSendBonusActivation = yield context.df.callActivityWithRetry(
     "SendBonusActivationActivity",
     {
@@ -57,6 +59,7 @@ export const handler = function*(
     },
     errorOrBonusVacanzaBase.value
   );
+
   if (SendBonusActivationFailure.is(undecodedSendBonusActivation)) {
     yield context.df.callActivity(
       "FailedBonusActivationActivity",

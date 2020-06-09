@@ -4,6 +4,7 @@
 
 import { Either, left } from "fp-ts/lib/Either";
 import * as t from "io-ts";
+import { isArray } from "util";
 import { BonusVacanzaBase as ApiBonusVacanzaBase } from "../generated/ade/BonusVacanzaBase";
 import { NucleoFamiliareElem as ApiNucleoFamiliareElem } from "../generated/ade/NucleoFamiliareElem";
 import { BonusActivation as ApiBonusActivation } from "../generated/definitions/BonusActivation";
@@ -63,39 +64,20 @@ export const toApiBonusActivation = (
 };
 
 /**
- * Maps FamilyMember domain object into NucleoFamiliareElem API object
- */
-export const toApiNucleoFamiliareElem = (
-  familyMember: FamilyMember
-): Either<t.Errors, ApiNucleoFamiliareElem> => {
-  return ApiNucleoFamiliareElem.decode({
-    codiceFiscale: familyMember.fiscalCode
-  });
-};
-
-/**
- * Maps BonusActivation domain object into an BonusVacanzaBase API object
+ * Maps BonusActivation domain object into an ADE BonusVacanzaBase API object
  */
 export const toApiBonusVacanzaBase = (
   domainObject: BonusActivation
 ): Either<t.Errors, ApiBonusVacanzaBase> => {
-  try {
-    const {
-      code,
-      applicantFiscalCode,
-      updatedAt,
-      dsuRequest: { maxAmount, familyMembers, hasDiscrepancies }
-    } = domainObject;
-    return ApiBonusVacanzaBase.decode({
-      codiceBuono: code,
-      codiceFiscaleDichiarante: applicantFiscalCode,
-      dataGenerazione: updatedAt.toISOString(),
-      flagDifformitaIsee: hasDiscrepancies ? 1 : 0,
-      importoMassimo: maxAmount,
-      nucleoFamiliare: familyMembers.map(toApiNucleoFamiliareElem)
-    });
-  } catch (err) {
-    // destructuring may fail
-    return left([{ message: err.message }] as t.Errors);
-  }
+  return ApiBonusVacanzaBase.decode({
+    codiceBuono: domainObject.code,
+    codiceFiscaleDichiarante: domainObject.applicantFiscalCode,
+    dataGenerazione: domainObject.updatedAt?.toISOString(),
+    flagDifformitaIsee: domainObject.dsuRequest?.hasDiscrepancies ? 1 : 0,
+    importoMassimo: domainObject.dsuRequest?.maxAmount,
+    // TODO: remove this check when fields become required
+    nucleoFamiliare: domainObject.dsuRequest?.familyMembers.map(_ => ({
+      codiceFiscale: _.fiscalCode
+    }))
+  });
 };

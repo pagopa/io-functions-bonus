@@ -93,7 +93,8 @@ type ISendBonusActivationHandler = (
 ) => Promise<SendBonusActivationResult>;
 
 /**
- * Perform the API request to request a binus activation
+ * Call ADE rest service to activate a bonus
+ *
  * @param adeClient an instance of ADE Client
  *
  * @returns either a success or a failure request
@@ -118,8 +119,7 @@ export function SendBonusActivationHandler(
       .fold<SendBonusActivationResult>(
         unhandledError => {
           context.log.error(
-            `SendBonusActivationActivity|ERROR|Unhadled Failure:`,
-            unhandledError
+            `SendBonusActivationActivity|UNHANDLED_ERROR=${unhandledError.message}`
           );
           return SendBonusActivationUnhandledFailure.encode({
             kind: "FAILURE",
@@ -128,9 +128,15 @@ export function SendBonusActivationHandler(
         },
         response => {
           if (BonusVacanzaTransientError.is(response.value)) {
+            context.log.error(
+              `SendBonusActivationActivity|TRANSIENT_ERROR=${response.status}:${response.value}`
+            );
             // throw the exception so the activity can be retried by the orchestrator
             throw response;
           } else if (BonusVacanzaInvalidRequestError.is(response.value)) {
+            context.log.error(
+              `SendBonusActivationActivity|PERMANENT_ERROR=${response.status}:${response.value}`
+            );
             return SendBonusActivationInvalidRequestFailure.encode({
               kind: "FAILURE",
               reason: response.value
@@ -140,6 +146,9 @@ export function SendBonusActivationHandler(
               kind: "SUCCESS"
             });
           }
+          context.log.error(
+            `SendBonusActivationActivity|UNEXPECTED_ERROR=${response.status}:${response.value}`
+          );
           return SendBonusActivationUnhandledFailure.encode({
             kind: "FAILURE",
             reason: response

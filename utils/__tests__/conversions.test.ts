@@ -339,13 +339,6 @@ describe("ApiBonusActivationFromModel", () => {
 });
 
 describe("ApiBonusVacanzaBaseFromModel", () => {
-  it("should not decode an invalid domain object", () => {
-    const invalidDomainObject = { dsuRequest: { familyMembers: [] } };
-    // @ts-ignore needed to test an unrepresentable type assignment
-    const result = toApiBonusVacanzaBase(invalidDomainObject);
-    expect(isLeft(result)).toBeTruthy();
-  });
-
   it("should decode domain", () => {
     const domainObject = aBonusActivationDomainObject;
     const result = toApiBonusVacanzaBase(domainObject);
