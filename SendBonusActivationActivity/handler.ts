@@ -1,9 +1,11 @@
 import { Context } from "@azure/functions";
-import { Left, toError } from "fp-ts/lib/Either";
+import { toError } from "fp-ts/lib/Either";
 import { fromEither, TaskEither, tryCatch } from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
+import { TypeofApiResponse } from "italia-ts-commons/lib/requests";
 import { BonusVacanzaBase } from "../generated/ade/BonusVacanzaBase";
+import { RichiestaBonusT } from "../generated/ade/requestTypes";
 import {
   ADEClientInstance,
   BonusVacanzaInvalidRequestError,
@@ -52,14 +54,6 @@ export type SendBonusActivationResult = t.TypeOf<
   typeof SendBonusActivationResult
 >;
 
-type RichiestaBonusResponseT = ReturnType<
-  ADEClientInstance["richiestaBonus"]
-> extends Promise<infer L>
-  ? L extends Left<infer _, infer T>
-    ? T
-    : never
-  : never;
-
 /**
  * Lift adeClient.richiestaBonus to TaskEither type
  * @param adeClient a client instance
@@ -70,7 +64,7 @@ type RichiestaBonusResponseT = ReturnType<
 const richiestaBonusTask = (
   adeClient: ADEClientInstance,
   bonusVacanzaBase: BonusVacanzaBase
-): TaskEither<Error, RichiestaBonusResponseT> => {
+): TaskEither<Error, TypeofApiResponse<RichiestaBonusT>> => {
   return tryCatch(
     () =>
       adeClient
