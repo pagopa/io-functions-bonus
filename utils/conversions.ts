@@ -2,16 +2,13 @@
  * Map API objects to domain objects
  */
 
-import { Either, left } from "fp-ts/lib/Either";
+import { Either } from "fp-ts/lib/Either";
 import * as t from "io-ts";
-import { isArray } from "util";
 import { BonusVacanzaBase as ApiBonusVacanzaBase } from "../generated/ade/BonusVacanzaBase";
-import { NucleoFamiliareElem as ApiNucleoFamiliareElem } from "../generated/ade/NucleoFamiliareElem";
 import { BonusActivation as ApiBonusActivation } from "../generated/definitions/BonusActivation";
 import { EligibilityCheck as ApiEligibilityCheck } from "../generated/definitions/EligibilityCheck";
 import { BonusActivation } from "../generated/models/BonusActivation";
 import { EligibilityCheck } from "../generated/models/EligibilityCheck";
-import { FamilyMember } from "../generated/models/FamilyMember";
 import { renameObjectKeys } from "./rename_keys";
 import { camelCaseToSnakeCase, snakeCaseToCamelCase } from "./strings";
 
