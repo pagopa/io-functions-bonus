@@ -5,6 +5,7 @@ import { EligibilityCheck as ApiEligibilityCheck } from "../../generated/definit
 
 import {
   toApiBonusActivation,
+  toApiBonusVacanzaBase,
   toApiEligibilityCheck,
   toModelBonusActivation,
   toModelEligibilityCheck
@@ -40,7 +41,9 @@ import {
 import { EligibilityCheck } from "../../generated/models/EligibilityCheck";
 
 import { IWithinRangeIntegerTag } from "italia-ts-commons/lib/numbers";
+import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import { BonusVacanzaBase as ApiBonusVacanzaBase } from "../../generated/ade/BonusVacanzaBase";
 import { BonusActivationStatusEnum as ApiBonusActivationStatusEnum } from "../../generated/definitions/BonusActivationStatus";
 import { MaxBonusAmount } from "../../generated/definitions/MaxBonusAmount";
 import { MaxBonusTaxBenefit } from "../../generated/definitions/MaxBonusTaxBenefit";
@@ -334,5 +337,26 @@ describe("ApiBonusActivationFromModel", () => {
           expect(value).toEqual(domainObject);
         }
       );
+  });
+});
+
+describe("ApiBonusVacanzaBaseFromModel", () => {
+  it("should not decode an invalid domain object", () => {
+    const invalidDomainObject = { dsuRequest: { familyMembers: [] } };
+    // @ts-ignore needed to test an unrepresentable type assignment
+    const result = toApiBonusVacanzaBase(invalidDomainObject);
+    expect(isLeft(result)).toBeTruthy();
+  });
+
+  it("should decode domain", () => {
+    const domainObject = aBonusActivationDomainObject;
+    const result = toApiBonusVacanzaBase(domainObject);
+    if (isRight(result)) {
+      expect(ApiBonusVacanzaBase.is(result.value)).toBeTruthy();
+    } else {
+      fail(
+        `Valid domain object must be decoded: ${readableReport(result.value)}`
+      );
+    }
   });
 });
