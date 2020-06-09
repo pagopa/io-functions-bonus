@@ -1,7 +1,12 @@
+// tslint:disable: no-identical-functions no-duplicate-string
 import { BonusVacanzaBase } from "../../generated/ade/BonusVacanzaBase";
 import { BonusVacanzaError } from "../../generated/ade/BonusVacanzaError";
 import { RestResultRichiesta } from "../../generated/ade/RestResultRichiesta";
-import { ADEClient } from "../adeClient";
+import {
+  ADEClient,
+  BonusVacanzaInvalidRequestError,
+  BonusVacanzaTransientError
+} from "../adeClient";
 
 const aBonusVacanzaBase: BonusVacanzaBase = {
   codiceBuono: "aCodiceBuono",
@@ -92,5 +97,105 @@ describe("ADEClient#richiestaBonus", () => {
         expect(result.value).toEqual(aBonusVacanzaError);
       }
     );
+  });
+});
+
+describe("BonusVacanzaTransientError", () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+  });
+
+  const aGenericError = {
+    errorCode: "3000",
+    errorMessage: "Generic Error"
+  };
+  const aGenericApplicationError = {
+    errorCode: "4000",
+    errorMessage: "Generic ApplicationError"
+  };
+
+  it.each`
+    name                           | returnStatus | payload
+    ${"generic error"}             | ${500}       | ${aGenericError}
+    ${"generic application error"} | ${400}       | ${aGenericApplicationError}
+  `("should decode $name error response", async ({ returnStatus, payload }) => {
+    mockFetch.mockImplementationOnce(() => {
+      return {
+        headers: {},
+        json: async () => payload,
+        status: returnStatus
+      };
+    });
+    const client = ADEClient("", (mockFetch as unknown) as typeof fetch);
+    const response = await client.richiestaBonus({
+      bonusVacanzaBase: aBonusVacanzaBase
+    });
+    response
+      .orElse(() => fail("Cannot decode response"))
+      .map(result => {
+        BonusVacanzaTransientError.decode(result.value)
+          .map(value => {
+            expect(value).toEqual(payload);
+          })
+          .orElse(() => fail("Cannot decode payload"));
+      });
+  });
+});
+
+describe("BonusVacanzaInvalidRequestError", () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+  });
+
+  const aBonusVacanzaCodeAlreadyPresentError = {
+    errorCode: "1000",
+    errorMessage: "Codice presente in banca dati"
+  };
+  const aBonusVacanzaOtherFamilyMemberError = {
+    errorCode: "1005",
+    errorMessage:
+      "Presente in banca dati una richiesta associata ad un altro componente delnucleo familiare"
+  };
+  const aBonusVacanzaEmptyFamilyError = {
+    errorCode: "900",
+    errorMessage: "il nucleo familiare deve contenere almeno un elemento"
+  };
+  const aBonusVacanzaNoFiscalCodeProvidedProvidedError = {
+    errorCode: "907",
+    errorMessage: "Codice fiscale richiedente obbligatorio"
+  };
+  const aBonusVacanzaNoGenerationDateProvidedProvidedError = {
+    errorCode: "908",
+    errorMessage: "Data Generazione buono, obbligatoria"
+  };
+
+  it.each`
+    name                                              | returnStatus | payload
+    ${"bonus code already present error"}             | ${400}       | ${aBonusVacanzaCodeAlreadyPresentError}
+    ${"bonus requested by other family member error"} | ${400}       | ${aBonusVacanzaOtherFamilyMemberError}
+    ${"empty family error"}                           | ${400}       | ${aBonusVacanzaEmptyFamilyError}
+    ${"no fiscal code provided error"}                | ${400}       | ${aBonusVacanzaNoFiscalCodeProvidedProvidedError}
+    ${"no generation date provided error"}            | ${400}       | ${aBonusVacanzaNoGenerationDateProvidedProvidedError}
+  `("should decode $name error response", async ({ returnStatus, payload }) => {
+    mockFetch.mockImplementationOnce(() => {
+      return {
+        headers: {},
+        json: async () => payload,
+        status: returnStatus
+      };
+    });
+    const client = ADEClient("", (mockFetch as unknown) as typeof fetch);
+    const response = await client.richiestaBonus({
+      bonusVacanzaBase: aBonusVacanzaBase
+    });
+    response
+      .orElse(() => fail("Cannot decode response"))
+      .map(result => {
+        BonusVacanzaInvalidRequestError.decode(result.value)
+          .map(value => {
+            expect(value).toEqual(payload);
+          })
+          .orElse(() => fail("Cannot decode payload"));
+      });
   });
 });

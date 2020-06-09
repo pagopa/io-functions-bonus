@@ -1,8 +1,14 @@
 import { Context } from "@azure/functions";
-import { fromEither } from "fp-ts/lib/TaskEither";
+import { Left, toError } from "fp-ts/lib/Either";
+import { fromEither, TaskEither, tryCatch } from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { BonusVacanzaBase } from "../generated/ade/BonusVacanzaBase";
+import {
+  ADEClientInstance,
+  BonusVacanzaInvalidRequestError,
+  BonusVacanzaTransientError
+} from "../utils/adeClient";
 
 export const SendBonusActivationSuccess = t.interface({
   kind: t.literal("SUCCESS")
@@ -11,9 +17,29 @@ export type SendBonusActivationSuccess = t.TypeOf<
   typeof SendBonusActivationSuccess
 >;
 
-export const SendBonusActivationFailure = t.interface({
-  kind: t.literal("FAILURE")
+export const SendBonusActivationUnhandledFailure = t.interface({
+  kind: t.literal("FAILURE"),
+  reason: t.union([t.string, t.object])
 });
+export type SendBonusActivationUnhandledFailure = t.TypeOf<
+  typeof SendBonusActivationUnhandledFailure
+>;
+
+export const SendBonusActivationInvalidRequestFailure = t.interface({
+  kind: t.literal("FAILURE"),
+  reason: BonusVacanzaInvalidRequestError
+});
+export type SendBonusActivationInvalidRequestFailure = t.TypeOf<
+  typeof SendBonusActivationInvalidRequestFailure
+>;
+
+export const SendBonusActivationFailure = t.union(
+  [
+    SendBonusActivationInvalidRequestFailure,
+    SendBonusActivationUnhandledFailure
+  ],
+  "SendBonusActivationFailure"
+);
 export type SendBonusActivationFailure = t.TypeOf<
   typeof SendBonusActivationFailure
 >;
@@ -31,26 +57,79 @@ type ISendBonusActivationHandler = (
   input: unknown
 ) => Promise<SendBonusActivationResult>;
 
-export function SendBonusActivationHandler(): ISendBonusActivationHandler {
+type RichiestaBonusResponseT = ReturnType<
+  ADEClientInstance["richiestaBonus"]
+> extends Promise<infer L>
+  ? L extends Left<infer _, infer T>
+    ? T
+    : never
+  : never;
+const richiestaBonusTask = (
+  adeClient: ADEClientInstance,
+  bonusVacanzaBase: BonusVacanzaBase
+): TaskEither<Error, RichiestaBonusResponseT> => {
+  return tryCatch(
+    () =>
+      adeClient
+        .richiestaBonus({ bonusVacanzaBase })
+        .then(validationErrorOrResponse =>
+          validationErrorOrResponse.fold(
+            err => {
+              throw new Error(`Error: [${readableReport(err)}]`);
+            },
+            resp => resp
+          )
+        ),
+    toError
+  );
+};
+
+export function SendBonusActivationHandler(
+  adeClient: ADEClientInstance
+): ISendBonusActivationHandler {
   return async (
     context: Context,
     input: unknown
   ): Promise<SendBonusActivationResult> => {
     context.log.info(`SendBonusActivationActivity|INFO|Input: ${input}`);
     return await fromEither(
-      FiscalCode.decode(input).mapLeft(
+      BonusVacanzaBase.decode(input).mapLeft(
         err => new Error(`Error: [${readableReport(err)}]`)
       )
     )
+      .chain(bonusVacanzaBase =>
+        richiestaBonusTask(adeClient, bonusVacanzaBase)
+      )
       .fold<SendBonusActivationResult>(
-        _ =>
-          SendBonusActivationFailure.encode({
-            kind: "FAILURE"
-          }),
-        _ =>
-          SendBonusActivationSuccess.encode({
-            kind: "SUCCESS"
-          })
+        unhandledError => {
+          context.log.error(
+            `SendBonusActivationActivity|ERROR|Unhadled Failure:`,
+            unhandledError
+          );
+          return SendBonusActivationUnhandledFailure.encode({
+            kind: "FAILURE",
+            reason: unhandledError.message
+          });
+        },
+        response => {
+          if (BonusVacanzaTransientError.is(response.value)) {
+            // throw the exception so the activity can be retried by the orchestrator
+            throw response;
+          } else if (BonusVacanzaInvalidRequestError.is(response.value)) {
+            return SendBonusActivationInvalidRequestFailure.encode({
+              kind: "FAILURE",
+              reason: response.value
+            });
+          } else if (response.status === 200) {
+            return SendBonusActivationSuccess.encode({
+              kind: "SUCCESS"
+            });
+          }
+          return SendBonusActivationUnhandledFailure.encode({
+            kind: "FAILURE",
+            reason: response
+          });
+        }
       )
       .run();
   };
