@@ -218,28 +218,15 @@ definitions:
     type: array
     items:
       $ref: "#/definitions/FamilyMember"
-  EligibilityCheckSuccessEligible:
+  Dsu:
     type: object
-    title: Eligibility check success
-    description: |
-      Eligibility check succeeded, we can proceed and send the eligibility status.
-      Amounts are left undefined when status is INELIGIBLE
     properties:
-      id:
-        type: string
-        minLength: 1
-      status:
-        type: string
-        x-extensible-enum:
-          - ELIGIBLE
       family_members:
         $ref: "#/definitions/FamilyMembers"
       max_amount:
         $ref: "#/definitions/MaxBonusAmount"
       max_tax_benefit:
         $ref: "#/definitions/MaxBonusTaxBenefit"
-      valid_before:
-        $ref: "#/definitions/Timestamp"
       request_id:
         type: string
         minLength: 1
@@ -259,17 +246,36 @@ definitions:
         type: boolean
         description: PresenzaDifformita
     required:
-      - id
-      - status
       - family_members
       - max_amount
       - max_tax_benefit
-      - valid_before
       - request_id
       - isee_type
       - dsu_protocol_id
       - dsu_created_at
       - has_discrepancies
+  EligibilityCheckSuccessEligible:
+    allOf:
+      - $ref: "#/definitions/Dsu"
+      - type: object
+        title: Eligibility check success
+        description: |
+          Eligibility check succeeded, we can proceed and send the eligibility status.
+          Amounts are left undefined when status is INELIGIBLE
+        properties:
+          id:
+            type: string
+            minLength: 1
+          status:
+            type: string
+            x-extensible-enum:
+              - ELIGIBLE
+          valid_before:
+            $ref: "#/definitions/Timestamp"
+        required:
+          - id
+          - status
+          - valid_before
   EligibilityCheckSuccessIneligible:
     type: object
     title: Eligibility check success
@@ -343,8 +349,6 @@ definitions:
       - ACTIVE
       - FAILED
       - REDEEMED
-  BonusActivationDsu:
-    $ref: "#/definitions/EligibilityCheckSuccessEligible"
   BonusActivation:
     type: object
     title: Bonus activation
@@ -363,7 +367,7 @@ definitions:
       updated_at:
         $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/master/openapi/definitions.yaml#/Timestamp"
       dsu_request:
-        $ref: "#/definitions/BonusActivationDsu"
+        $ref: "#/definitions/Dsu"
     required:
       - id
       - applicant_fiscal_code
