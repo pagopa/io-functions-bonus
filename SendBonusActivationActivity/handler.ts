@@ -52,11 +52,6 @@ export type SendBonusActivationResult = t.TypeOf<
   typeof SendBonusActivationResult
 >;
 
-type ISendBonusActivationHandler = (
-  context: Context,
-  input: unknown
-) => Promise<SendBonusActivationResult>;
-
 type RichiestaBonusResponseT = ReturnType<
   ADEClientInstance["richiestaBonus"]
 > extends Promise<infer L>
@@ -64,6 +59,14 @@ type RichiestaBonusResponseT = ReturnType<
     ? T
     : never
   : never;
+
+/**
+ * Lift adeClient.richiestaBonus to TaskEither type
+ * @param adeClient a client instance
+ * @param bonusVacanzaBase the input to be pass
+ *
+ * @returns either an Error or an API Response
+ */
 const richiestaBonusTask = (
   adeClient: ADEClientInstance,
   bonusVacanzaBase: BonusVacanzaBase
@@ -84,6 +87,18 @@ const richiestaBonusTask = (
   );
 };
 
+type ISendBonusActivationHandler = (
+  context: Context,
+  input: unknown
+) => Promise<SendBonusActivationResult>;
+
+/**
+ * Perform the API request to request a binus activation
+ * @param adeClient an instance of ADE Client
+ *
+ * @returns either a success or a failure request
+ * @throws when the response is considered a transient failure and thus is not considered a domain message
+ */
 export function SendBonusActivationHandler(
   adeClient: ADEClientInstance
 ): ISendBonusActivationHandler {
