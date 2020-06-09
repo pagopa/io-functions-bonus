@@ -92,11 +92,13 @@ describe("SendBonusActivationHandler", () => {
     SendBonusActivationFailure.decode(result)
       .orElse(_ => fail("Cannot decode result"))
       .map(value => {
-        expect(value.reason).toEqual({
-          headers: {},
-          status: 123,
-          value: { foo: "bar" }
-        });
+        expect(value.reason).toEqual(
+          JSON.stringify({
+            headers: {},
+            status: 123,
+            value: { foo: "bar" }
+          })
+        );
       });
   });
 

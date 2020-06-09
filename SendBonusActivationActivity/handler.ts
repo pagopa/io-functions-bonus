@@ -20,15 +20,15 @@ export type SendBonusActivationSuccess = t.TypeOf<
 >;
 
 export const SendBonusActivationUnhandledFailure = t.interface({
-  kind: t.literal("FAILURE"),
-  reason: t.union([t.string, t.object])
+  kind: t.literal("UNHANDLED_FAILURE"),
+  reason: t.string
 });
 export type SendBonusActivationUnhandledFailure = t.TypeOf<
   typeof SendBonusActivationUnhandledFailure
 >;
 
 export const SendBonusActivationInvalidRequestFailure = t.interface({
-  kind: t.literal("FAILURE"),
+  kind: t.literal("INVALID_REQUEST_FAILURE"),
   reason: BonusVacanzaInvalidRequestError
 });
 export type SendBonusActivationInvalidRequestFailure = t.TypeOf<
@@ -116,7 +116,7 @@ export function SendBonusActivationHandler(
             `SendBonusActivationActivity|UNHANDLED_ERROR=${unhandledError.message}`
           );
           return SendBonusActivationUnhandledFailure.encode({
-            kind: "FAILURE",
+            kind: "UNHANDLED_FAILURE",
             reason: unhandledError.message
           });
         },
@@ -132,7 +132,7 @@ export function SendBonusActivationHandler(
               `SendBonusActivationActivity|PERMANENT_ERROR=${response.status}:${response.value}`
             );
             return SendBonusActivationInvalidRequestFailure.encode({
-              kind: "FAILURE",
+              kind: "INVALID_REQUEST_FAILURE",
               reason: response.value
             });
           } else if (response.status === 200) {
@@ -144,8 +144,8 @@ export function SendBonusActivationHandler(
             `SendBonusActivationActivity|UNEXPECTED_ERROR=${response.status}:${response.value}`
           );
           return SendBonusActivationUnhandledFailure.encode({
-            kind: "FAILURE",
-            reason: response
+            kind: "UNHANDLED_FAILURE",
+            reason: JSON.stringify(response)
           });
         }
       )

@@ -69,10 +69,10 @@ export const toApiBonusVacanzaBase = (
   return ApiBonusVacanzaBase.decode({
     codiceBuono: domainObject.code,
     codiceFiscaleDichiarante: domainObject.applicantFiscalCode,
-    dataGenerazione: domainObject.updatedAt?.toISOString(),
-    flagDifformitaIsee: domainObject.dsuRequest?.hasDiscrepancies ? 1 : 0,
-    importoMassimo: domainObject.dsuRequest?.maxAmount,
-    nucleoFamiliare: domainObject.dsuRequest?.familyMembers.map(_ => ({
+    dataGenerazione: domainObject.updatedAt.toISOString(),
+    flagDifformitaIsee: domainObject.dsuRequest.hasDiscrepancies ? 1 : 0,
+    importoMassimo: domainObject.dsuRequest.maxAmount,
+    nucleoFamiliare: domainObject.dsuRequest.familyMembers.map(_ => ({
       codiceFiscale: _.fiscalCode
     }))
   });
