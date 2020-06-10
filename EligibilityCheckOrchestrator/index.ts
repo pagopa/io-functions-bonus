@@ -67,10 +67,10 @@ const EligibilityCheckOrchestrator = df.orchestrator(function*(
   );
 
   // send push notification with eligibility details
-  /*yield context.df.callActivity(
+  yield context.df.callActivity(
     "NotifyEligibilityCheckActivity",
     eligibilityCheckResponse
-  );*/
+  );
 
   return eligibilityCheckResponse;
 });
