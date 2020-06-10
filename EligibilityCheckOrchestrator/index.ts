@@ -8,6 +8,11 @@ import { addSeconds } from "date-fns";
 import * as df from "durable-functions";
 import { ActivityResult as DeleteEligibilityCheckActivityResult } from "../DeleteEligibilityCheckActivity/handler";
 import { ActivityResult } from "../EligibilityCheckActivity/handler";
+import { EligibilityCheckFailure } from "../generated/models/EligibilityCheckFailure";
+import { EligibilityCheckSuccessEligible } from "../generated/models/EligibilityCheckSuccessEligible";
+import { EligibilityCheckSuccessIneligible } from "../generated/models/EligibilityCheckSuccessIneligible";
+import { toEligibilityCheckFromDSU } from "../utils/conversions";
+import { MESSAGES } from "../utils/messages";
 import { retryOptions } from "../utils/retryPolicy";
 
 const NOTIFICATION_DELAY_SECONDS = 10;
@@ -16,12 +21,13 @@ const EligibilityCheckOrchestrator = df.orchestrator(function*(
   context: IOrchestrationFunctionContext
 ): Generator<TaskSet | Task> {
   context.df.setCustomStatus("RUNNING");
+  const orchestratorInput = context.df.getInput();
   // tslint:disable-next-line: no-let
   let eligibilityCheckResponse: ActivityResult;
   try {
     const deleteEligibilityCheckResponse = yield context.df.callActivity(
       "DeleteEligibilityCheckActivity",
-      context.df.getInput()
+      orchestratorInput
     );
 
     DeleteEligibilityCheckActivityResult.decode(
@@ -35,7 +41,7 @@ const EligibilityCheckOrchestrator = df.orchestrator(function*(
     const undecodedEligibilityCheckResponse = yield context.df.callActivityWithRetry(
       "EligibilityCheckActivity",
       retryOptions,
-      context.df.getInput()
+      orchestratorInput
     );
     eligibilityCheckResponse = ActivityResult.decode(
       undecodedEligibilityCheckResponse
@@ -66,10 +72,22 @@ const EligibilityCheckOrchestrator = df.orchestrator(function*(
     addSeconds(context.df.currentUtcDateTime, NOTIFICATION_DELAY_SECONDS)
   );
 
+  const eligibilityCheck = toEligibilityCheckFromDSU(
+    eligibilityCheckResponse.data,
+    eligibilityCheckResponse.fiscalCode,
+    eligibilityCheckResponse.validBefore
+  );
+
   // send push notification with eligibility details
   yield context.df.callActivity(
-    "NotifyEligibilityCheckActivity",
-    eligibilityCheckResponse
+    "SendMessageActivity",
+    EligibilityCheckFailure.is(eligibilityCheck)
+      ? MESSAGES.EligibilityCheckFailure()
+      : EligibilityCheckSuccessEligible.is(eligibilityCheck)
+      ? MESSAGES.EligibilityCheckSuccessEligible()
+      : EligibilityCheckSuccessIneligible.is(eligibilityCheck)
+      ? MESSAGES.EligibilityCheckSuccessIneligible()
+      : {}
   );
 
   return eligibilityCheckResponse;

@@ -124,7 +124,7 @@ export const toEligibilityCheckFromDSU = (
   data: ConsultazioneSogliaIndicatoreResponse,
   fiscalCode: FiscalCode,
   validBefore: Timestamp
-) => {
+): ApiEligibilityCheck => {
   const bonusValue = calculateMaxBonusAmount(
     data.DatiIndicatore?.Componenti ? data.DatiIndicatore.Componenti.length : 0
   );
