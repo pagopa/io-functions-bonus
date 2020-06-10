@@ -21,10 +21,7 @@ import {
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { eligibilityCheckOrchestratorSuffix } from "../EligibilityCheck/handler";
 import { EligibilityCheck } from "../generated/definitions/EligibilityCheck";
-import {
-  ELIGIBILITY_CHECK_MODEL_PK_FIELD,
-  EligibilityCheckModel
-} from "../models/eligibility_check";
+import { EligibilityCheckModel } from "../models/eligibility_check";
 import { initTelemetryClient } from "../utils/appinsights";
 import { toApiEligibilityCheck } from "../utils/conversions";
 
@@ -66,12 +63,12 @@ export function GetEligibilityCheckHandler(
         | IResponseErrorNotFound
       >
     >(
-      async _ => {
-        context.log.error("GetEligibilityCheck|ERROR|%s", _);
+      async queryError => {
+        context.log.error("GetEligibilityCheck|ERROR|%s", queryError);
         return ResponseErrorInternal("Query error retrieving DSU");
       },
-      async _ => {
-        if (_.isNone()) {
+      async maybeModelEligibilityCheck => {
+        if (maybeModelEligibilityCheck.isNone()) {
           return ResponseErrorNotFound("Not Found", "DSU not found");
         }
         // Since we're sending the result to the frontend,
@@ -81,7 +78,7 @@ export function GetEligibilityCheckHandler(
           `${fiscalCode}${eligibilityCheckOrchestratorSuffix}`,
           "Success"
         );
-        return toApiEligibilityCheck(_.value).fold<
+        return toApiEligibilityCheck(maybeModelEligibilityCheck.value).fold<
           IResponseErrorInternal | IResponseSuccessJson<EligibilityCheck>
         >(
           err => {
