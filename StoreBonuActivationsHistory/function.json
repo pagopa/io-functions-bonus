@@ -1,0 +1,24 @@
+{
+  "bindings": [
+    {
+      "type": "cosmosDBTrigger",
+      "name": "documents",
+      "direction": "in",
+      "leaseCollectionName": "change-feed-leases",
+      "leaseCollectionPrefix": "logs",
+      "connectionStringSetting": "COSMOSDB_CONNECTION_STRING",
+      "databaseName": "%COSMOSDB_BONUS_DATABASE_NAME%",
+      "collectionName": "bonus-activations",
+      "createLeaseCollectionIfNotExists": true,
+      "startFromBeginning": true
+    },
+    {
+      "tableName": "bonusactivations",
+      "connection": "BONUS_STORAGE_CONNECTION_STRING",
+      "name": "bonusActivationsLogs",
+      "type": "table",
+      "direction": "out"
+    }    
+  ],
+  "scriptFile": "../dist/StoreBonusActivationsHistory/index.js"
+}
