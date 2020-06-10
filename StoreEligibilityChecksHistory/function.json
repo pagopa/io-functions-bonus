@@ -5,20 +5,20 @@
       "name": "documents",
       "direction": "in",
       "leaseCollectionName": "change-feed-leases",
-      "leaseCollectionPrefix": "ba",
+      "leaseCollectionPrefix": "ec",
       "connectionStringSetting": "COSMOSDB_CONNECTION_STRING",
       "databaseName": "%COSMOSDB_BONUS_DATABASE_NAME%",
-      "collectionName": "bonus-activations",
+      "collectionName": "eligibility-checks",
       "createLeaseCollectionIfNotExists": true,
       "startFromBeginning": false
     },
     {
-      "tableName": "bonusactivations",
+      "tableName": "eligibilitychecks",
       "connection": "BONUS_STORAGE_CONNECTION_STRING",
-      "name": "bonusActivationsLogs",
+      "name": "eligibilityChecksLogs",
       "type": "table",
       "direction": "out"
     }    
   ],
-  "scriptFile": "../dist/StoreBonusActivationsHistory/index.js"
+  "scriptFile": "../dist/StoreEligibilityChecksHistory/index.js"
 }
