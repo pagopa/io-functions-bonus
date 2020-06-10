@@ -61,8 +61,8 @@ export function EligibilityCheckHandler(): IEligibilityCheckHandler {
     const status = await client.getStatus(
       `${fiscalCode}${eligibilityCheckOrchestratorSuffix}`
     );
-    if (status.customStatus === "RUNNING") {
-      return ResponseSuccessAccepted("Orchestrator already running");
+    if (status.runtimeStatus === df.OrchestrationRuntimeStatus.Running) {
+      return ResponseSuccessAccepted("Still running");
     }
     try {
       await client.startNew(
