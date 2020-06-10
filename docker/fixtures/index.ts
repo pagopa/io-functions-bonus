@@ -21,7 +21,7 @@ import * as documentDbUtils from "io-functions-commons/dist/src/utils/documentdb
 import { getRequiredStringEnv } from "io-functions-commons/dist/src/utils/env";
 import { documentClient } from "../../utils/cosmosdb";
 
-const cosmosDbName = getRequiredStringEnv("COSMOSDB_NAME");
+const cosmosDbName = getRequiredStringEnv("COSMOSDB_BONUS_DATABASE_NAME");
 
 const documentDbDatabaseUrl = documentDbUtils.getDatabaseUri(cosmosDbName);
 
