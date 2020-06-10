@@ -22,7 +22,7 @@ const eligibilityCheckCollectionUrl = documentDbUtils.getCollectionUri(
 
 const eligibilityCheckModel = new EligibilityCheckModel(
   documentClient,
-  profilesCollectionUrl
+  eligibilityCheckCollectionUrl
 );
 
 // Setup Express
