@@ -284,6 +284,24 @@ definitions:
           - id
           - status
           - valid_before
+  EligibilityCheckConflict:
+    allOf:
+      - $ref: "#/definitions/Dsu"
+      - type: object
+        title: |
+          Eligibility check succeeded but there's already a bonus found
+          for this family member set
+        properties:
+          id:
+            type: string
+            minLength: 1
+          status:
+            type: string
+            x-extensible-enum:
+              - FORBIDDEN
+    required:
+      - id
+      - status
   EligibilityCheckSuccessIneligible:
     type: object
     title: Eligibility check success

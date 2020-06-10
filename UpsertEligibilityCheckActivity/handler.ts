@@ -63,6 +63,11 @@ export function getUpsertEligibilityCheckActivityHandler(
               );
             }
             const modelEligibilityCheck = errorOrModelEligibilityCheck.value;
+
+            // TODO: check if a bonus for the family members is already
+            // active and convert EligibilityCheckSuccessEligibile into
+            // an EligibilityCheckConflict object before saving
+
             return eligibilityCheckModel.createOrUpdate(
               { ...modelEligibilityCheck, kind: "INewEligibilityCheck" },
               modelEligibilityCheck[ELIGIBILITY_CHECK_MODEL_PK_FIELD]
