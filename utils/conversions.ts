@@ -166,6 +166,7 @@ export const toEligibilityCheckFromDSU = (
       isee_type: data.DatiIndicatore.TipoIndicatore,
       max_amount: bonusValue,
       max_tax_benefit: calculateMaxBonusTaxBenefit(bonusValue),
+      // tslint:disable-next-line: no-useless-cast
       request_id: data.IdRichiesta.toString() as NonEmptyString,
       status: EligibleStatus.ELIGIBLE,
       valid_before: validBefore
