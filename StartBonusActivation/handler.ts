@@ -8,7 +8,7 @@ import { Either, left, right, toError } from "fp-ts/lib/Either";
 import {
   fromEither,
   TaskEither,
-  taskEither,
+  taskEitherSeq,
   tryCatch
 } from "fp-ts/lib/TaskEither";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
@@ -252,7 +252,7 @@ export function StartBonusActivationHandler(
   return async (context, fiscalCode) => {
     const client = df.getClient(context);
 
-    return sequenceT(taskEither)(
+    return sequenceT(taskEitherSeq)(
       checkEligibilityCheckIsRunning(client, fiscalCode) as TaskEither<
         StartBonusActivationResponse,
         false

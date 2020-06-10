@@ -1,10 +1,21 @@
 // tslint:disable: no-any
-
+import * as df from "durable-functions";
 import { Context } from "@azure/functions";
 
 export const mockStartNew = jest.fn();
+export const mockGetStatus = jest.fn();
+
+export const mockStatusRunning = {
+  runtimeStatus: df.OrchestrationRuntimeStatus.Running
+};
+export const mockStatusCompleted = {
+  runtimeStatus: df.OrchestrationRuntimeStatus.Completed
+};
+
+export const OrchestrationRuntimeStatus = df.OrchestrationRuntimeStatus;
 
 export const getClient = jest.fn(() => ({
+  getStatus: mockGetStatus,
   startNew: mockStartNew
 }));
 
