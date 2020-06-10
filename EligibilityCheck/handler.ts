@@ -37,11 +37,15 @@ type IEligibilityCheckHandler = (
 
 initTelemetryClient();
 
+/**
+ * API controller: start eligibility check
+ * trying to get data from INPS webservice.
+ */
 export function EligibilityCheckHandler(): IEligibilityCheckHandler {
   return async (context, fiscalCode) => {
     const client = df.getClient(context);
 
-    // If a bonus activation for that user in in progress
+    // If a bonus activation for that user is in progress
     // returns 403 status response
     const activationStatus = await client.getStatus(
       `${fiscalCode}${activationOrchestratorSuffix}`

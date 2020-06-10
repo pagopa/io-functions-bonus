@@ -27,7 +27,7 @@ export const ActivityResult = t.taggedUnion("kind", [
 export type ActivityResult = t.TypeOf<typeof ActivityResult>;
 
 /**
- * Delete Eligibility Check from cosmos
+ * Delete Eligibility Check from database
  */
 export const getDeleteEligibilityCheckActivityHandler = (
   eligibilityCheckModel: EligibilityCheckModel

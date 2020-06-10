@@ -10,14 +10,14 @@ import { getDeleteEligibilityCheckActivityHandler } from "./handler";
 const cosmosDbName = getRequiredStringEnv("COSMOSDB_NAME");
 
 const documentDbDatabaseUrl = documentDbUtils.getDatabaseUri(cosmosDbName);
-const profilesCollectionUrl = documentDbUtils.getCollectionUri(
+const eligibilityCheckCollectionUrl = documentDbUtils.getCollectionUri(
   documentDbDatabaseUrl,
   ELIGIBILITY_CHECK_COLLECTION_NAME
 );
 
 const eligibilityCheckModel = new EligibilityCheckModel(
   documentClient,
-  profilesCollectionUrl
+  eligibilityCheckCollectionUrl
 );
 
 const deleteEligibilityCheckActivityHandler = getDeleteEligibilityCheckActivityHandler(
