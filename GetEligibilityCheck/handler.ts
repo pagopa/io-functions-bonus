@@ -19,11 +19,11 @@ import {
   ResponseSuccessJson
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { eligibilityCheckOrchestratorSuffix } from "../EligibilityCheck/handler";
 import { EligibilityCheck } from "../generated/definitions/EligibilityCheck";
 import { EligibilityCheckModel } from "../models/eligibility_check";
 import { initTelemetryClient } from "../utils/appinsights";
 import { toApiEligibilityCheck } from "../utils/conversions";
+import { makeStartEligibilityCheckOrchestratorId } from "../utils/orchestrators";
 
 type IGetEligibilityCheckHandler = (
   context: Context,
@@ -45,7 +45,7 @@ export function GetEligibilityCheckHandler(
   return async (context, fiscalCode) => {
     const client = df.getClient(context);
     const status = await client.getStatus(
-      `${fiscalCode}${eligibilityCheckOrchestratorSuffix}`
+      makeStartEligibilityCheckOrchestratorId(fiscalCode)
     );
     if (status.customStatus === "RUNNING") {
       return ResponseSuccessAccepted("Still running");
@@ -75,7 +75,7 @@ export function GetEligibilityCheckHandler(
         // we stop the orchestrator here in order to avoid
         // sending a push notification with the same result
         await client.terminate(
-          `${fiscalCode}${eligibilityCheckOrchestratorSuffix}`,
+          makeStartEligibilityCheckOrchestratorId(fiscalCode),
           "Success"
         );
         return toApiEligibilityCheck(maybeModelEligibilityCheck.value).fold<

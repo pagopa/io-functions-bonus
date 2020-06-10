@@ -19,10 +19,11 @@ import {
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { InstanceId } from "../generated/definitions/InstanceId";
-import { activationOrchestratorSuffix } from "../StartBonusActivation/handler";
 import { initTelemetryClient } from "../utils/appinsights";
-
-export const eligibilityCheckOrchestratorSuffix = "-BV01DSU";
+import {
+  makeStartBonusActivationOrchestratorId,
+  makeStartEligibilityCheckOrchestratorId
+} from "../utils/orchestrators";
 
 type IEligibilityCheckHandler = (
   context: Context,
@@ -48,7 +49,7 @@ export function EligibilityCheckHandler(): IEligibilityCheckHandler {
     // If a bonus activation for that user is in progress
     // returns 403 status response
     const activationStatus = await client.getStatus(
-      `${fiscalCode}${activationOrchestratorSuffix}`
+      makeStartBonusActivationOrchestratorId(fiscalCode)
     );
     if (
       activationStatus.runtimeStatus === df.OrchestrationRuntimeStatus.Running
@@ -59,7 +60,7 @@ export function EligibilityCheckHandler(): IEligibilityCheckHandler {
     // If another ElegibilityCheck operation is in progress for that user
     // returns 202 status response
     const status = await client.getStatus(
-      `${fiscalCode}${eligibilityCheckOrchestratorSuffix}`
+      makeStartEligibilityCheckOrchestratorId(fiscalCode)
     );
     if (status.runtimeStatus === df.OrchestrationRuntimeStatus.Running) {
       return ResponseSuccessAccepted("Still running");
@@ -67,7 +68,7 @@ export function EligibilityCheckHandler(): IEligibilityCheckHandler {
     try {
       await client.startNew(
         "EligibilityCheckOrchestrator",
-        `${fiscalCode}${eligibilityCheckOrchestratorSuffix}`,
+        makeStartEligibilityCheckOrchestratorId(fiscalCode),
         fiscalCode
       );
     } catch (err) {

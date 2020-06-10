@@ -16,6 +16,7 @@ import {
   ResponseSuccessAccepted
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { makeStartBonusActivationOrchestratorId } from "../utils/orchestrators";
 
 type IStartBonusActivationHandler = (
   context: Context,
@@ -29,14 +30,12 @@ type IStartBonusActivationHandler = (
   | IResponseErrorConflict
 >;
 
-export const activationOrchestratorSuffix = "-BV01ACTIVATION";
-
 export function StartBonusActivationHandler(): IStartBonusActivationHandler {
   return async (context, fiscalCode) => {
     // TODO: Add implementation
     const client = df.getClient(context);
     const status = await client.getStatus(
-      `${fiscalCode}${activationOrchestratorSuffix}`
+      makeStartBonusActivationOrchestratorId(fiscalCode)
     );
     if (status.runtimeStatus === df.OrchestrationRuntimeStatus.Running) {
       return ResponseSuccessAccepted();
