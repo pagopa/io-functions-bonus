@@ -92,14 +92,18 @@ paths:
           description: Wrong or missing function key.
         "403":
           description: |
-            Cannot activate a new bonus because the eligibility data has expired
-            or the user is ineligible to get the bonus.
+            Cannot activate a new bonus because the user is ineligible to get the bonus.
             She must re-initiate the eligibility procedure to refresh her data
             and retry to activate the bonus within 24h since she got the result.
         "409":
           description: |
             Cannot activate a new bonus because another active or redeemed
             bonus related to this user was found.
+        "410":
+          description: |
+            Cannot activate a new bonus because the eligibility data has expired.
+            She must re-initiate the eligibility procedure to refresh her data
+            and retry to activate the bonus within 24h since she got the result.
         "500":
           description: Service unavailable.
           schema:
