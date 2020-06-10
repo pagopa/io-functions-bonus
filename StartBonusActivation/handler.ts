@@ -31,6 +31,7 @@ import {
   ResponseSuccessRedirectToResource
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import { pick } from "italia-ts-commons/lib/types";
 import { BonusActivation } from "../generated/models/BonusActivation";
 import { BonusActivationStatusEnum } from "../generated/models/BonusActivationStatus";
 import { Dsu } from "../generated/models/Dsu";
@@ -184,23 +185,21 @@ const getLastValidDSU = (
           | IResponseErrorInternal,
           Dsu
         >
-      >(fromEither(left(ResponseErrorInternal(`Cannot find DSU`))), doc => {
-        if (EligibilityCheckSuccessEligible.is(doc)) {
-          if (doc.validBefore <= new Date()) {
-            // extract dsu keys from EligibilityCheckSuccessEligible
-            const dsu: Dsu = keys(Dsu._A).reduce(
-              (p, k) => ({
-                ...p,
-                [k]: doc[k]
-              }),
-              {} as Dsu
-            );
-            return fromEither(right(dsu));
-          }
-          return fromEither(left(ResponseErrorResourceGone));
-        }
-        return fromEither(left(ResponseErrorForbiddenNotAuthorized));
-      });
+      >(fromEither(left(ResponseErrorInternal(`Cannot find DSU`))), doc =>
+        // the found document is not in eligible status
+        !EligibilityCheckSuccessEligible.is(doc)
+          ? fromEither(left(ResponseErrorForbiddenNotAuthorized))
+          : // the check is expired
+          doc.validBefore > new Date()
+          ? fromEither(left(ResponseErrorResourceGone))
+          : // the check is fine, I can extract the DSU data from it
+            fromEither(
+              right(
+                // extract dsu keys from EligibilityCheckSuccessEligible
+                pick(keys(Dsu._A), doc)
+              )
+            )
+      );
     }
   );
 
