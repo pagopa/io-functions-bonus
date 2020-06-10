@@ -19,16 +19,11 @@ import {
 } from "io-functions-commons/dist/src/models/service";
 import * as documentDbUtils from "io-functions-commons/dist/src/utils/documentdb";
 import { getRequiredStringEnv } from "io-functions-commons/dist/src/utils/env";
+import { documentClient } from "../../utils/cosmosdb";
 
-const cosmosDbKey = getRequiredStringEnv("CUSTOMCONNSTR_COSMOSDB_KEY");
-const cosmosDbUri = getRequiredStringEnv("CUSTOMCONNSTR_COSMOSDB_URI");
 const cosmosDbName = getRequiredStringEnv("COSMOSDB_NAME");
 
 const documentDbDatabaseUrl = documentDbUtils.getDatabaseUri(cosmosDbName);
-
-const documentClient = new DocumentDBClient(cosmosDbUri, {
-  masterKey: cosmosDbKey
-});
 
 function createDatabase(databaseName: string): Promise<Either<Error, void>> {
   return new Promise(resolve => {

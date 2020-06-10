@@ -8,40 +8,66 @@ import {
   wrapRequestHandler
 } from "io-functions-commons/dist/src/utils/request_middleware";
 import {
+  IResponseErrorForbiddenNotAuthorizedForRecipient,
   IResponseErrorInternal,
   IResponseSuccessAccepted,
   IResponseSuccessRedirectToResource,
+  ResponseErrorForbiddenNotAuthorizedForRecipient,
   ResponseErrorInternal,
   ResponseSuccessAccepted,
   ResponseSuccessRedirectToResource
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { InstanceId } from "../generated/definitions/InstanceId";
+import { activationOrchestratorSuffix } from "../StartBonusActivation/handler";
 import { initTelemetryClient } from "../utils/appinsights";
+
+export const eligibilityCheckOrchestratorSuffix = "-BV01DSU";
 
 type IEligibilityCheckHandler = (
   context: Context,
   fiscalCode: FiscalCode
 ) => Promise<
+  // tslint:disable-next-line: max-union-size
   | IResponseSuccessRedirectToResource<InstanceId, InstanceId>
   | IResponseSuccessAccepted
   | IResponseErrorInternal
+  | IResponseErrorForbiddenNotAuthorizedForRecipient
 >;
 
 initTelemetryClient();
 
+/**
+ * API controller: start eligibility check
+ * trying to get data from INPS webservice.
+ */
 export function EligibilityCheckHandler(): IEligibilityCheckHandler {
   return async (context, fiscalCode) => {
     const client = df.getClient(context);
-    const status = await client.getStatus(`${fiscalCode}-BV01DSU`);
-    // TODO: If a bonus request is running return status 403
-    if (status.customStatus === "RUNNING") {
-      return ResponseSuccessAccepted("Orchestrator already running");
+
+    // If a bonus activation for that user is in progress
+    // returns 403 status response
+    const activationStatus = await client.getStatus(
+      `${fiscalCode}${activationOrchestratorSuffix}`
+    );
+    if (
+      activationStatus.runtimeStatus === df.OrchestrationRuntimeStatus.Running
+    ) {
+      return ResponseErrorForbiddenNotAuthorizedForRecipient;
+    }
+
+    // If another ElegibilityCheck operation is in progress for that user
+    // returns 202 status response
+    const status = await client.getStatus(
+      `${fiscalCode}${eligibilityCheckOrchestratorSuffix}`
+    );
+    if (status.runtimeStatus === df.OrchestrationRuntimeStatus.Running) {
+      return ResponseSuccessAccepted("Still running");
     }
     try {
       await client.startNew(
         "EligibilityCheckOrchestrator",
-        `${fiscalCode}-BV01DSU`,
+        `${fiscalCode}${eligibilityCheckOrchestratorSuffix}`,
         fiscalCode
       );
     } catch (err) {

@@ -6,38 +6,58 @@
 
 import { addSeconds } from "date-fns";
 import * as df from "durable-functions";
+import { ActivityResult as DeleteEligibilityCheckActivityResult } from "../DeleteEligibilityCheckActivity/handler";
 import { ActivityResult } from "../EligibilityCheckActivity/handler";
+import { retryOptions } from "../utils/retryPolicy";
 
 const NOTIFICATION_DELAY_SECONDS = 10;
 
 const EligibilityCheckOrchestrator = df.orchestrator(function*(
   context: IOrchestrationFunctionContext
 ): Generator<TaskSet | Task> {
-  const retryOptions = {
-    backoffCoefficient: 1.5,
-    firstRetryIntervalInMilliseconds: 1000,
-    maxNumberOfAttempts: 10,
-    maxRetryIntervalInMilliseconds: 3600 * 100,
-    retryTimeoutInMilliseconds: 3600 * 1000
-  };
-  // TODO: Delete dsu record if exists
   context.df.setCustomStatus("RUNNING");
-  const undecodedEligibilityCheckResponse = yield context.df.callActivityWithRetry(
-    "EligibilityCheckActivity",
-    retryOptions,
-    context.df.getInput()
-  );
-  const eligibilityCheckResponse = ActivityResult.decode(
-    undecodedEligibilityCheckResponse
-  ).getOrElse({
-    kind: "FAILURE",
-    reason: " ActivityResult decoding error"
-  });
-  yield context.df.callActivityWithRetry(
-    "SaveDSUActivity",
-    retryOptions,
-    eligibilityCheckResponse
-  );
+  // tslint:disable-next-line: no-let
+  let eligibilityCheckResponse: ActivityResult;
+  try {
+    const deleteEligibilityCheckResponse = yield context.df.callActivity(
+      "DeleteEligibilityCheckActivity",
+      context.df.getInput()
+    );
+
+    DeleteEligibilityCheckActivityResult.decode(
+      deleteEligibilityCheckResponse
+    ).map(_ => {
+      if (_.kind === "FAILURE") {
+        throw new Error(_.reason);
+      }
+    });
+
+    const undecodedEligibilityCheckResponse = yield context.df.callActivityWithRetry(
+      "EligibilityCheckActivity",
+      retryOptions,
+      context.df.getInput()
+    );
+    eligibilityCheckResponse = ActivityResult.decode(
+      undecodedEligibilityCheckResponse
+    ).getOrElse({
+      kind: "FAILURE",
+      reason: "ActivityResult decoding error"
+    });
+    if (eligibilityCheckResponse.kind !== "SUCCESS") {
+      throw new Error(
+        `Unexpected response from EligibilityCheckActivity: [${eligibilityCheckResponse.reason}]`
+      );
+    }
+    yield context.df.callActivityWithRetry(
+      "UpsertEligibilityCheckActivity",
+      retryOptions,
+      eligibilityCheckResponse
+    );
+  } catch (err) {
+    context.log.error("EligibilityCheckOrchestrator|ERROR|%s", err);
+    context.df.setCustomStatus("COMPLETED");
+    return err;
+  }
   context.df.setCustomStatus("COMPLETED");
 
   // sleep before sending push notification
