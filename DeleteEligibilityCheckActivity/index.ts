@@ -7,7 +7,7 @@ import {
 import { documentClient } from "../utils/cosmosdb";
 import { getDeleteEligibilityCheckActivityHandler } from "./handler";
 
-const cosmosDbName = getRequiredStringEnv("COSMOSDB_NAME");
+const cosmosDbName = getRequiredStringEnv("COSMOSDB_BONUS_DATABASE_NAME");
 
 const documentDbDatabaseUrl = documentDbUtils.getDatabaseUri(cosmosDbName);
 const eligibilityCheckCollectionUrl = documentDbUtils.getCollectionUri(
