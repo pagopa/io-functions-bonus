@@ -34,11 +34,11 @@ function calculateMaxBonusAmount(
   numberOfFamilyMembers: number
 ): MaxBonusAmount {
   return (numberOfFamilyMembers > 2
-    ? 50000
+    ? 500
     : numberOfFamilyMembers === 2
-    ? 25000
+    ? 250
     : numberOfFamilyMembers === 1
-    ? 15000
+    ? 150
     : 0) as MaxBonusAmount;
 }
 

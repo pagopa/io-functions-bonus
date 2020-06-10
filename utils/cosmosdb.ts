@@ -4,8 +4,8 @@
 import { DocumentClient as DocumentDBClient } from "documentdb";
 import { getRequiredStringEnv } from "io-functions-commons/dist/src/utils/env";
 
-const cosmosDbUri = getRequiredStringEnv("COSMOSDB_BONUS_URI");
-const masterKey = getRequiredStringEnv("COSMOSDB_BONUS_KEY");
+const cosmosDbUri = getRequiredStringEnv("CUSTOMCONNSTR_COSMOSDB_URI");
+const masterKey = getRequiredStringEnv("CUSTOMCONNSTR_COSMOSDB_KEY");
 
 export const documentClient = new DocumentDBClient(cosmosDbUri, {
   masterKey
