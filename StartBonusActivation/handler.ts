@@ -1,6 +1,16 @@
 import { Context } from "@azure/functions";
+import { QueryError } from "documentdb";
 import * as df from "durable-functions";
+import { DurableOrchestrationClient } from "durable-functions/lib/src/durableorchestrationclient";
 import * as express from "express";
+import { sequenceT } from "fp-ts/lib/Apply";
+import { Either, left, right, toError } from "fp-ts/lib/Either";
+import {
+  fromEither,
+  TaskEither,
+  taskEither,
+  tryCatch
+} from "fp-ts/lib/TaskEither";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import { FiscalCodeMiddleware } from "io-functions-commons/dist/src/utils/middlewares/fiscalcode";
 import {
@@ -8,43 +18,278 @@ import {
   wrapRequestHandler
 } from "io-functions-commons/dist/src/utils/request_middleware";
 import {
-  IResponseErrorConflict,
+  HttpStatusCodeEnum,
+  IResponse,
+  IResponseErrorForbiddenNotAuthorized,
   IResponseErrorInternal,
   IResponseSuccessAccepted,
   IResponseSuccessRedirectToResource,
-  ResponseErrorConflict,
-  ResponseSuccessAccepted
+  ResponseErrorForbiddenNotAuthorized,
+  ResponseErrorGeneric,
+  ResponseErrorInternal,
+  ResponseSuccessAccepted,
+  ResponseSuccessRedirectToResource
 } from "italia-ts-commons/lib/responses";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import { BonusActivation } from "../generated/models/BonusActivation";
+import { BonusActivationStatusEnum } from "../generated/models/BonusActivationStatus";
+import { Dsu } from "../generated/models/Dsu";
+import { EligibilityCheckSuccessEligible } from "../generated/models/EligibilityCheckSuccessEligible";
+import {
+  BonusActivationModel,
+  NewBonusActivation
+} from "../models/bonus_activation";
+import { EligibilityCheckModel } from "../models/eligibility_check";
+import {
+  makeStartBonusActivationOrchestratorId,
+  makeStartEligibilityCheckOrchestratorId
+} from "../utils/orchestrators";
+import { keys } from "../utils/types";
+
+const checkOrchestratorIsRunning = (
+  client: DurableOrchestrationClient,
+  orchestratorId: string
+): TaskEither<Error, boolean> =>
+  tryCatch(() => client.getStatus(orchestratorId), toError).map(
+    status => status.runtimeStatus === df.OrchestrationRuntimeStatus.Running
+  );
+
+// A custom response type for 401 Gone
+// TODO: Move it to "italia-ts-commons/lib/responses"
+export interface IResponseErrorResourceGone
+  extends IResponse<"IResponseErrorResourceGone"> {}
+export const ResponseErrorResourceGone: IResponseErrorResourceGone = {
+  ...ResponseErrorGeneric(
+    HttpStatusCodeEnum.HTTP_STATUS_410,
+    "Gone",
+    "The resource you are looking for does not longer exist"
+  ),
+  kind: "IResponseErrorResourceGone"
+};
+
+const makeBonusActivationResourceUri = (
+  fiscalcode: FiscalCode,
+  bonusId: string
+) => `/bonus/vacanze/activations/${fiscalcode}/${bonusId}`;
+
+/**
+ * Converts a Promise<Either> into a TaskEither
+ * This is needed because our models return unconvenient type. Both left and rejection cases are handled as a TaskEither left
+ * @param lazyPromise a lazy promise to convert
+ * @param queryName an optional name for the query, for logging purpose
+ *
+ * @returns either the query result or a query failure
+ */
+const fromQueryEither = <R>(
+  lazyPromise: () => Promise<Either<QueryError | Error, R>>
+): TaskEither<Error, R> =>
+  tryCatch(lazyPromise, toError).chain(errorOrResult =>
+    fromEither(errorOrResult).mapLeft(toError)
+  );
+
+/**
+ * Check if the current user has a pending activation request.
+ * If there's no pending requests right(false) is returned
+ * @param client
+ * @param fiscalCode
+ *
+ * @returns either false or a custom response indicating whether there's a process running or there has been an internal error during the check
+ */
+const checkBonusActivationIsRunning = (
+  client: DurableOrchestrationClient,
+  fiscalCode: FiscalCode
+): TaskEither<IResponseErrorInternal | IResponseSuccessAccepted, false> =>
+  checkOrchestratorIsRunning(
+    client,
+    makeStartBonusActivationOrchestratorId(fiscalCode)
+  ).foldTaskEither<IResponseErrorInternal | IResponseSuccessAccepted, false>(
+    err =>
+      fromEither(
+        left(
+          ResponseErrorInternal(
+            `Error checking BonusActivationOrchestrator: ${err.message}`
+          )
+        )
+      ),
+    isRunning =>
+      isRunning
+        ? fromEither(left(ResponseSuccessAccepted()))
+        : fromEither(right(false))
+  );
+
+/**
+ * Check if the current user has a pending dsu validation request.
+ * If there's no pending requests right(false) is returned
+ * @param client
+ * @param fiscalCode
+ *
+ * @returns either false or a custom response indicating whether there's a process running or there has been an internal error during the check
+ */
+const checkEligibilityCheckIsRunning = (
+  client: DurableOrchestrationClient,
+  fiscalCode: FiscalCode
+): TaskEither<
+  IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized,
+  false
+> =>
+  checkOrchestratorIsRunning(
+    client,
+    makeStartEligibilityCheckOrchestratorId(fiscalCode)
+  ).foldTaskEither<
+    IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized,
+    false
+  >(
+    err =>
+      fromEither(
+        left(
+          ResponseErrorInternal(
+            `Error checking EligibilityCheckOrchestrator: ${err.message}`
+          )
+        )
+      ),
+    isRunning =>
+      isRunning
+        ? fromEither(left(ResponseErrorForbiddenNotAuthorized))
+        : fromEither(right(false))
+  );
+
+/**
+ * Query for a valid DSU relative to the current user.
+ * @param eligibilityCheckModel the model instance for EligibilityCheck
+ * @param fiscalCode the id of the current user
+ *
+ * @returns either a valid DSU or a response relative to the state of the DSU
+ */
+const getLastValidDSU = (
+  eligibilityCheckModel: EligibilityCheckModel,
+  fiscalCode: FiscalCode
+): TaskEither<
+  | IResponseErrorForbiddenNotAuthorized
+  | IResponseErrorResourceGone
+  | IResponseErrorInternal,
+  Dsu
+> =>
+  fromQueryEither(() =>
+    eligibilityCheckModel.find(fiscalCode, fiscalCode)
+  ).foldTaskEither(
+    err =>
+      fromEither(
+        left(ResponseErrorInternal(`Error reading DSU: ${err.message}`))
+      ),
+    maybeDoc => {
+      return maybeDoc.fold<
+        TaskEither<
+          | IResponseErrorForbiddenNotAuthorized
+          | IResponseErrorResourceGone
+          | IResponseErrorInternal,
+          Dsu
+        >
+      >(fromEither(left(ResponseErrorInternal(`Cannot find DSU`))), doc => {
+        if (EligibilityCheckSuccessEligible.is(doc)) {
+          if (doc.validBefore <= new Date()) {
+            // extract dsu keys from EligibilityCheckSuccessEligible
+            const dsu: Dsu = keys(Dsu._A).reduce(
+              (p, k) => ({
+                ...p,
+                [k]: doc[k]
+              }),
+              {} as Dsu
+            );
+            return fromEither(right(dsu));
+          }
+          return fromEither(left(ResponseErrorResourceGone));
+        }
+        return fromEither(left(ResponseErrorForbiddenNotAuthorized));
+      });
+    }
+  );
+
+/**
+ * Create a new BonusActivation request record
+ * @param bonusActivationModel an instance of BonusActivationModel
+ * @param fiscalCode the id of the requesting user
+ * @param dsu the valid DSU of the current user
+ *
+ * @returns either the created record or
+ */
+const createBonusActivation = (
+  bonusActivationModel: BonusActivationModel,
+  fiscalCode: FiscalCode,
+  dsu: Dsu
+): TaskEither<IResponseErrorInternal, BonusActivation> =>
+  fromQueryEither(() => {
+    const bonusCode = "any code" as NonEmptyString;
+    const bonusActivation: NewBonusActivation = {
+      applicantFiscalCode: fiscalCode,
+      code: bonusCode,
+      dsuRequest: dsu,
+      id: bonusCode,
+      kind: "INewBonusActivation",
+      status: BonusActivationStatusEnum.PROCESSING,
+      updatedAt: new Date()
+    };
+    return bonusActivationModel.create(bonusActivation, fiscalCode);
+  }).mapLeft(err =>
+    ResponseErrorInternal(`Error creating BonusActivation: ${err.message}`)
+  );
+
+type StartBonusActivationResponse =
+  | IResponseErrorInternal
+  | IResponseErrorForbiddenNotAuthorized
+  | IResponseErrorResourceGone
+  | IResponseSuccessAccepted
+  | IResponseSuccessRedirectToResource<BonusActivation, BonusActivation>;
 
 type IStartBonusActivationHandler = (
   context: Context,
   fiscalCode: FiscalCode
-) => Promise<
-  // tslint:disable-next-line: max-union-size
-  | IResponseSuccessAccepted
-  // TODO: Add types
-  | IResponseSuccessRedirectToResource<unknown, unknown>
-  | IResponseErrorInternal
-  | IResponseErrorConflict
->;
+) => Promise<StartBonusActivationResponse>;
 
-export const orchestratorSuffix = "-BV01ACTIVATION";
-
-export function StartBonusActivationHandler(): IStartBonusActivationHandler {
+export function StartBonusActivationHandler(
+  bonusActivationModel: BonusActivationModel,
+  eligibilityCheckModel: EligibilityCheckModel
+): IStartBonusActivationHandler {
   return async (context, fiscalCode) => {
-    // TODO: Add implementation
     const client = df.getClient(context);
-    const status = await client.getStatus(`${fiscalCode}${orchestratorSuffix}`);
-    if (status.runtimeStatus === df.OrchestrationRuntimeStatus.Running) {
-      return ResponseSuccessAccepted();
-    }
-    return ResponseErrorConflict("Implementation missing");
+
+    return sequenceT(taskEither)(
+      checkEligibilityCheckIsRunning(client, fiscalCode) as TaskEither<
+        StartBonusActivationResponse,
+        false
+      >,
+      checkBonusActivationIsRunning(client, fiscalCode) as TaskEither<
+        StartBonusActivationResponse,
+        false
+      >,
+      getLastValidDSU(eligibilityCheckModel, fiscalCode) as TaskEither<
+        StartBonusActivationResponse,
+        Dsu
+      >
+    )
+      .chain(([, , dsu]) =>
+        createBonusActivation(bonusActivationModel, fiscalCode, dsu)
+      )
+      .fold(
+        l => l,
+        bonusActivation =>
+          ResponseSuccessRedirectToResource(
+            bonusActivation,
+            makeBonusActivationResourceUri(fiscalCode, bonusActivation.id),
+            bonusActivation
+          )
+      )
+      .run();
   };
 }
 
-export function StartBonusActivation(): express.RequestHandler {
-  const handler = StartBonusActivationHandler();
+export function StartBonusActivation(
+  bonusActivationModel: BonusActivationModel,
+  eligibilityCheckModel: EligibilityCheckModel
+): express.RequestHandler {
+  const handler = StartBonusActivationHandler(
+    bonusActivationModel,
+    eligibilityCheckModel
+  );
 
   const middlewaresWrap = withRequestMiddlewares(
     // Extract Azure Functions bindings

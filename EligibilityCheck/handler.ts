@@ -18,6 +18,7 @@ import {
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { initTelemetryClient } from "../utils/appinsights";
+import { makeStartEligibilityCheckOrchestratorId } from "../utils/orchestrators";
 
 type IEligibilityCheckHandler = (
   context: Context,
@@ -33,7 +34,8 @@ initTelemetryClient();
 export function EligibilityCheckHandler(): IEligibilityCheckHandler {
   return async (context, fiscalCode) => {
     const client = df.getClient(context);
-    const status = await client.getStatus(`${fiscalCode}-BV01DSU`);
+    const orchestratorId = makeStartEligibilityCheckOrchestratorId(fiscalCode);
+    const status = await client.getStatus(orchestratorId);
     // TODO: If a bonus request is running return status 403
     if (status.customStatus === "RUNNING") {
       return ResponseSuccessAccepted("Orchestrator already running");
@@ -41,7 +43,7 @@ export function EligibilityCheckHandler(): IEligibilityCheckHandler {
     try {
       await client.startNew(
         "EligibilityCheckOrchestrator",
-        `${fiscalCode}-BV01DSU`,
+        orchestratorId,
         fiscalCode
       );
     } catch (err) {

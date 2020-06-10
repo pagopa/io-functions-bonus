@@ -40,6 +40,7 @@ import { MaxBonusAmount } from "../generated/definitions/MaxBonusAmount";
 import { MaxBonusTaxBenefit } from "../generated/definitions/MaxBonusTaxBenefit";
 import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
 import { initTelemetryClient } from "../utils/appinsights";
+import { makeStartEligibilityCheckOrchestratorId } from "../utils/orchestrators";
 
 type IGetEligibilityCheckHandler = (
   context: Context,
@@ -76,7 +77,8 @@ function calculateMaxBonusTaxBenefit(
 export function GetEligibilityCheckHandler(): IGetEligibilityCheckHandler {
   return async (context, fiscalCode) => {
     const client = df.getClient(context);
-    const status = await client.getStatus(`${fiscalCode}-BV01DSU`);
+    const orchestratorId = makeStartEligibilityCheckOrchestratorId(fiscalCode);
+    const status = await client.getStatus(orchestratorId);
     if (status.customStatus === "RUNNING") {
       return ResponseSuccessAccepted("Orchestrator already running");
     }
@@ -153,7 +155,7 @@ export function GetEligibilityCheckHandler(): IGetEligibilityCheckHandler {
           // Since we're sending the result to the frontend,
           // we stop the orchestrator here in order to avoid
           // sending a push notification with the same result
-          await client.terminate(`${fiscalCode}-BV01DSU`, "Success");
+          await client.terminate(orchestratorId, "Success");
           // TODO: Check casting below
           return ResponseSuccessJson(_ as EligibilityCheck);
         }
