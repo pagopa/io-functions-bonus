@@ -48,7 +48,7 @@ export function GetEligibilityCheckHandler(
       `${fiscalCode}${eligibilityCheckOrchestratorSuffix}`
     );
     if (status.customStatus === "RUNNING") {
-      return ResponseSuccessAccepted("Orchestrator already running");
+      return ResponseSuccessAccepted("Still running");
     }
     const eligibilityCheckDocument = await eligibilityCheckModel.find(
       fiscalCode,

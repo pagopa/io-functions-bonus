@@ -1,8 +1,9 @@
 import { Context } from "@azure/functions";
 import { isLeft } from "fp-ts/lib/Either";
 import { fromEither, tryCatch } from "fp-ts/lib/TaskEither";
+import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
-import { ActivityResultSuccess } from "../EligibilityCheckActivity/handler";
+import { ActivityResultSuccess as ActivityInput } from "../EligibilityCheckActivity/handler";
 import { EligibilityCheck } from "../generated/definitions/EligibilityCheck";
 import {
   ELIGIBILITY_CHECK_MODEL_PK_FIELD,
@@ -13,10 +14,27 @@ import {
   toModelEligibilityCheck
 } from "../utils/conversions";
 
+export const ActivityResultSuccess = t.interface({
+  kind: t.literal("SUCCESS")
+});
+export type ActivityResultSuccess = t.TypeOf<typeof ActivityResultSuccess>;
+
+const ActivityResultFailure = t.interface({
+  kind: t.literal("FAILURE"),
+  reason: t.string
+});
+type ActivityResultFailure = t.TypeOf<typeof ActivityResultFailure>;
+
+const ActivityResult = t.taggedUnion("kind", [
+  ActivityResultFailure,
+  ActivityResultSuccess
+]);
+type ActivityResult = t.TypeOf<typeof ActivityResult>;
+
 type ISaveEligibilityCheckHandler = (
   context: Context,
   input: unknown
-) => Promise<unknown>;
+) => Promise<ActivityResult>;
 
 // tslint:disable-next-line: cognitive-complexity
 export function getUpsertEligibilityCheckActivityHandler(
@@ -24,7 +42,7 @@ export function getUpsertEligibilityCheckActivityHandler(
 ): ISaveEligibilityCheckHandler {
   return (context: Context, input: unknown) => {
     return fromEither(
-      ActivityResultSuccess.decode(input).mapLeft(
+      ActivityInput.decode(input).mapLeft(
         _ => new Error(`Error decoding ActivityInput: [${readableReport(_)}]`)
       )
     )
@@ -56,9 +74,18 @@ export function getUpsertEligibilityCheckActivityHandler(
       .chain(_ =>
         fromEither(_).mapLeft(err => new Error(`Query Error: ${err.body}`))
       )
-      .mapLeft(_ => {
-        context.log.error(`UpsertEligibilityCheckActivity|ERROR|${_.message}`);
-      })
+      .fold<ActivityResult>(
+        err => {
+          context.log.error(
+            `UpsertEligibilityCheckActivity|ERROR|${err.message}`
+          );
+          return ActivityResultFailure.encode({
+            kind: "FAILURE",
+            reason: err.message
+          });
+        },
+        _ => ActivityResultSuccess.encode({ kind: "SUCCESS" })
+      )
       .run();
   };
 }
