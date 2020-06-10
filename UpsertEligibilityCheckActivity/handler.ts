@@ -132,7 +132,7 @@ export function getUpsertEligibilityCheckActivityHandler(
             }
             return eligibilityCheckModel.createOrUpdate(
               { ...errorOrData.value, kind: "INewEligibilityCheck" },
-              ELIGIBILITY_CHECK_MODEL_PK_FIELD
+              errorOrData.value[ELIGIBILITY_CHECK_MODEL_PK_FIELD]
             );
           },
           err => new Error(`Error upserting EligibilityCheck [${err}]`)
