@@ -2,27 +2,15 @@
 
 ## Develop locally
 
+1. Install dotnet sdk: https://dotnet.microsoft.com/download
+1. Modify env.example to include CosmosDB and Azure Storage Account connection strings
+
 ```shell
 cp env.example .env
 yarn install
-docker-compose up -d --build
-docker-compose logs -f functions
+yarn start
 ```
 
-## Notable environtment variables
+## Notable environment variables
 
-SLOT_TASK_HUBNAME
-
-APPINSIGHTS_INSTRUMENTATIONKEY
-
-COSMOSDB_BONUS_DATABASE_NAME
-
-COSMOSDB_BONUS_KEY
-
-COSMOSDB_BONUS_URI
-
-INPS_SERVICE_ENDPOINT
-
-SERVICES_API_URL
-
-SERVICES_API_KEY
+See [env.example](./env.example)
