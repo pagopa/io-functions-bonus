@@ -7,6 +7,7 @@ import {
   withRequestMiddlewares,
   wrapRequestHandler
 } from "io-functions-commons/dist/src/utils/request_middleware";
+import { readableReport } from "italia-ts-commons/lib/reporters";
 import {
   IResponseErrorInternal,
   IResponseErrorNotFound,
@@ -25,6 +26,7 @@ import {
   EligibilityCheckModel
 } from "../models/eligibility_check";
 import { initTelemetryClient } from "../utils/appinsights";
+import { toApiEligibilityCheck } from "../utils/conversions";
 
 type IGetEligibilityCheckHandler = (
   context: Context,
@@ -80,7 +82,16 @@ export function GetEligibilityCheckHandler(
           `${fiscalCode}${eligibilityCheckOrchestratorSuffix}`,
           "Success"
         );
-        return ResponseSuccessJson(_.value);
+        return toApiEligibilityCheck(_.value).fold<
+          IResponseErrorInternal | IResponseSuccessJson<EligibilityCheck>
+        >(
+          err => {
+            return ResponseErrorInternal(
+              `Conversion error: [${readableReport(err)}]`
+            );
+          },
+          response => ResponseSuccessJson(response)
+        );
       }
     );
   };

@@ -1,10 +1,12 @@
 import { Context } from "@azure/functions";
 import { rights } from "fp-ts/lib/Array";
+import { isLeft } from "fp-ts/lib/Either";
 import { fromEither, tryCatch } from "fp-ts/lib/TaskEither";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { ActivityResultSuccess } from "../EligibilityCheckActivity/handler";
 import { EsitoEnum } from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
+import { EligibilityCheck } from "../generated/definitions/EligibilityCheck";
 import {
   EligibilityCheckFailure,
   ErrorEnum
@@ -22,11 +24,11 @@ import { FamilyMembers } from "../generated/definitions/FamilyMembers";
 import { MaxBonusAmount } from "../generated/definitions/MaxBonusAmount";
 import { MaxBonusTaxBenefit } from "../generated/definitions/MaxBonusTaxBenefit";
 import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
-import { EligibilityCheck } from "../generated/models/EligibilityCheck";
 import {
   ELIGIBILITY_CHECK_MODEL_PK_FIELD,
   EligibilityCheckModel
 } from "../models/eligibility_check";
+import { toModelEligibilityCheck } from "../utils/conversions";
 
 function calculateMaxBonusAmount(
   numberOfFamilyMembers: number
@@ -119,11 +121,20 @@ export function getUpsertEligibilityCheckActivityHandler(
       })
       .chain(_ =>
         tryCatch(
-          () =>
-            eligibilityCheckModel.createOrUpdate(
-              { ..._, kind: "INewEligibilityCheck" },
+          () => {
+            const errorOrData = toModelEligibilityCheck(_);
+            if (isLeft(errorOrData)) {
+              throw new Error(
+                `Eligibility check Conversion error: [${readableReport(
+                  errorOrData.value
+                )}]`
+              );
+            }
+            return eligibilityCheckModel.createOrUpdate(
+              { ...errorOrData.value, kind: "INewEligibilityCheck" },
               ELIGIBILITY_CHECK_MODEL_PK_FIELD
-            ),
+            );
+          },
           err => new Error(`Error upserting EligibilityCheck [${err}]`)
         )
       )

@@ -4,7 +4,6 @@ import { fromEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "io-functions-commons/dist/generated/definitions/FiscalCode";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
-import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { ConsultazioneSogliaIndicatoreResponse } from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
 import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
 import { Timestamp } from "../generated/definitions/Timestamp";
@@ -13,7 +12,7 @@ import { ISoapClientAsync } from "../utils/inpsSoapClient";
 // Activity result
 export const ActivityResultSuccess = t.interface({
   data: ConsultazioneSogliaIndicatoreResponse,
-  fiscalCode: NonEmptyString,
+  fiscalCode: FiscalCode,
   kind: t.literal("SUCCESS"),
   validBefore: Timestamp
 });
@@ -71,7 +70,7 @@ export const getEligibilityCheckActivityHandler = (
         _ =>
           Promise.resolve({
             data: _.dsu,
-            fiscalCode: (_.fiscalCode as unknown) as NonEmptyString,
+            fiscalCode: _.fiscalCode,
             kind: "SUCCESS" as "SUCCESS",
             validBefore: addHours(new Date(), 24)
           })
