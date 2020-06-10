@@ -9,6 +9,11 @@
 cp env.example .env
 yarn install
 yarn start
+
+func durable start-new --function-name StartBonusActivationOrchestrator \
+  --connection-string-setting BONUS_STORAGE_CONNECTION_STRING --task-hub-name FunctionHub \
+  --input @fixtures/input.json
+
 ```
 
 ## Notable environment variables
