@@ -13,7 +13,7 @@ const ALPHABET_LEN = ALPHABET.length;
 // Bonus codes have a length of 12 characthers
 export const BONUSCODE_LENGTH = 12;
 
-export const BonusCode = PatternString("[ACEFGHLMNPRUV3469]{12}");
+export const BonusCode = PatternString(`[${ALPHABET}]{${BONUSCODE_LENGTH}}`);
 export type BonusCode = t.TypeOf<typeof BonusCode>;
 
 const asyncRandomBytes = promisify(randomBytes);
