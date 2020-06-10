@@ -2926,6 +2926,14 @@ faker@^4.1.0:
   resolved "https://registry.yarnpkg.com/faker/-/faker-4.1.0.tgz#1e45bbbecc6774b3c195fad2835109c6d748cc3f"
   integrity sha1-HkW7vsxndLPBlfrSg1EJxtdIzD8=
 
+fast-check@^1.24.2:
+  version "1.24.2"
+  resolved "https://registry.yarnpkg.com/fast-check/-/fast-check-1.24.2.tgz#1f5e4a3c20530c3a85a861e60f680c32229d4fcb"
+  integrity sha512-ZL48cyZZLJnVsUj127Zi1mfFLM98yzw0LlSSH8CMeVmpL5RCfSRcZSZZ0kJWrRK4eOgNFnXXKNDbzuRb3Vsdhg==
+  dependencies:
+    pure-rand "^2.0.0"
+    tslib "^1.10.0"
+
 fast-deep-equal@^1.0.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/fast-deep-equal/-/fast-deep-equal-1.1.0.tgz#c053477817c86b51daa853c81e059b733d023614"
@@ -7127,6 +7135,11 @@ pupa@^2.0.1:
   dependencies:
     escape-goat "^2.0.0"
 
+pure-rand@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/pure-rand/-/pure-rand-2.0.0.tgz#3324633545207907fe964c2f0ebf05d8e9a7f129"
+  integrity sha512-mk98aayyd00xbfHgE3uEmAUGzz3jCdm8Mkf5DUXUhc7egmOaGG2D7qhVlynGenNe9VaNJZvzO9hkc8myuTkDgw==
+
 q@^1.5.1:
   version "1.5.1"
   resolved "https://registry.yarnpkg.com/q/-/q-1.5.1.tgz#7e32f75b41381291d04611f1bf14109ac00651d7"
@@ -8594,15 +8607,15 @@ tslib@1.9.0:
   resolved "https://registry.yarnpkg.com/tslib/-/tslib-1.9.0.tgz#e37a86fda8cbbaf23a057f473c9f4dc64e5fc2e8"
   integrity sha512-f/qGG2tUkrISBlQZEjEqoZ3B2+npJjIf04H1wuAv9iA8i04Icp+61KRXxFdha22670NJopsZCIjhC3SnjPRKrQ==
 
+tslib@^1.10.0, tslib@^1.9.0:
+  version "1.13.0"
+  resolved "https://registry.yarnpkg.com/tslib/-/tslib-1.13.0.tgz#c881e13cc7015894ed914862d276436fa9a47043"
+  integrity sha512-i/6DQjL8Xf3be4K/E6Wgpekn5Qasl1usyw++dAA35Ue5orEn65VIxOA+YvNNl9HV3qv70T7CNwjODHZrLwvd1Q==
+
 tslib@^1.7.1, tslib@^1.8.0, tslib@^1.8.1, tslib@^1.9.3:
   version "1.10.0"
   resolved "https://registry.yarnpkg.com/tslib/-/tslib-1.10.0.tgz#c3c19f95973fb0a62973fb09d90d961ee43e5c8a"
   integrity sha512-qOebF53frne81cf0S9B41ByenJ3/IuH8yJKngAX35CmiZySA0khhkovshKK+jGCaMnVomla7gVlIcc3EvKPbTQ==
-
-tslib@^1.9.0:
-  version "1.13.0"
-  resolved "https://registry.yarnpkg.com/tslib/-/tslib-1.13.0.tgz#c881e13cc7015894ed914862d276436fa9a47043"
-  integrity sha512-i/6DQjL8Xf3be4K/E6Wgpekn5Qasl1usyw++dAA35Ue5orEn65VIxOA+YvNNl9HV3qv70T7CNwjODHZrLwvd1Q==
 
 tslint-config-prettier@^1.18.0:
   version "1.18.0"
