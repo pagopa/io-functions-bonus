@@ -53,10 +53,9 @@ export function GetEligibilityCheckHandler(
     if (status.customStatus === "RUNNING") {
       return ResponseSuccessAccepted("Orchestrator already running");
     }
-    // TODO: Read DSU from cosmos
     const eligibilityCheckDocument = await eligibilityCheckModel.find(
       fiscalCode,
-      ELIGIBILITY_CHECK_MODEL_PK_FIELD
+      fiscalCode
     );
     return eligibilityCheckDocument.fold<
       Promise<
