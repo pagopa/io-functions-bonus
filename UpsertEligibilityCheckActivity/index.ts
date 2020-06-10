@@ -20,8 +20,8 @@ const eligibilityCheckModel = new EligibilityCheckModel(
   profilesCollectionUrl
 );
 
-const saveEligibilityCheckActivity = getUpsertEligibilityCheckActivityHandler(
+const UpsertEligibilityCheckActivity = getUpsertEligibilityCheckActivityHandler(
   eligibilityCheckModel
 );
 
-export default saveEligibilityCheckActivity;
+export default UpsertEligibilityCheckActivity;

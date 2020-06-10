@@ -57,7 +57,7 @@ type ISaveEligibilityCheckHandler = (
 export function getUpsertEligibilityCheckActivityHandler(
   eligibilityCheckModel: EligibilityCheckModel
 ): ISaveEligibilityCheckHandler {
-  return async (context: Context, input: unknown) => {
+  return (context: Context, input: unknown) => {
     return fromEither(
       ActivityResultSuccess.decode(input).mapLeft(
         _ => new Error(`Error decoding ActivityInput: [${readableReport(_)}]`)
@@ -137,6 +137,9 @@ export function getUpsertEligibilityCheckActivityHandler(
           },
           err => new Error(`Error upserting EligibilityCheck [${err}]`)
         )
+      )
+      .chain(_ =>
+        fromEither(_).mapLeft(err => new Error(`Query Error: ${err.body}`))
       )
       .mapLeft(_ => {
         context.log.error(`UpsertEligibilityCheckActivity|ERROR|${_.message}`);
