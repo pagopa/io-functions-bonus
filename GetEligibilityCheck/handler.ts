@@ -41,7 +41,6 @@ type IGetEligibilityCheckHandler = (
 
 initTelemetryClient();
 
-// tslint:disable-next-line: cognitive-complexity
 export function GetEligibilityCheckHandler(
   eligibilityCheckModel: EligibilityCheckModel
 ): IGetEligibilityCheckHandler {
