@@ -2,7 +2,9 @@ import fc from "fast-check";
 
 import { isLeft, isRight } from "fp-ts/lib/Either";
 
-import { ALPHABET, BonusCode, genRandomBonusCode } from "../bonusCode";
+import { BonusCode } from "../../generated/definitions/BonusCode";
+
+import { ALPHABET, genRandomBonusCode } from "../bonusCode";
 
 describe("BonusCode", () => {
   const alphaIdxArb = fc.integer(0, ALPHABET.length - 1);

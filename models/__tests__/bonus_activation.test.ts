@@ -12,6 +12,7 @@ import {
 import * as DocumentDbUtils from "io-functions-commons/dist/src/utils/documentdb";
 import { IWithinRangeIntegerTag } from "italia-ts-commons/lib/numbers";
 import { BonusActivationStatusEnum } from "../../generated/models/BonusActivationStatus";
+import { BonusCode } from "../../generated/models/BonusCode";
 import { StatusEnum } from "../../generated/models/EligibilityCheckSuccessEligible";
 
 const aDatabaseUri = DocumentDbUtils.getDatabaseUri("mockdb" as NonEmptyString);
@@ -21,10 +22,10 @@ const aCollectionUri = DocumentDbUtils.getCollectionUri(
 );
 
 const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
-const aBonusId = "bonusid123" as NonEmptyString;
-const aBonusActivationId = `${aFiscalCode}-${aBonusId}` as NonEmptyString;
+const aBonusId = "AAAAAAAAAAAA" as NonEmptyString & BonusCode;
+const aBonusActivationId = aBonusId;
 const aBonusActivation: BonusActivation = {
-  id: "aBonusActivationId" as NonEmptyString,
+  id: "AAAAAAAAAAAA" as BonusCode,
 
   applicantFiscalCode: aFiscalCode,
 

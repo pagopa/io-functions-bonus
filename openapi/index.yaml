@@ -203,6 +203,12 @@ definitions:
     required:
       - detail
 
+  BonusCode:
+    description: The unique secret code that identifies a bonus
+    type: string
+    minLength: 12
+    maxLength: 12
+    pattern: "^[ACEFGHLMNPRUV3469]{12}$"
   InstanceId:
     type: object
     properties:
@@ -378,8 +384,7 @@ definitions:
     description: Bonus activation
     properties:
       id:
-        type: string
-        minLength: 1
+        $ref: "#/definitions/BonusCode"
       applicant_fiscal_code:
         $ref: "#/definitions/FiscalCode"
       status:
@@ -404,8 +409,7 @@ definitions:
     type: object
     properties:
       id:
-        type: string
-        minLength: 1
+        $ref: "#/definitions/BonusCode"
       status:
         $ref: "#/definitions/BonusActivationStatus"
       is_applicant:
