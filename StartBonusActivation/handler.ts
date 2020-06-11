@@ -1,4 +1,5 @@
 import { Context } from "@azure/functions";
+import { isAfter } from "date-fns";
 import { QueryError } from "documentdb";
 import * as df from "durable-functions";
 import { DurableOrchestrationClient } from "durable-functions/lib/src/durableorchestrationclient";
@@ -19,10 +20,12 @@ import {
 } from "io-functions-commons/dist/src/utils/request_middleware";
 import {
   IResponseErrorForbiddenNotAuthorized,
+  IResponseErrorGone,
   IResponseErrorInternal,
   IResponseSuccessAccepted,
   IResponseSuccessRedirectToResource,
   ResponseErrorForbiddenNotAuthorized,
+  ResponseErrorGone,
   ResponseErrorInternal,
   ResponseSuccessAccepted,
   ResponseSuccessRedirectToResource
@@ -42,7 +45,6 @@ import {
   makeStartBonusActivationOrchestratorId,
   makeStartEligibilityCheckOrchestratorId
 } from "../utils/orchestrators";
-import { IResponseErrorGone, ResponseErrorGone } from "../utils/responses";
 import { keys } from "../utils/types";
 
 const checkOrchestratorIsRunning = (
@@ -175,7 +177,7 @@ const getLastValidDSU = (
         !EligibilityCheckSuccessEligible.is(doc)
           ? fromEither(left(ResponseErrorForbiddenNotAuthorized))
           : // the check is expired
-          doc.validBefore > new Date()
+          isAfter(doc.validBefore, new Date())
           ? fromEither(left(ResponseErrorGone(`DSU expired`)))
           : // the check is fine, I can extract the DSU data from it
             fromEither(
