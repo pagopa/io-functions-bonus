@@ -12,6 +12,7 @@ import { ISoapClientAsync } from "../utils/inpsSoapClient";
 // Activity result
 export const ActivityResultSuccess = t.interface({
   data: ConsultazioneSogliaIndicatoreResponse,
+  fiscalCode: FiscalCode,
   kind: t.literal("SUCCESS"),
   validBefore: Timestamp
 });
@@ -33,9 +34,13 @@ export type ActivityResult = t.TypeOf<typeof ActivityResult>;
 
 /**
  * Call INPS webservice to read the ISEE information
+ * and parses returned XML
  */
 export const getEligibilityCheckActivityHandler = (
-  soapClientAsync: ISoapClientAsync
+  soapClientAsync: ISoapClientAsync,
+  // Value for `Bonus Vacanze 2020`
+  // @see https://docs.google.com/document/d/1k-oWVK7Qs-c42b5HW4ild6rzpbQFDJ-f
+  thresholdCode = "BVAC01"
 ) => {
   return async (context: Context, input: unknown): Promise<ActivityResult> => {
     return await fromEither(
@@ -44,34 +49,35 @@ export const getEligibilityCheckActivityHandler = (
       )
     )
       .chain(fiscalCode => {
-        return soapClientAsync.ConsultazioneSogliaIndicatore({
-          CodiceFiscale: fiscalCode,
-          CodiceSoglia: "BVAC01", // Value for `Bonus Vacanze 2020` @see https://docs.google.com/document/d/1k-oWVK7Qs-c42b5HW4ild6rzpbQFDJ-f
-          FornituraNucleo: SiNoTypeEnum.SI
-        });
+        return soapClientAsync
+          .ConsultazioneSogliaIndicatore({
+            CodiceFiscale: fiscalCode,
+            CodiceSoglia: thresholdCode,
+            FornituraNucleo: SiNoTypeEnum.SI
+          })
+          .map(_ => ({ dsu: _, fiscalCode }));
       })
       .mapLeft(err => {
-        const errorMessage = `EligibilityCheckActivity|ERROR|${err}`;
-        context.log.error(errorMessage);
-        return errorMessage;
+        context.log.error(`EligibilityCheckActivity|ERROR|${err.message}`);
+        return err;
       })
       .fold(
-        errorMessage =>
+        err =>
           // Reject fail the Activity execution
           // If called with `callActivityWithRetry` the execution will be restarted
           Promise.reject(
             ActivityResultFailure.encode({
               kind: "FAILURE",
-              reason: errorMessage
+              reason: err.message
             })
           ),
         _ =>
-          // TODO: Check casting below
-          Promise.resolve(({
-            data: _,
-            kind: "SUCCESS",
+          Promise.resolve({
+            data: _.dsu,
+            fiscalCode: _.fiscalCode,
+            kind: "SUCCESS" as "SUCCESS",
             validBefore: addHours(new Date(), 24)
-          } as unknown) as ActivityResultSuccess)
+          })
       )
       .run();
   };

@@ -2,22 +2,24 @@
 import { NewMessage } from "io-functions-commons/dist/generated/definitions/NewMessage";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 
+import { MessageContent } from "io-functions-commons/dist/generated/definitions/MessageContent";
 import * as t from "io-ts";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { toHash } from "../utils/hash";
 import { sendMessage } from "../utils/notifications";
 
-// TODO: switch text based on user's preferred_language
-const eligibiliyCheckMessage = () =>
+const makeNewMessage = (content: MessageContent) =>
   NewMessage.decode({
-    content: {
-      // TODO: insert real text
-      markdown: `In non occaecat aliqua pariatur consectetur ad. Fugiat aliquip ut in nulla commodo irure enim consectetur eiusmod magna sint ea. Incididunt consequat pariatur nisi elit anim et fugiat dolore enim dolor adipisicing laboris do. Aliquip aliquip dolore sint excepteur fugiat deserunt consequat.`,
-      subject: `IO App - ricezione dati ISEE`
-    }
+    content
   }).getOrElseL(errs => {
     throw new Error("Invalid MessageContent: " + readableReport(errs));
   });
+
+export const ActivityInput = t.interface({
+  content: MessageContent,
+  fiscalCode: FiscalCode
+});
+export type ActivityInput = t.TypeOf<typeof ActivityInput>;
 
 // Activity result
 const ActivityResultSuccess = t.interface({
@@ -39,18 +41,11 @@ export const ActivityResult = t.taggedUnion("kind", [
 ]);
 export type ActivityResult = t.TypeOf<typeof ActivityResult>;
 
-export const ActivityInput = t.interface({
-  blobName: t.string,
-  fiscalCode: FiscalCode,
-  password: t.string
-});
-export type ActivityInput = t.TypeOf<typeof ActivityInput>;
-
 export const getActivityFunction = (
   publicApiUrl: NonEmptyString,
   publicApiKey: NonEmptyString,
   timeoutFetch: typeof fetch,
-  logPrefix = `NotifyEligibilityCheckActivity`
+  logPrefix = `SendMessageActivity`
 ) => (context: Context, input: unknown): Promise<ActivityResult> => {
   const failure = (reason: string) => {
     context.log.error(reason);
@@ -72,7 +67,7 @@ export const getActivityFunction = (
           errs
         )}|INPUT=${JSON.stringify(input)}`
       ),
-    async ({ fiscalCode }) => {
+    async ({ content, fiscalCode }) => {
       const cfHash = toHash(fiscalCode);
       // throws in case of timeout so
       // the orchestrator can schedule a retry
@@ -80,7 +75,7 @@ export const getActivityFunction = (
         fiscalCode,
         publicApiUrl,
         publicApiKey,
-        eligibiliyCheckMessage(),
+        makeNewMessage(content),
         timeoutFetch
       );
 
@@ -93,7 +88,7 @@ export const getActivityFunction = (
         }
       }
 
-      context.log.info(`${logPrefix}|CFHASH=${cfHash}|RESPONSE=${status}`);
+      context.log.verbose(`${logPrefix}|CFHASH=${cfHash}|RESPONSE=${status}`);
       return success();
     }
   );

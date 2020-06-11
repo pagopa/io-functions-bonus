@@ -69,6 +69,8 @@ const fetchWithTimeout = setFetchTimeout(
       : agent.getHttpsFetch(process.env)
   )
 );
+
+// TODO: pass client certificate
 const httpFetch = toFetch(fetchWithTimeout);
 
 export interface ISoapClientAsync {
