@@ -1,5 +1,5 @@
 import { Context } from "@azure/functions";
-import { isAfter } from "date-fns";
+import { isBefore } from "date-fns";
 import { QueryError } from "documentdb";
 import * as df from "durable-functions";
 import { DurableOrchestrationClient } from "durable-functions/lib/src/durableorchestrationclient";
@@ -178,7 +178,7 @@ const getLastValidDSU = (
         !EligibilityCheckSuccessEligible.is(doc)
           ? fromEither(left(ResponseErrorForbiddenNotAuthorized))
           : // the check is expired
-          isAfter(doc.validBefore, new Date())
+          isBefore(doc.validBefore, new Date())
           ? fromEither(left(ResponseErrorGone(`DSU expired`)))
           : // the check is fine, I can extract the DSU data from it
             fromEither(
