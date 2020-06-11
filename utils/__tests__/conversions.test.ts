@@ -45,6 +45,7 @@ import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { BonusVacanzaBase as ApiBonusVacanzaBase } from "../../generated/ade/BonusVacanzaBase";
 import { BonusActivationStatusEnum as ApiBonusActivationStatusEnum } from "../../generated/definitions/BonusActivationStatus";
+import { BonusCode } from "../../generated/definitions/BonusCode";
 import { MaxBonusAmount } from "../../generated/definitions/MaxBonusAmount";
 import { MaxBonusTaxBenefit } from "../../generated/definitions/MaxBonusTaxBenefit";
 import { BonusActivationStatusEnum } from "../../generated/models/BonusActivationStatus";
@@ -118,7 +119,7 @@ const aFailureDomainObject: EligibilityCheckFailure = {
 };
 
 const aBonusActivationDomainObject: BonusActivation = {
-  id: "aBonusActivationId" as NonEmptyString,
+  id: "AAAAAAAAAAAA" as BonusCode,
 
   applicantFiscalCode: aFiscalCode,
 
@@ -154,7 +155,7 @@ const aBonusActivationDomainObject: BonusActivation = {
 };
 
 const aBonusActivationApiObject: ApiBonusActivation = {
-  id: "aBonusActivationId" as NonEmptyString,
+  id: "AAAAAAAAAAAA" as BonusCode,
 
   applicant_fiscal_code: aFiscalCode,
 
