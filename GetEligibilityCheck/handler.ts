@@ -1,4 +1,5 @@
 import { Context } from "@azure/functions";
+import { isBefore } from "date-fns";
 import * as df from "durable-functions";
 import * as express from "express";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
@@ -20,10 +21,12 @@ import {
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { EligibilityCheck } from "../generated/definitions/EligibilityCheck";
+import { EligibilityCheckSuccessEligible } from "../generated/definitions/EligibilityCheckSuccessEligible";
 import { EligibilityCheckModel } from "../models/eligibility_check";
 import { initTelemetryClient } from "../utils/appinsights";
 import { toApiEligibilityCheck } from "../utils/conversions";
 import { makeStartEligibilityCheckOrchestratorId } from "../utils/orchestrators";
+import { IResponseErrorGone, ResponseErrorGone } from "../utils/responses";
 
 type IGetEligibilityCheckHandler = (
   context: Context,
@@ -34,11 +37,11 @@ type IGetEligibilityCheckHandler = (
   | IResponseSuccessJson<EligibilityCheck>
   | IResponseErrorInternal
   | IResponseErrorNotFound
+  | IResponseErrorGone
 >;
 
 initTelemetryClient();
 
-// tslint:disable-next-line: cognitive-complexity
 export function GetEligibilityCheckHandler(
   eligibilityCheckModel: EligibilityCheckModel
 ): IGetEligibilityCheckHandler {
@@ -61,6 +64,7 @@ export function GetEligibilityCheckHandler(
         | IResponseSuccessAccepted
         | IResponseSuccessJson<EligibilityCheck>
         | IResponseErrorNotFound
+        | IResponseErrorGone
       >
     >(
       async queryError => {
@@ -71,22 +75,36 @@ export function GetEligibilityCheckHandler(
         if (maybeModelEligibilityCheck.isNone()) {
           return ResponseErrorNotFound("Not Found", "DSU not found");
         }
+
         // Since we're sending the result to the frontend,
         // we stop the orchestrator here in order to avoid
         // sending a push notification with the same result
-        await client.terminate(
-          makeStartEligibilityCheckOrchestratorId(fiscalCode),
-          "Success"
-        );
+        if (status.runtimeStatus === df.OrchestrationRuntimeStatus.Running) {
+          await client.terminate(
+            makeStartEligibilityCheckOrchestratorId(fiscalCode),
+            "Success"
+          );
+        }
+
         return toApiEligibilityCheck(maybeModelEligibilityCheck.value).fold<
-          IResponseErrorInternal | IResponseSuccessJson<EligibilityCheck>
+          | IResponseErrorInternal
+          | IResponseSuccessJson<EligibilityCheck>
+          | IResponseErrorGone
         >(
           err => {
             return ResponseErrorInternal(
               `Conversion error: [${readableReport(err)}]`
             );
           },
-          response => ResponseSuccessJson(response)
+          response => {
+            if (
+              EligibilityCheckSuccessEligible.is(response) &&
+              isBefore(response.valid_before, new Date())
+            ) {
+              return ResponseErrorGone("Eligibility check expired");
+            }
+            return ResponseSuccessJson(response);
+          }
         );
       }
     );
