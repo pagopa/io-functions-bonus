@@ -236,6 +236,10 @@ export function StartBonusActivationHandler(
   return async (context, fiscalCode) => {
     const client = df.getClient(context);
 
+    // TODO: lock for familiuid
+    // TODO: generate bonus code with provided algorithm
+    // TODO: iterate bonusActivationModel.create to be sure the code is unique
+    // TODO: call orchestrator
     return sequenceT(taskEitherSeq)(
       checkEligibilityCheckIsRunning(client, fiscalCode) as TaskEither<
         StartBonusActivationResponse,
