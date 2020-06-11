@@ -42,10 +42,7 @@ import {
   makeStartBonusActivationOrchestratorId,
   makeStartEligibilityCheckOrchestratorId
 } from "../utils/orchestrators";
-import {
-  IResponseErrorResourceGone,
-  ResponseErrorResourceGone
-} from "../utils/responses";
+import { IResponseErrorGone, ResponseErrorGone } from "../utils/responses";
 import { keys } from "../utils/types";
 
 const checkOrchestratorIsRunning = (
@@ -154,7 +151,7 @@ const getLastValidDSU = (
   fiscalCode: FiscalCode
 ): TaskEither<
   | IResponseErrorForbiddenNotAuthorized
-  | IResponseErrorResourceGone
+  | IResponseErrorGone
   | IResponseErrorInternal,
   Dsu
 > =>
@@ -169,7 +166,7 @@ const getLastValidDSU = (
       return maybeDoc.fold<
         TaskEither<
           | IResponseErrorForbiddenNotAuthorized
-          | IResponseErrorResourceGone
+          | IResponseErrorGone
           | IResponseErrorInternal,
           Dsu
         >
@@ -179,7 +176,7 @@ const getLastValidDSU = (
           ? fromEither(left(ResponseErrorForbiddenNotAuthorized))
           : // the check is expired
           doc.validBefore > new Date()
-          ? fromEither(left(ResponseErrorResourceGone))
+          ? fromEither(left(ResponseErrorGone(`DSU expired`)))
           : // the check is fine, I can extract the DSU data from it
             fromEither(
               right(
@@ -223,7 +220,7 @@ const createBonusActivation = (
 type StartBonusActivationResponse =
   | IResponseErrorInternal
   | IResponseErrorForbiddenNotAuthorized
-  | IResponseErrorResourceGone
+  | IResponseErrorGone
   | IResponseSuccessAccepted
   | IResponseSuccessRedirectToResource<BonusActivation, BonusActivation>;
 

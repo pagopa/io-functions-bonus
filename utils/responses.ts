@@ -1,22 +1,19 @@
+import * as express from "express";
+import { HttpStatusCodeEnum, IResponse } from "italia-ts-commons/lib/responses";
 /**
- * Collection of response types missing in italia-ts-commons/lib/responses
+ * Interface for a gone response returning status 410.
  */
-
-import {
-  HttpStatusCodeEnum,
-  IResponse,
-  ResponseErrorGeneric
-} from "italia-ts-commons/lib/responses";
-
-// A custom response type for 401 Gone
-// TODO: Move it to "italia-ts-commons/lib/responses"
-export interface IResponseErrorResourceGone
-  extends IResponse<"IResponseErrorResourceGone"> {}
-export const ResponseErrorResourceGone: IResponseErrorResourceGone = {
-  ...ResponseErrorGeneric(
-    HttpStatusCodeEnum.HTTP_STATUS_410,
-    "Gone",
-    "The resource you are looking for does not longer exist"
-  ),
-  kind: "IResponseErrorResourceGone"
-};
+export interface IResponseErrorGone extends IResponse<"IResponseErrorGone"> {
+  readonly value: { detail: string };
+}
+/**
+ * Returns a json response with status 410.
+ */
+export function ResponseErrorGone(detail: string): IResponseErrorGone {
+  return {
+    apply: (res: express.Response) =>
+      res.status(HttpStatusCodeEnum.HTTP_STATUS_410).json({ detail }),
+    kind: "IResponseErrorGone",
+    value: { detail }
+  };
+}
