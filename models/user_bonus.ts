@@ -64,4 +64,22 @@ export class UserBonusModel extends DocumentDbModel<
   ) {
     super(dbClient, collectionUrl, toBaseType, toRetrieved);
   }
+  public findBonusActivations(
+    fiscalCode: FiscalCode
+  ): DocumentDbUtils.IResultIterator<UserBonus> {
+    return DocumentDbUtils.queryDocuments(
+      this.dbClient,
+      this.collectionUri,
+      {
+        parameters: [
+          {
+            name: "@fiscalCode",
+            value: fiscalCode
+          }
+        ],
+        query: `SELECT * FROM m WHERE m.${USER_BONUS_MODEL_PK_FIELD} = @fiscalCode`
+      },
+      fiscalCode
+    );
+  }
 }

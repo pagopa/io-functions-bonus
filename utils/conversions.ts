@@ -8,6 +8,7 @@ import * as t from "io-ts";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { BonusVacanzaBase as ApiBonusVacanzaBase } from "../generated/ade/BonusVacanzaBase";
 import { BonusActivation as ApiBonusActivation } from "../generated/definitions/BonusActivation";
+import { BonusActivationItem } from "../generated/definitions/BonusActivationItem";
 import {
   ConsultazioneSogliaIndicatoreResponse,
   EsitoEnum
@@ -34,6 +35,7 @@ import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
 import { Timestamp } from "../generated/definitions/Timestamp";
 import { BonusActivation } from "../generated/models/BonusActivation";
 import { EligibilityCheck } from "../generated/models/EligibilityCheck";
+import { UserBonus } from "../models/user_bonus";
 import { renameObjectKeys } from "./rename_keys";
 import { camelCaseToSnakeCase, snakeCaseToCamelCase } from "./strings";
 
@@ -101,6 +103,16 @@ export const toApiBonusVacanzaBase = (
       codiceFiscale: _.fiscalCode
     }))
   });
+};
+
+/**
+ * Maps UserBonus domain object to BonusActivationItem API object
+ */
+export const toApiUserBonus = (domainObj: UserBonus): BonusActivationItem => {
+  return {
+    id: domainObj.bonusId,
+    is_applicant: domainObj.isApplicant
+  };
 };
 
 function calculateMaxBonusAmount(
