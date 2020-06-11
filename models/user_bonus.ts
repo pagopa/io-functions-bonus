@@ -3,15 +3,16 @@ import { DocumentDbModel } from "io-functions-commons/dist/src//utils/documentdb
 import * as DocumentDbUtils from "io-functions-commons/dist/src/utils/documentdb";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { tag } from "italia-ts-commons/lib/types";
+import { BonusCode } from "../generated/models/BonusCode";
 
 export const USER_BONUS_COLLECTION_NAME = "user-bonuses";
 export const USER_BONUS_MODEL_PK_FIELD = "fiscalCode";
 
 const UserBonus = t.interface({
   // Id of the Bonus available to the user
-  bonusId: NonEmptyString,
+  bonusId: BonusCode,
   // The id of the user
   fiscalCode: FiscalCode,
   // Whether this person is the one in his/her family that applied for the bonus to activate
