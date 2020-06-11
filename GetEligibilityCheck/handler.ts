@@ -10,10 +10,12 @@ import {
 } from "io-functions-commons/dist/src/utils/request_middleware";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import {
+  IResponseErrorGone,
   IResponseErrorInternal,
   IResponseErrorNotFound,
   IResponseSuccessAccepted,
   IResponseSuccessJson,
+  ResponseErrorGone,
   ResponseErrorInternal,
   ResponseErrorNotFound,
   ResponseSuccessAccepted,
@@ -26,7 +28,6 @@ import { EligibilityCheckModel } from "../models/eligibility_check";
 import { initTelemetryClient } from "../utils/appinsights";
 import { toApiEligibilityCheck } from "../utils/conversions";
 import { makeStartEligibilityCheckOrchestratorId } from "../utils/orchestrators";
-import { IResponseErrorGone, ResponseErrorGone } from "../utils/responses";
 
 type IGetEligibilityCheckHandler = (
   context: Context,
