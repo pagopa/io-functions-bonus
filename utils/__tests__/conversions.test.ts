@@ -45,10 +45,11 @@ import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { BonusVacanzaBase as ApiBonusVacanzaBase } from "../../generated/ade/BonusVacanzaBase";
 import { BonusActivationStatusEnum as ApiBonusActivationStatusEnum } from "../../generated/definitions/BonusActivationStatus";
-import { BonusCode } from "../../generated/definitions/BonusCode";
+import { BonusCode as BonusCodeApi } from "../../generated/definitions/BonusCode";
 import { MaxBonusAmount } from "../../generated/definitions/MaxBonusAmount";
 import { MaxBonusTaxBenefit } from "../../generated/definitions/MaxBonusTaxBenefit";
 import { BonusActivationStatusEnum } from "../../generated/models/BonusActivationStatus";
+import { BonusCode as BonusCodeModel } from "../../generated/models/BonusCode";
 
 const aFiscalCode = "SPNDNL80R13C523K" as FiscalCode;
 
@@ -119,7 +120,7 @@ const aFailureDomainObject: EligibilityCheckFailure = {
 };
 
 const aBonusActivationDomainObject: BonusActivation = {
-  id: "AAAAAAAAAAAA" as BonusCode,
+  id: "AAAAAAAAAAAA" as BonusCodeModel,
 
   applicantFiscalCode: aFiscalCode,
 
@@ -155,7 +156,7 @@ const aBonusActivationDomainObject: BonusActivation = {
 };
 
 const aBonusActivationApiObject: ApiBonusActivation = {
-  id: "AAAAAAAAAAAA" as BonusCode,
+  id: "AAAAAAAAAAAA" as BonusCodeApi,
 
   applicant_fiscal_code: aFiscalCode,
 
