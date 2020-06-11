@@ -18,14 +18,11 @@ import {
   wrapRequestHandler
 } from "io-functions-commons/dist/src/utils/request_middleware";
 import {
-  HttpStatusCodeEnum,
-  IResponse,
   IResponseErrorForbiddenNotAuthorized,
   IResponseErrorInternal,
   IResponseSuccessAccepted,
   IResponseSuccessRedirectToResource,
   ResponseErrorForbiddenNotAuthorized,
-  ResponseErrorGeneric,
   ResponseErrorInternal,
   ResponseSuccessAccepted,
   ResponseSuccessRedirectToResource
@@ -45,6 +42,10 @@ import {
   makeStartBonusActivationOrchestratorId,
   makeStartEligibilityCheckOrchestratorId
 } from "../utils/orchestrators";
+import {
+  IResponseErrorResourceGone,
+  ResponseErrorResourceGone
+} from "../utils/responses";
 import { keys } from "../utils/types";
 
 const checkOrchestratorIsRunning = (
@@ -54,19 +55,6 @@ const checkOrchestratorIsRunning = (
   tryCatch(() => client.getStatus(orchestratorId), toError).map(
     status => status.runtimeStatus === df.OrchestrationRuntimeStatus.Running
   );
-
-// A custom response type for 401 Gone
-// TODO: Move it to "italia-ts-commons/lib/responses"
-export interface IResponseErrorResourceGone
-  extends IResponse<"IResponseErrorResourceGone"> {}
-export const ResponseErrorResourceGone: IResponseErrorResourceGone = {
-  ...ResponseErrorGeneric(
-    HttpStatusCodeEnum.HTTP_STATUS_410,
-    "Gone",
-    "The resource you are looking for does not longer exist"
-  ),
-  kind: "IResponseErrorResourceGone"
-};
 
 const makeBonusActivationResourceUri = (
   fiscalcode: FiscalCode,
