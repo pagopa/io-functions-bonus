@@ -9,9 +9,9 @@ import { Either, left, right, toError } from "fp-ts/lib/Either";
 import {
   fromEither,
   TaskEither,
+  taskEither,
   taskEitherSeq,
-  tryCatch,
-  taskEither
+  tryCatch
 } from "fp-ts/lib/TaskEither";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import { FiscalCodeMiddleware } from "io-functions-commons/dist/src/utils/middlewares/fiscalcode";
