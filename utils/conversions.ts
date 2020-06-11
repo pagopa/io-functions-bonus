@@ -17,6 +17,7 @@ import {
   EligibilityCheckFailure,
   ErrorEnum
 } from "../generated/definitions/EligibilityCheckFailure";
+import { StatusEnum as EligibilityCheckFailureStatus } from "../generated/definitions/EligibilityCheckFailure";
 import {
   EligibilityCheckSuccessEligible,
   StatusEnum as EligibleStatus
@@ -91,9 +92,9 @@ export const toApiBonusVacanzaBase = (
   domainObject: BonusActivation
 ): Either<t.Errors, ApiBonusVacanzaBase> => {
   return ApiBonusVacanzaBase.decode({
-    codiceBuono: domainObject.code,
+    codiceBuono: domainObject.id,
     codiceFiscaleDichiarante: domainObject.applicantFiscalCode,
-    dataGenerazione: domainObject.updatedAt.toISOString(),
+    dataGenerazione: domainObject.createdAt.toISOString(),
     flagDifformitaIsee: domainObject.dsuRequest.hasDiscrepancies ? 1 : 0,
     importoMassimo: domainObject.dsuRequest.maxAmount,
     nucleoFamiliare: domainObject.dsuRequest.familyMembers.map(_ => ({
@@ -150,24 +151,27 @@ export const toEligibilityCheckFromDSU = (
           ? ErrorEnum.INVALID_REQUEST
           : ErrorEnum.INTERNAL_ERROR,
       error_description: data.DescrizioneErrore || "Esito value is not OK",
-      id: (fiscalCode as unknown) as NonEmptyString
+      id: (fiscalCode as unknown) as NonEmptyString,
+      status: EligibilityCheckFailureStatus.FAILURE
     });
   }
 
   if (data.DatiIndicatore?.SottoSoglia === SiNoTypeEnum.SI) {
     return (EligibilityCheckSuccessEligible.encode({
-      dsu_created_at: data.DatiIndicatore.DataPresentazioneDSU,
-      dsu_protocol_id: (data.DatiIndicatore.ProtocolloDSU ||
-        "") as NonEmptyString,
-      family_members: familyMembers,
-      has_discrepancies:
-        data.DatiIndicatore.PresenzaDifformita === SiNoTypeEnum.SI,
+      dsu_request: {
+        dsu_created_at: data.DatiIndicatore.DataPresentazioneDSU,
+        dsu_protocol_id: (data.DatiIndicatore.ProtocolloDSU ||
+          "") as NonEmptyString,
+        family_members: familyMembers,
+        has_discrepancies:
+          data.DatiIndicatore.PresenzaDifformita === SiNoTypeEnum.SI,
+        isee_type: data.DatiIndicatore.TipoIndicatore,
+        max_amount: bonusValue,
+        max_tax_benefit: calculateMaxBonusTaxBenefit(bonusValue),
+        // tslint:disable-next-line: no-useless-cast
+        request_id: data.IdRichiesta.toString() as NonEmptyString
+      },
       id: (fiscalCode as unknown) as NonEmptyString,
-      isee_type: data.DatiIndicatore.TipoIndicatore,
-      max_amount: bonusValue,
-      max_tax_benefit: calculateMaxBonusTaxBenefit(bonusValue),
-      // tslint:disable-next-line: no-useless-cast
-      request_id: data.IdRichiesta.toString() as NonEmptyString,
       status: EligibleStatus.ELIGIBLE,
       valid_before: validBefore
     }) as unknown) as EligibilityCheckSuccessEligible;

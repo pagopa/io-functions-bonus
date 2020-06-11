@@ -32,9 +32,9 @@ import {
   ResponseSuccessRedirectToResource
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
-import { pick } from "italia-ts-commons/lib/types";
 import { BonusActivation } from "../generated/models/BonusActivation";
 import { BonusActivationStatusEnum } from "../generated/models/BonusActivationStatus";
+import { BonusCode } from "../generated/models/BonusCode";
 import { Dsu } from "../generated/models/Dsu";
 import { EligibilityCheckSuccessEligible } from "../generated/models/EligibilityCheckSuccessEligible";
 import {
@@ -46,7 +46,6 @@ import {
   makeStartBonusActivationOrchestratorId,
   makeStartEligibilityCheckOrchestratorId
 } from "../utils/orchestrators";
-import { keys } from "../utils/types";
 
 const checkOrchestratorIsRunning = (
   client: DurableOrchestrationClient,
@@ -181,12 +180,7 @@ const getLastValidDSU = (
           isBefore(doc.validBefore, new Date())
           ? fromEither(left(ResponseErrorGone(`DSU expired`)))
           : // the check is fine, I can extract the DSU data from it
-            fromEither(
-              right(
-                // extract dsu keys from EligibilityCheckSuccessEligible
-                pick(keys(Dsu._A), doc)
-              )
-            )
+            fromEither(right(doc.dsuRequest))
       );
     }
   );
@@ -206,15 +200,14 @@ const createBonusActivation = (
 ): TaskEither<IResponseErrorInternal, BonusActivation> =>
   fromQueryEither(() => {
     // TODO: generate bonus code with provided algorithm
-    const bonusCode = "any code" as NonEmptyString;
+    const bonusCode = "any code" as BonusCode & NonEmptyString;
     const bonusActivation: NewBonusActivation = {
       applicantFiscalCode: fiscalCode,
-      code: bonusCode,
+      createdAt: new Date(),
       dsuRequest: dsu,
       id: bonusCode,
       kind: "INewBonusActivation",
-      status: BonusActivationStatusEnum.PROCESSING,
-      updatedAt: new Date()
+      status: BonusActivationStatusEnum.PROCESSING
     };
     return bonusActivationModel.create(bonusActivation, fiscalCode);
   }).mapLeft(err =>
