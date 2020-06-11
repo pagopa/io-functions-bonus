@@ -1,13 +1,13 @@
 import * as express from "express";
 import { IResponse } from "italia-ts-commons/lib/responses";
 /**
- * Interface for a no content response returning a empty object.
+ * Interface for a gone response returning status 410.
  */
 export interface IResponseErrorGone extends IResponse<"IResponseErrorGone"> {
-  readonly value: {};
+  readonly value: { detail: string };
 }
 /**
- * Returns a no content json response.
+ * Returns a json response with status 410.
  */
 export function ResponseErrorGone(detail: string): IResponseErrorGone {
   return {
