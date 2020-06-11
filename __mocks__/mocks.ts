@@ -1,4 +1,8 @@
+import { IWithinRangeIntegerTag } from "italia-ts-commons/lib/numbers";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import { BonusActivation } from "../generated/models/BonusActivation";
+import { BonusActivationStatusEnum } from "../generated/models/BonusActivationStatus";
+import { BonusCode } from "../generated/models/BonusCode";
 import { Dsu } from "../generated/models/Dsu";
 import {
   EligibilityCheckFailure,
@@ -11,6 +15,14 @@ import {
 } from "../generated/models/EligibilityCheckSuccessEligible";
 import { MaxBonusAmount } from "../generated/models/MaxBonusAmount";
 import { MaxBonusTaxBenefit } from "../generated/models/MaxBonusTaxBenefit";
+import {
+  NewBonusActivation,
+  RetrievedBonusActivation
+} from "../models/bonus_activation";
+import {
+  EligibilityCheckSuccessIneligible,
+  StatusEnum as EligibilityCheckSuccessIneligibleStatus
+} from "../generated/models/EligibilityCheckSuccessIneligible";
 
 export const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
 
@@ -51,9 +63,64 @@ export const aEligibilityCheckSuccessEligibleExpired: EligibilityCheckSuccessEli
   validBefore: new Date(Date.now() - 1 * 60 * 60 * 1000 /* -1h */)
 };
 
+export const aEligibilityCheckSuccessIneligible: EligibilityCheckSuccessIneligible = {
+  id: (aFiscalCode as unknown) as NonEmptyString,
+  status: EligibilityCheckSuccessIneligibleStatus.INELIGIBLE
+};
+
 export const aEligibilityCheckFailure: EligibilityCheckFailure = {
   error: EligibilityCheckFailureErrorEnum.INTERNAL_ERROR,
   errorDescription: "lorem ipsum",
   id: (aFiscalCode as unknown) as NonEmptyString,
   status: EligibilityCheckFailureStatusEnum.FAILURE
+};
+
+export const aBonusId = "AAAAAAAAAAAA" as NonEmptyString & BonusCode;
+export const aBonusActivationId = aBonusId;
+export const aBonusActivation: BonusActivation = {
+  id: "AAAAAAAAAAAA" as BonusCode,
+
+  applicantFiscalCode: aFiscalCode,
+
+  status: BonusActivationStatusEnum.ACTIVE,
+
+  createdAt: new Date(),
+
+  dsuRequest: {
+    familyMembers: [
+      {
+        fiscalCode: aFiscalCode,
+        name: "MARIO" as NonEmptyString,
+        surname: "ROSSI" as NonEmptyString
+      }
+    ],
+
+    maxAmount: (200 as unknown) as IWithinRangeIntegerTag<150, 501> & number,
+
+    maxTaxBenefit: (100 as unknown) as IWithinRangeIntegerTag<30, 101> & number,
+
+    requestId: "aRequestId" as NonEmptyString,
+
+    iseeType: "aISEEtype",
+
+    dsuProtocolId: "aProtocolId" as NonEmptyString,
+
+    dsuCreatedAt: new Date(),
+
+    hasDiscrepancies: false
+  }
+};
+
+export const aRetrievedBonusActivation: RetrievedBonusActivation = {
+  ...aBonusActivation,
+  _self: "xyz",
+  _ts: 123,
+  id: aBonusActivationId,
+  kind: "IRetrievedBonusActivation"
+};
+
+export const aNewBonusActivation: NewBonusActivation = {
+  ...aBonusActivation,
+  id: aBonusActivationId,
+  kind: "INewBonusActivation"
 };

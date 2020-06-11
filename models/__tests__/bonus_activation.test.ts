@@ -1,76 +1,22 @@
 import * as DocumentDb from "documentdb";
 import { isLeft, isRight } from "fp-ts/lib/Either";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
-import { BonusActivation } from "../../generated/models/BonusActivation";
+import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import {
   BONUS_ACTIVATION_COLLECTION_NAME,
-  BonusActivationModel,
-  NewBonusActivation,
-  RetrievedBonusActivation
+  BonusActivationModel
 } from "../bonus_activation";
 
 import * as DocumentDbUtils from "io-functions-commons/dist/src/utils/documentdb";
-import { IWithinRangeIntegerTag } from "italia-ts-commons/lib/numbers";
-import { BonusActivationStatusEnum } from "../../generated/models/BonusActivationStatus";
-import { BonusCode } from "../../generated/models/BonusCode";
-import { StatusEnum } from "../../generated/models/EligibilityCheckSuccessEligible";
+import {
+  aNewBonusActivation,
+  aRetrievedBonusActivation
+} from "../../__mocks__/mocks";
 
 const aDatabaseUri = DocumentDbUtils.getDatabaseUri("mockdb" as NonEmptyString);
 const aCollectionUri = DocumentDbUtils.getCollectionUri(
   aDatabaseUri,
   BONUS_ACTIVATION_COLLECTION_NAME
 );
-
-const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
-const aBonusId = "AAAAAAAAAAAA" as NonEmptyString & BonusCode;
-const aBonusActivationId = aBonusId;
-const aBonusActivation: BonusActivation = {
-  id: "AAAAAAAAAAAA" as BonusCode,
-
-  applicantFiscalCode: aFiscalCode,
-
-  status: BonusActivationStatusEnum.ACTIVE,
-
-  createdAt: new Date(),
-
-  dsuRequest: {
-    familyMembers: [
-      {
-        fiscalCode: aFiscalCode,
-        name: "MARIO" as NonEmptyString,
-        surname: "ROSSI" as NonEmptyString
-      }
-    ],
-
-    maxAmount: (200 as unknown) as IWithinRangeIntegerTag<150, 501> & number,
-
-    maxTaxBenefit: (100 as unknown) as IWithinRangeIntegerTag<30, 101> & number,
-
-    requestId: "aRequestId" as NonEmptyString,
-
-    iseeType: "aISEEtype",
-
-    dsuProtocolId: "aProtocolId" as NonEmptyString,
-
-    dsuCreatedAt: new Date(),
-
-    hasDiscrepancies: false
-  }
-};
-
-const aRetrievedBonusActivation: RetrievedBonusActivation = {
-  ...aBonusActivation,
-  _self: "xyz",
-  _ts: 123,
-  id: aBonusActivationId,
-  kind: "IRetrievedBonusActivation"
-};
-
-const aNewBonusActivation: NewBonusActivation = {
-  ...aBonusActivation,
-  id: aBonusActivationId,
-  kind: "INewBonusActivation"
-};
 
 describe("BonusActivationModel#create", () => {
   it("should create a new BonusActivation", async () => {

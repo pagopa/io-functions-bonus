@@ -42,10 +42,12 @@ import {
   NewBonusActivation
 } from "../models/bonus_activation";
 import { EligibilityCheckModel } from "../models/eligibility_check";
+import { genRandomBonusCode } from "../utils/bonusCode";
 import {
   makeStartBonusActivationOrchestratorId,
   makeStartEligibilityCheckOrchestratorId
 } from "../utils/orchestrators";
+import { repeatUntil } from "../utils/repeatUntil";
 
 const checkOrchestratorIsRunning = (
   client: DurableOrchestrationClient,
@@ -148,7 +150,7 @@ const checkEligibilityCheckIsRunning = (
  *
  * @returns either a valid DSU or a response relative to the state of the DSU
  */
-const getLastValidDSU = (
+const getLatestValidDSU = (
   eligibilityCheckModel: EligibilityCheckModel,
   fiscalCode: FiscalCode
 ): TaskEither<
@@ -172,7 +174,7 @@ const getLastValidDSU = (
           | IResponseErrorInternal,
           Dsu
         >
-      >(fromEither(left(ResponseErrorInternal(`Cannot find DSU`))), doc =>
+      >(fromEither(left(ResponseErrorForbiddenNotAuthorized)), doc =>
         // the found document is not in eligible status
         !EligibilityCheckSuccessEligible.is(doc)
           ? fromEither(left(ResponseErrorForbiddenNotAuthorized))
@@ -186,6 +188,14 @@ const getLastValidDSU = (
   );
 
 /**
+ * Generate a random bonus code. The operation may fail, so it has a retry mechanism
+ *
+ * @returns either a bonus code or a failure response
+ */
+const tryGenerateBonusCode = () =>
+  repeatUntil(() => tryCatch(genRandomBonusCode, toError));
+
+/**
  * Create a new BonusActivation request record
  * @param bonusActivationModel an instance of BonusActivationModel
  * @param fiscalCode the id of the requesting user
@@ -197,22 +207,31 @@ const createBonusActivation = (
   bonusActivationModel: BonusActivationModel,
   fiscalCode: FiscalCode,
   dsu: Dsu
-): TaskEither<IResponseErrorInternal, BonusActivation> =>
-  fromQueryEither(() => {
-    // TODO: generate bonus code with provided algorithm
-    const bonusCode = "any code" as BonusCode & NonEmptyString;
-    const bonusActivation: NewBonusActivation = {
-      applicantFiscalCode: fiscalCode,
-      createdAt: new Date(),
-      dsuRequest: dsu,
-      id: bonusCode,
-      kind: "INewBonusActivation",
-      status: BonusActivationStatusEnum.PROCESSING
-    };
-    return bonusActivationModel.create(bonusActivation, fiscalCode);
-  }).mapLeft(err =>
+): TaskEither<IResponseErrorInternal, BonusActivation> => {
+  const shouldRepeat = (l: QueryError | Error) => {
+    // TODO: fix this condition
+    return !(l instanceof Error) && !!l.code && l.code === 409;
+  };
+
+  const lazyQueryTask = () =>
+    tryGenerateBonusCode().chain(bonusCode =>
+      fromQueryEither(() => {
+        const bonusActivation: NewBonusActivation = {
+          applicantFiscalCode: fiscalCode,
+          createdAt: new Date(),
+          dsuRequest: dsu,
+          id: bonusCode as BonusCode & NonEmptyString,
+          kind: "INewBonusActivation",
+          status: BonusActivationStatusEnum.PROCESSING
+        };
+        return bonusActivationModel.create(bonusActivation, fiscalCode);
+      })
+    );
+
+  return repeatUntil(lazyQueryTask, shouldRepeat).mapLeft(err =>
     ResponseErrorInternal(`Error creating BonusActivation: ${err.message}`)
   );
+};
 
 type StartBonusActivationResponse =
   | IResponseErrorInternal
@@ -242,7 +261,7 @@ export function StartBonusActivationHandler(
         StartBonusActivationResponse,
         false
       >,
-      getLastValidDSU(eligibilityCheckModel, fiscalCode) as TaskEither<
+      getLatestValidDSU(eligibilityCheckModel, fiscalCode) as TaskEither<
         StartBonusActivationResponse,
         Dsu
       >
@@ -253,7 +272,6 @@ export function StartBonusActivationHandler(
         return taskEither.of(_);
       })
       .chain(([, , dsu]) =>
-        // TODO: iterate bonusActivationModel.create to be sure the code is unique
         createBonusActivation(bonusActivationModel, fiscalCode, dsu)
       )
       .chain(_ => {
