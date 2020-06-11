@@ -1,4 +1,5 @@
 import { Context } from "@azure/functions";
+import { isBefore } from "date-fns";
 import * as df from "durable-functions";
 import * as express from "express";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
@@ -98,7 +99,7 @@ export function GetEligibilityCheckHandler(
           response => {
             if (
               EligibilityCheckSuccessEligible.is(response) &&
-              response.valid_before < new Date()
+              isBefore(response.valid_before, new Date())
             ) {
               return ResponseErrorGone("Eligibility check expired");
             }
