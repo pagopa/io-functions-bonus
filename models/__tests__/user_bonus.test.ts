@@ -10,6 +10,7 @@ import {
 } from "../user_bonus";
 
 import * as DocumentDbUtils from "io-functions-commons/dist/src/utils/documentdb";
+import { BonusCode } from "../../generated/models/BonusCode";
 
 const aDatabaseUri = DocumentDbUtils.getDatabaseUri("mockdb" as NonEmptyString);
 const aCollectionUri = DocumentDbUtils.getCollectionUri(
@@ -18,7 +19,7 @@ const aCollectionUri = DocumentDbUtils.getCollectionUri(
 );
 
 const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
-const aBonusId = "bonusid123" as NonEmptyString;
+const aBonusId = "AAAAAAAAAAA3" as BonusCode;
 const aUserBonusId = `${aFiscalCode}-${aBonusId}` as NonEmptyString;
 const aUserBonus: UserBonus = {
   bonusId: aBonusId,
