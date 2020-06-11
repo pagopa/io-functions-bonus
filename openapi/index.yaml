@@ -64,6 +64,10 @@ paths:
           description: Wrong or missing function key.
         "404":
           description: Request not found.
+        "410":
+          description: Request expired
+          schema:
+            $ref: "#/definitions/DetailResponse"
         "500":
           description: Service unavailable.
           schema:
@@ -187,6 +191,13 @@ definitions:
     $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/ProblemJson"
   PaginationResponse:
     $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/PaginationResponse"
+  DetailResponse:
+    type: object
+    properties:
+      detail:
+        type: string
+    required:
+      - detail
 
   InstanceId:
     type: object
