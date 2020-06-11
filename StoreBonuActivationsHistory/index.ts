@@ -7,7 +7,7 @@ const index: AzureFunction = async (
 ) => {
   return {
     bonusActivationsLogs: documents.map(d => ({
-      PartitionKey: `${d.id}-BA`,
+      PartitionKey: `${d.id}`,
       Payload: JSON.stringify(d),
       RowKey: d._ts
     }))

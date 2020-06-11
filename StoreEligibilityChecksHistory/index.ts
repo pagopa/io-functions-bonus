@@ -7,7 +7,7 @@ const index: AzureFunction = async (
 ) => {
   return {
     eligibilityChecksLogs: documents.map(d => ({
-      PartitionKey: `${d.id}-EC`,
+      PartitionKey: `${d.id}`,
       Payload: JSON.stringify(d),
       RowKey: d._ts
     }))
