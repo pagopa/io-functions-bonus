@@ -438,7 +438,6 @@ definitions:
           the bonus activation identified by the id
     required:
       - id
-      - status
       - is_applicant
   BonusActivationCollection:
     type: object

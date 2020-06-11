@@ -15,7 +15,8 @@ import { BonusActivation as ApiBonusActivation } from "../../generated/definitio
 import { BonusActivation } from "../../generated/models/BonusActivation";
 import {
   EligibilityCheckFailure,
-  ErrorEnum as EligibilityCheckFailureErrorEnum
+  ErrorEnum as EligibilityCheckFailureErrorEnum,
+  StatusEnum as EligibilityCheckFailureStatusEnum
 } from "../../generated/models/EligibilityCheckFailure";
 import {
   EligibilityCheckSuccessEligible,
@@ -28,7 +29,8 @@ import {
 
 import {
   EligibilityCheckFailure as ApiEligibilityCheckFailure,
-  ErrorEnum as ApiEligibilityCheckFailureErrorEnum
+  ErrorEnum as ApiEligibilityCheckFailureErrorEnum,
+  StatusEnum as ErrorStatusEnum
 } from "../../generated/definitions/EligibilityCheckFailure";
 import {
   EligibilityCheckSuccessEligible as ApiEligibilityCheckSuccessEligible,
@@ -56,21 +58,23 @@ const aFiscalCode = "SPNDNL80R13C523K" as FiscalCode;
 //// Api objects
 
 const anElibigleApiObject: ApiEligibilityCheckSuccessEligible = {
-  dsu_created_at: new Date().toString(),
-  dsu_protocol_id: "123" as NonEmptyString,
-  family_members: [
-    {
-      fiscal_code: aFiscalCode,
-      name: "Mario" as NonEmptyString,
-      surname: "Rossi" as NonEmptyString
-    }
-  ],
-  has_discrepancies: true,
+  dsu_request: {
+    dsu_created_at: new Date(),
+    dsu_protocol_id: "123" as NonEmptyString,
+    family_members: [
+      {
+        fiscal_code: aFiscalCode,
+        name: "Mario" as NonEmptyString,
+        surname: "Rossi" as NonEmptyString
+      }
+    ],
+    has_discrepancies: true,
+    isee_type: "some isee type" as NonEmptyString,
+    max_amount: 200 as MaxBonusAmount,
+    max_tax_benefit: 50 as MaxBonusTaxBenefit,
+    request_id: "123" as NonEmptyString
+  },
   id: (aFiscalCode as unknown) as NonEmptyString,
-  isee_type: "some isee type" as NonEmptyString,
-  max_amount: 200 as MaxBonusAmount,
-  max_tax_benefit: 50 as MaxBonusTaxBenefit,
-  request_id: "123" as NonEmptyString,
   status: ApiEligibilityCheckSuccessEligibleEnum.ELIGIBLE,
   valid_before: new Date()
 };
@@ -83,27 +87,30 @@ const anInelibigleApiObject: ApiEligibilityCheckSuccessIneligible = {
 const aFailureApiObject: ApiEligibilityCheckFailure = {
   error: ApiEligibilityCheckFailureErrorEnum.INTERNAL_ERROR,
   error_description: "lorem ipsum",
-  id: (aFiscalCode as unknown) as NonEmptyString
+  id: (aFiscalCode as unknown) as NonEmptyString,
+  status: "FAILURE" as ErrorStatusEnum
 };
 
 //// Domain objects
 
 const anEligibleDomainObject: EligibilityCheckSuccessEligible = {
-  dsuCreatedAt: new Date().toString(),
-  dsuProtocolId: "123" as NonEmptyString,
-  familyMembers: [
-    {
-      fiscalCode: aFiscalCode,
-      name: "Mario" as NonEmptyString,
-      surname: "Rossi" as NonEmptyString
-    }
-  ],
-  hasDiscrepancies: true,
+  dsuRequest: {
+    dsuCreatedAt: new Date(),
+    dsuProtocolId: "123" as NonEmptyString,
+    familyMembers: [
+      {
+        fiscalCode: aFiscalCode,
+        name: "Mario" as NonEmptyString,
+        surname: "Rossi" as NonEmptyString
+      }
+    ],
+    hasDiscrepancies: true,
+    iseeType: "some isee type",
+    maxAmount: 200 as MaxBonusAmount,
+    maxTaxBenefit: 50 as MaxBonusTaxBenefit,
+    requestId: "123" as NonEmptyString
+  },
   id: (aFiscalCode as unknown) as NonEmptyString,
-  iseeType: "some isee type",
-  maxAmount: 200 as MaxBonusAmount,
-  maxTaxBenefit: 50 as MaxBonusTaxBenefit,
-  requestId: "123" as NonEmptyString,
   status: EligibilityCheckSuccessEligibleStatusEnum.ELIGIBLE,
   validBefore: new Date()
 };
@@ -116,7 +123,8 @@ const anIneligibleDomainObject: EligibilityCheckSuccessIneligible = {
 const aFailureDomainObject: EligibilityCheckFailure = {
   error: EligibilityCheckFailureErrorEnum.INTERNAL_ERROR,
   errorDescription: "lorem ipsum",
-  id: (aFiscalCode as unknown) as NonEmptyString
+  id: (aFiscalCode as unknown) as NonEmptyString,
+  status: EligibilityCheckFailureStatusEnum.FAILURE
 };
 
 const aBonusActivationDomainObject: BonusActivation = {
@@ -126,9 +134,7 @@ const aBonusActivationDomainObject: BonusActivation = {
 
   status: BonusActivationStatusEnum.ACTIVE,
 
-  code: "a bonus code" as NonEmptyString,
-
-  updatedAt: new Date(),
+  createdAt: new Date(),
 
   dsuRequest: {
     familyMembers: [
@@ -149,7 +155,7 @@ const aBonusActivationDomainObject: BonusActivation = {
 
     dsuProtocolId: "aProtocolId" as NonEmptyString,
 
-    dsuCreatedAt: new Date().toISOString(),
+    dsuCreatedAt: new Date(),
 
     hasDiscrepancies: false
   }
@@ -162,9 +168,7 @@ const aBonusActivationApiObject: ApiBonusActivation = {
 
   status: ApiBonusActivationStatusEnum.ACTIVE,
 
-  code: "a bonus code" as NonEmptyString,
-
-  updated_at: new Date(),
+  created_at: new Date(),
 
   dsu_request: {
     family_members: [
@@ -186,7 +190,7 @@ const aBonusActivationApiObject: ApiBonusActivation = {
 
     dsu_protocol_id: "aProtocolId" as NonEmptyString,
 
-    dsu_created_at: new Date().toISOString(),
+    dsu_created_at: new Date(),
 
     has_discrepancies: false
   }

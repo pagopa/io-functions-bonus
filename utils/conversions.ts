@@ -17,7 +17,7 @@ import {
   EligibilityCheckFailure,
   ErrorEnum
 } from "../generated/definitions/EligibilityCheckFailure";
-import { StatusEnum as EligibilityCheckFailureStatus } from "../generated/definitions/EligibilityCheckFailure";
+import { StatusEnum as ErrorStatusEnum } from "../generated/definitions/EligibilityCheckFailure";
 import {
   EligibilityCheckSuccessEligible,
   StatusEnum as EligibleStatus
@@ -152,7 +152,7 @@ export const toEligibilityCheckFromDSU = (
           : ErrorEnum.INTERNAL_ERROR,
       error_description: data.DescrizioneErrore || "Esito value is not OK",
       id: (fiscalCode as unknown) as NonEmptyString,
-      status: EligibilityCheckFailureStatus.FAILURE
+      status: ErrorStatusEnum.FAILURE
     });
   }
 
