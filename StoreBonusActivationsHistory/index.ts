@@ -1,4 +1,5 @@
 import { AzureFunction, Context } from "@azure/functions";
+import { toBaseDoc } from "../utils/cosmosdb";
 
 const index: AzureFunction = async (
   _: Context,
@@ -8,7 +9,7 @@ const index: AzureFunction = async (
   return {
     bonusActivationsLogs: documents.map(d => ({
       PartitionKey: `${d.id}`,
-      Payload: JSON.stringify(d),
+      Payload: JSON.stringify(toBaseDoc(d)),
       RowKey: d._ts
     }))
   };

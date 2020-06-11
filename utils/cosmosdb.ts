@@ -10,3 +10,9 @@ const masterKey = getRequiredStringEnv("COSMOSDB_BONUS_KEY");
 export const documentClient = new DocumentDBClient(cosmosDbUri, {
   masterKey
 });
+
+// tslint:disable-next-line: no-any
+export const toBaseDoc = (doc: any) => {
+  const { _rid, _self, _ts, _etag, _lsn, _metadata, ...clean } = doc;
+  return clean;
+};
