@@ -10,7 +10,8 @@ import {
   fromEither,
   TaskEither,
   taskEitherSeq,
-  tryCatch
+  tryCatch,
+  taskEither
 } from "fp-ts/lib/TaskEither";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import { FiscalCodeMiddleware } from "io-functions-commons/dist/src/utils/middlewares/fiscalcode";
@@ -204,6 +205,7 @@ const createBonusActivation = (
   dsu: Dsu
 ): TaskEither<IResponseErrorInternal, BonusActivation> =>
   fromQueryEither(() => {
+    // TODO: generate bonus code with provided algorithm
     const bonusCode = "any code" as NonEmptyString;
     const bonusActivation: NewBonusActivation = {
       applicantFiscalCode: fiscalCode,
@@ -238,10 +240,6 @@ export function StartBonusActivationHandler(
   return async (context, fiscalCode) => {
     const client = df.getClient(context);
 
-    // TODO: lock for familiuid
-    // TODO: generate bonus code with provided algorithm
-    // TODO: iterate bonusActivationModel.create to be sure the code is unique
-    // TODO: call orchestrator
     return sequenceT(taskEitherSeq)(
       checkEligibilityCheckIsRunning(client, fiscalCode) as TaskEither<
         StartBonusActivationResponse,
@@ -256,9 +254,19 @@ export function StartBonusActivationHandler(
         Dsu
       >
     )
+
+      .chain(_ => {
+        // TODO: lock for familiuid
+        return taskEither.of(_);
+      })
       .chain(([, , dsu]) =>
+        // TODO: iterate bonusActivationModel.create to be sure the code is unique
         createBonusActivation(bonusActivationModel, fiscalCode, dsu)
       )
+      .chain(_ => {
+        // TODO: call orchestrator
+        return taskEither.of(_);
+      })
       .fold(
         l => l,
         bonusActivation =>
