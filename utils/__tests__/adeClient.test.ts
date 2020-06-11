@@ -11,7 +11,7 @@ import {
 const aBonusVacanzaBase: BonusVacanzaBase = {
   codiceBuono: "aCodiceBuono",
   codiceFiscaleDichiarante: "aCodiceFiscaleDichiarante",
-  dataGenerazione: "aDataGenerazione",
+  dataGenerazione: new Date(),
   flagDifformitaIsee: 0,
   nucleoFamiliare: [{ codiceFiscale: "aCodiceFiscale" }]
 };

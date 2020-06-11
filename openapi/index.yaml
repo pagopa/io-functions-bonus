@@ -123,13 +123,12 @@ paths:
         "200":
           description: |
             List of bonus activations ID belonging to the authenticated user
-            or to any member of her family (former and actual)
+            or to any member of her family (former and actual).
+            Returns an empty array in case there's no record found.
           schema:
             $ref: "#/definitions/PaginatedBonusActivationsCollection"
         "401":
           description: Wrong or missing function key.
-        "404":
-          description: No activation found.
         "500":
           description: Service unavailable.
           schema:
@@ -284,27 +283,47 @@ definitions:
       - dsu_created_at
       - has_discrepancies
   EligibilityCheckSuccessEligible:
-    allOf:
-      - $ref: "#/definitions/Dsu"
-      - type: object
-        title: Eligibility check success
-        description: |
-          Eligibility check succeeded, we can proceed and send the eligibility status.
-          Amounts are left undefined when status is INELIGIBLE
-        properties:
-          id:
-            type: string
-            minLength: 1
-          status:
-            type: string
-            x-extensible-enum:
-              - ELIGIBLE
-          valid_before:
-            $ref: "#/definitions/Timestamp"
-        required:
-          - id
-          - status
-          - valid_before
+    type: object
+    title: Eligibility check success
+    description: |
+      Eligibility check succeeded, we can proceed and send the eligibility status.
+      Amounts are left undefined when status is INELIGIBLE
+    properties:
+      id:
+        type: string
+        minLength: 1
+      status:
+        type: string
+        x-extensible-enum:
+          - ELIGIBLE
+      valid_before:
+        $ref: "#/definitions/Timestamp"
+      dsu_request:
+        $ref: "#/definitions/Dsu"
+    required:
+      - id
+      - status
+      - valid_before
+      - dsu_request
+  EligibilityCheckSuccessConflict:
+    type: object
+    title: |
+      Eligibility check succeeded but there's already a bonus found
+      for this set of family members.
+    properties:
+      id:
+        type: string
+        minLength: 1
+      status:
+        type: string
+        x-extensible-enum:
+          - CONFLICT
+      dsu_request:
+        $ref: "#/definitions/Dsu"
+    required:
+      - id
+      - status
+      - dsu_request
   EligibilityCheckSuccessIneligible:
     type: object
     title: Eligibility check success
@@ -326,6 +345,7 @@ definitions:
     x-one-of: true
     allOf:
       - $ref: "#/definitions/EligibilityCheckSuccessEligible"
+      - $ref: "#/definitions/EligibilityCheckSuccessConflict"
       - $ref: "#/definitions/EligibilityCheckSuccessIneligible"
   EligibilityCheckFailure:
     type: object
@@ -349,10 +369,15 @@ definitions:
           - DATABASE_OFFLINE
       error_description:
         type: string
+      status:
+        type: string
+        x-extensible-enum:
+          - FAILURE
     required:
       - id
       - error
       - error_description
+      - status
   EligibilityCheck:
     title: Eligibility check
     description: Eligibility check
@@ -389,12 +414,9 @@ definitions:
         $ref: "#/definitions/FiscalCode"
       status:
         $ref: "#/definitions/BonusActivationStatus"
-      code:
-        type: string
-        minLength: 1
       dsu_request:
         $ref: "#/definitions/Dsu"
-      updated_at:
+      created_at:
         $ref: "#/definitions/Timestamp"
       redeemed_at:
         $ref: "#/definitions/Timestamp"
@@ -402,16 +424,13 @@ definitions:
       - id
       - applicant_fiscal_code
       - status
-      - code
       - dsu_request
-      - updated_at
+      - created_at
   BonusActivationItem:
     type: object
     properties:
       id:
         $ref: "#/definitions/BonusCode"
-      status:
-        $ref: "#/definitions/BonusActivationStatus"
       is_applicant:
         type: boolean
         description: |
@@ -419,7 +438,6 @@ definitions:
           the bonus activation identified by the id
     required:
       - id
-      - status
       - is_applicant
   BonusActivationCollection:
     type: object

@@ -31,9 +31,7 @@ const aBonusActivation: BonusActivation = {
 
   status: BonusActivationStatusEnum.ACTIVE,
 
-  code: "a bonus code" as NonEmptyString,
-
-  updatedAt: new Date(),
+  createdAt: new Date(),
 
   dsuRequest: {
     familyMembers: [
@@ -54,7 +52,7 @@ const aBonusActivation: BonusActivation = {
 
     dsuProtocolId: "aProtocolId" as NonEmptyString,
 
-    dsuCreatedAt: new Date().toISOString(),
+    dsuCreatedAt: new Date(),
 
     hasDiscrepancies: false
   }

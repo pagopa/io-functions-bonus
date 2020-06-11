@@ -2,7 +2,8 @@ import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { Dsu } from "../generated/models/Dsu";
 import {
   EligibilityCheckFailure,
-  ErrorEnum as EligibilityCheckFailureErrorEnum
+  ErrorEnum as EligibilityCheckFailureErrorEnum,
+  StatusEnum as EligibilityCheckFailureStatusEnum
 } from "../generated/models/EligibilityCheckFailure";
 import {
   EligibilityCheckSuccessEligible,
@@ -14,7 +15,7 @@ import { MaxBonusTaxBenefit } from "../generated/models/MaxBonusTaxBenefit";
 export const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
 
 export const aDsu: Dsu = {
-  dsuCreatedAt: new Date().toISOString(),
+  dsuCreatedAt: new Date(),
   dsuProtocolId: "aDsuProtocolId" as NonEmptyString,
   familyMembers: [
     {
@@ -31,27 +32,28 @@ export const aDsu: Dsu = {
 };
 
 export const aEligibilityCheckSuccessEligible: EligibilityCheckSuccessEligible = {
+  dsuRequest: aDsu,
   id: (aFiscalCode as unknown) as NonEmptyString,
   status: EligibilityCheckSuccessEligibleStatus.ELIGIBLE,
-  validBefore: new Date(),
-  ...aDsu
+  validBefore: new Date()
 };
 
 export const aEligibilityCheckSuccessEligibleValid: EligibilityCheckSuccessEligible = {
+  dsuRequest: aDsu,
   id: (aFiscalCode as unknown) as NonEmptyString,
   status: EligibilityCheckSuccessEligibleStatus.ELIGIBLE,
-  validBefore: new Date(Date.now() + 24 * 60 * 60 * 1000 /* +24h */),
-  ...aDsu
+  validBefore: new Date(Date.now() + 24 * 60 * 60 * 1000 /* +24h */)
 };
 export const aEligibilityCheckSuccessEligibleExpired: EligibilityCheckSuccessEligible = {
+  dsuRequest: aDsu,
   id: (aFiscalCode as unknown) as NonEmptyString,
   status: EligibilityCheckSuccessEligibleStatus.ELIGIBLE,
-  validBefore: new Date(Date.now() - 1 * 60 * 60 * 1000 /* -1h */),
-  ...aDsu
+  validBefore: new Date(Date.now() - 1 * 60 * 60 * 1000 /* -1h */)
 };
 
 export const aEligibilityCheckFailure: EligibilityCheckFailure = {
   error: EligibilityCheckFailureErrorEnum.INTERNAL_ERROR,
   errorDescription: "lorem ipsum",
-  id: (aFiscalCode as unknown) as NonEmptyString
+  id: (aFiscalCode as unknown) as NonEmptyString,
+  status: EligibilityCheckFailureStatusEnum.FAILURE
 };

@@ -12,6 +12,7 @@ import * as t from "io-ts";
 import { pick, tag } from "italia-ts-commons/lib/types";
 import { EligibilityCheck } from "../generated/models/EligibilityCheck";
 import { EligibilityCheckFailure } from "../generated/models/EligibilityCheckFailure";
+import { EligibilityCheckSuccessConflict } from "../generated/models/EligibilityCheckSuccessConflict";
 import { EligibilityCheckSuccessEligible } from "../generated/models/EligibilityCheckSuccessEligible";
 import { EligibilityCheckSuccessIneligible } from "../generated/models/EligibilityCheckSuccessIneligible";
 import { assertNever, keys } from "../utils/types";
@@ -53,6 +54,8 @@ function toBaseType(o: RetrievedEligibilityCheck): EligibilityCheck {
     ? pick(keys(EligibilityCheckSuccessEligible._A), o)
     : EligibilityCheckSuccessIneligible.is(o)
     ? pick(keys(EligibilityCheckSuccessIneligible._A), o)
+    : EligibilityCheckSuccessConflict.is(o)
+    ? pick(keys(EligibilityCheckSuccessConflict._A), o)
     : EligibilityCheckFailure.is(o)
     ? pick(keys(EligibilityCheckFailure._A), o)
     : assertNever(o);
