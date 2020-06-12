@@ -87,6 +87,9 @@ export function GetBonusActivationHandler(
               bonusActivation => ResponseSuccessJson(bonusActivation)
             );
           }
+          // When the bonus is not found into the database and a new bonus activation
+          // is in progress for the user, an Accepted response with status 202 will be returned.
+          // Otherwise a NonFound response with status 404.
           if (status.runtimeStatus === df.OrchestrationRuntimeStatus.Running) {
             return ResponseSuccessAccepted("Still running");
           }
