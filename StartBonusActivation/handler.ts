@@ -32,6 +32,13 @@ import {
   ResponseSuccessRedirectToResource
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import {
+  MaxRetries,
+  RetriableTask,
+  RetryAborted,
+  TransientError,
+  withRetries
+} from "italia-ts-commons/lib/tasks";
 import { BonusActivation } from "../generated/models/BonusActivation";
 import { BonusActivationStatusEnum } from "../generated/models/BonusActivationStatus";
 import { BonusCode } from "../generated/models/BonusCode";
@@ -39,7 +46,8 @@ import { Dsu } from "../generated/models/Dsu";
 import { EligibilityCheckSuccessEligible } from "../generated/models/EligibilityCheckSuccessEligible";
 import {
   BonusActivationModel,
-  NewBonusActivation
+  NewBonusActivation,
+  RetrievedBonusActivation
 } from "../models/bonus_activation";
 import { EligibilityCheckModel } from "../models/eligibility_check";
 import { genRandomBonusCode } from "../utils/bonusCode";
@@ -47,7 +55,8 @@ import {
   makeStartBonusActivationOrchestratorId,
   makeStartEligibilityCheckOrchestratorId
 } from "../utils/orchestrators";
-import { repeatUntil } from "../utils/repeatUntil";
+
+import { Millisecond } from "italia-ts-commons/lib/units";
 
 const checkOrchestratorIsRunning = (
   client: DurableOrchestrationClient,
@@ -66,7 +75,6 @@ const makeBonusActivationResourceUri = (
  * Converts a Promise<Either> into a TaskEither
  * This is needed because our models return unconvenient type. Both left and rejection cases are handled as a TaskEither left
  * @param lazyPromise a lazy promise to convert
- * @param queryName an optional name for the query, for logging purpose
  *
  * @returns either the query result or a query failure
  */
@@ -76,6 +84,32 @@ const fromQueryEither = <R>(
   tryCatch(lazyPromise, toError).chain(errorOrResult =>
     fromEither(errorOrResult).mapLeft(toError)
   );
+
+/**
+ * Converts a Promise<Either> into a RetriableTask
+ * This is needed because our models return unconvenient type. Both left and rejection cases are handled as a TaskEither left
+ * @param lazyPromise a lazy promise to convert
+ * @param shouldRetry a function that define which kind of query error must be treated as retrieable
+ *
+ * @returns either the query result or a query failure
+ */
+const fromQueryEitherToRetriableTask = <R>(
+  lazyPromise: () => Promise<Either<QueryError | Error, R>>,
+  shouldRetry: (q: QueryError) => boolean
+): RetriableTask<Error, R> => {
+  return tryCatch(lazyPromise, _ => _ as QueryError | Error)
+    .foldTaskEither<Error | QueryError, R>(
+      _ => fromEither(left(_)),
+      _ => fromEither(_)
+    )
+    .mapLeft(errorOrQueryError => {
+      return errorOrQueryError instanceof Error
+        ? errorOrQueryError
+        : shouldRetry(errorOrQueryError)
+        ? TransientError
+        : toError(errorOrQueryError);
+    });
+};
 
 /**
  * Check if the current user has a pending activation request.
@@ -188,14 +222,6 @@ const getLatestValidDSU = (
   );
 
 /**
- * Generate a random bonus code. The operation may fail, so it has a retry mechanism
- *
- * @returns either a bonus code or a failure response
- */
-const tryGenerateBonusCode = () =>
-  repeatUntil(() => tryCatch(genRandomBonusCode, toError));
-
-/**
  * Create a new BonusActivation request record
  * @param bonusActivationModel an instance of BonusActivationModel
  * @param fiscalCode the id of the requesting user
@@ -208,14 +234,20 @@ const createBonusActivation = (
   fiscalCode: FiscalCode,
   dsu: Dsu
 ): TaskEither<IResponseErrorInternal, BonusActivation> => {
-  const shouldRepeat = (l: QueryError | Error) => {
-    // TODO: fix this condition
-    return !(l instanceof Error) && !!l.code && l.code === 409;
+  const maxAttempts = 5;
+
+  const shouldRetry = (err: QueryError) => {
+    // pk violation
+    return err.code === 409;
   };
 
-  const lazyQueryTask = () =>
-    tryGenerateBonusCode().chain(bonusCode =>
-      fromQueryEither(() => {
+  const retriableBonusActivationTask = tryCatch(
+    genRandomBonusCode,
+    toError
+  ).foldTaskEither<Error | TransientError, RetrievedBonusActivation>(
+    _ => fromEither(left(_)),
+    (bonusCode: BonusCode) =>
+      fromQueryEitherToRetriableTask(() => {
         const bonusActivation: NewBonusActivation = {
           applicantFiscalCode: fiscalCode,
           createdAt: new Date(),
@@ -225,11 +257,20 @@ const createBonusActivation = (
           status: BonusActivationStatusEnum.PROCESSING
         };
         return bonusActivationModel.create(bonusActivation, fiscalCode);
-      })
-    );
+      }, shouldRetry)
+  );
 
-  return repeatUntil(lazyQueryTask, shouldRepeat).mapLeft(err =>
-    ResponseErrorInternal(`Error creating BonusActivation: ${err.message}`)
+  return withRetries<Error, RetrievedBonusActivation>(
+    maxAttempts,
+    () => 50 as Millisecond
+  )(retriableBonusActivationTask).mapLeft(errorOrMaxRetry =>
+    errorOrMaxRetry === MaxRetries || errorOrMaxRetry === RetryAborted
+      ? ResponseErrorInternal(
+          `Error creating BonusActivation: cannot create a db record after ${maxAttempts} attemps`
+        )
+      : ResponseErrorInternal(
+          `Error creating BonusActivation: ${errorOrMaxRetry.message}`
+        )
   );
 };
 

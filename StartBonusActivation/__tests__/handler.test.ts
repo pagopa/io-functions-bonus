@@ -1,6 +1,6 @@
 // tslint:disable: no-identical-functions
 
-import { right } from "fp-ts/lib/Either";
+import { left, right } from "fp-ts/lib/Either";
 import { none, some } from "fp-ts/lib/Option";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import {
@@ -42,9 +42,9 @@ const mockEligibilityCheckFind = jest.fn().mockImplementation(async () =>
   right(some(aEligibilityCheckSuccessEligibleValid))
 );
 
-const mockBonusActivationCreate = jest
-  .fn()
-  .mockImplementation(async () => right(aRetrievedBonusActivation));
+const mockBonusActivationCreate = jest.fn().mockImplementation(async _ => {
+  return right(aRetrievedBonusActivation);
+});
 const mockEligibilityCheckModel = ({
   find: mockEligibilityCheckFind
 } as unknown) as EligibilityCheckModel;
@@ -162,7 +162,7 @@ describe("StartBonusActivationHandler", () => {
     expect(response.kind).toBe("IResponseErrorInternal");
   });
 
-  it("should retry code generation if there's already the same code on the db", async () => {
+  it("should retry bonus code generation if there's already the same code on the db", async () => {
     mockBonusActivationCreate.mockImplementationOnce(async _ => {
       throw {
         code: 409
@@ -185,7 +185,25 @@ describe("StartBonusActivationHandler", () => {
   });
 
   // TODO: fix this test
-  it.skip("should not retry code generation if there's a generic db error", async () => {
+  it.skip("should not retry bonus code generation on a generic query error", async () => {
+    mockBonusActivationCreate.mockImplementationOnce(async _ => {
+      return left({
+        code: 123
+      });
+    });
+    const handler = StartBonusActivationHandler(
+      mockBonusActivationModel,
+      mockEligibilityCheckModel
+    );
+
+    const response = await handler(context, aFiscalCode);
+
+    expect(mockBonusActivationCreate).toHaveBeenCalledTimes(1);
+    expect(response.kind).toBe("IResponseErrorInternal");
+  });
+
+  // TODO: fix this test
+  it.skip("should not retry bonus code generation on a generic query error", async () => {
     mockBonusActivationCreate.mockImplementationOnce(async _ => {
       throw new Error("any error");
     });
