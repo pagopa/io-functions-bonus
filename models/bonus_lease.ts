@@ -10,7 +10,7 @@ import { keys } from "../utils/types";
 
 export const BONUS_LEASE_COLLECTION_NAME = "bonus-leases";
 
-// 12 characters unique ID
+// Computed unique ID from family members fiscal codes
 export const BONUS_LEASE_MODEL_PK_FIELD = "id";
 
 export const BonusLease = t.interface({
