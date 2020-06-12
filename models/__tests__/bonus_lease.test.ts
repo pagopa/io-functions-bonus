@@ -21,24 +21,20 @@ const aCollectionUri = DocumentDbUtils.getCollectionUri(
 
 const aFamilyUID = "AAABBB80A01C123D" as NonEmptyString;
 const aBonusId = "AAAAAAAAAAAA" as NonEmptyString & BonusCode;
-const aBonusLeaseId = `${aFamilyUID}-${aBonusId}` as NonEmptyString;
 const aBonusLease: BonusLease = {
   bonusId: aBonusId,
-  familyUID: aFamilyUID,
-  id: aBonusLeaseId
+  id: aFamilyUID
 };
 
 const aRetrievedBonusLease: RetrievedBonusLease = {
   ...aBonusLease,
   _self: "xyz",
   _ts: 123,
-  id: aBonusLeaseId,
   kind: "IRetrievedBonusLease"
 };
 
 const aNewBonusLease: NewBonusLease = {
   ...aBonusLease,
-  id: aBonusLeaseId,
   kind: "INewBonusLease"
 };
 

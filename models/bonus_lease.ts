@@ -15,7 +15,6 @@ export const BONUS_LEASE_MODEL_PK_FIELD = "id";
 
 export const BonusLease = t.interface({
   bonusId: BonusCode,
-  familyUID: NonEmptyString,
   id: NonEmptyString
 });
 export type BonusLease = t.TypeOf<typeof BonusLease>;
