@@ -34,6 +34,7 @@ const simulateOrchestratorIsRunning = (forOrchestratorId: string) => {
   );
 };
 
+// mockEligibilityCheckModel
 const mockEligibilityCheckFind = jest.fn().mockImplementation(async () =>
   // happy path: retrieve a valid eligible check
   right(some(aEligibilityCheckSuccessEligibleValid))
@@ -42,6 +43,7 @@ const mockEligibilityCheckModel = ({
   find: mockEligibilityCheckFind
 } as unknown) as EligibilityCheckModel;
 
+// mockBonusActivationModel
 const mockBonusActivationCreate = jest.fn().mockImplementation(async _ => {
   return right(aRetrievedBonusActivation);
 });
@@ -49,6 +51,7 @@ const mockBonusActivationModel = ({
   create: mockBonusActivationCreate
 } as unknown) as BonusActivationModel;
 
+// mockBonusLeaseModel
 const mockBonusLeaseCreate = jest.fn().mockImplementation(async _ => {
   return right(aRetrievedBonusLease);
 });

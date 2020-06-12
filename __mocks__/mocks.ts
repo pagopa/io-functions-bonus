@@ -17,6 +17,7 @@ import {
   EligibilityCheckSuccessIneligible,
   StatusEnum as EligibilityCheckSuccessIneligibleStatus
 } from "../generated/models/EligibilityCheckSuccessIneligible";
+
 import { MaxBonusAmount } from "../generated/models/MaxBonusAmount";
 import { MaxBonusTaxBenefit } from "../generated/models/MaxBonusTaxBenefit";
 import {
@@ -25,8 +26,8 @@ import {
 } from "../models/bonus_activation";
 import {
   BonusLease,
-  RetrievedBonusLease,
-  NewBonusLease
+  NewBonusLease,
+  RetrievedBonusLease
 } from "../models/bonus_lease";
 
 export const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
