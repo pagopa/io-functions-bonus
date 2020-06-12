@@ -10,7 +10,7 @@ export const toHash = (s: string): string => {
 export const generateFamilyUID = (familyMembers: FamilyMembers): string =>
   toHash(
     Array.from(familyMembers)
-      .sort((a, b) => (a.fiscal_code > b.fiscal_code ? 1 : -1))
       .map(_ => _.fiscal_code)
+      .sort((a, b) => a.localeCompare(b))
       .join("")
   );
