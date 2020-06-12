@@ -278,24 +278,24 @@ const createBonusActivation = (
 
 const acquireLockForUserFamily = (
   bonusLeaseModel: BonusLeaseModel,
-  family: FamilyMembers
+  familyMembers: FamilyMembers
 ): TaskEither<IResponseErrorConflict, NonEmptyString> => {
-  const familiUID = generateFamilyUID(family) as NonEmptyString;
+  const familyUID = generateFamilyUID(familyMembers) as NonEmptyString;
   return fromQueryEither(() =>
     bonusLeaseModel.create(
       {
-        id: familiUID,
+        id: familyUID,
         kind: "INewBonusLease"
       },
-      familiUID
+      familyUID
     )
   ).bimap(
     err =>
       // consider any error a failure for lease already prensent
       ResponseErrorConflict(
-        `Failed while acquiring lease for familiUID ${familiUID}: ${err.message}`
+        `Failed while acquiring lease for familiUID ${familyUID}: ${err.message}`
       ),
-    _ => familiUID
+    _ => familyUID
   );
 };
 
