@@ -5,7 +5,6 @@ import { DocumentDbModel } from "io-functions-commons/dist/src/utils/documentdb_
 import * as t from "io-ts";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { pick, tag } from "italia-ts-commons/lib/types";
-import { BonusCode } from "../generated/models/BonusCode";
 import { keys } from "../utils/types";
 
 export const BONUS_LEASE_COLLECTION_NAME = "bonus-leases";
@@ -14,7 +13,6 @@ export const BONUS_LEASE_COLLECTION_NAME = "bonus-leases";
 export const BONUS_LEASE_MODEL_PK_FIELD = "id";
 
 export const BonusLease = t.interface({
-  bonusId: BonusCode,
   id: NonEmptyString
 });
 export type BonusLease = t.TypeOf<typeof BonusLease>;

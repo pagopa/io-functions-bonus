@@ -4,13 +4,11 @@ import { QueryError } from "documentdb";
 import * as df from "durable-functions";
 import { DurableOrchestrationClient } from "durable-functions/lib/src/durableorchestrationclient";
 import * as express from "express";
-import { sequenceT } from "fp-ts/lib/Apply";
 import { Either, left, right, toError } from "fp-ts/lib/Either";
 import {
   fromEither,
   TaskEither,
   taskEither,
-  taskEitherSeq,
   tryCatch
 } from "fp-ts/lib/TaskEither";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
@@ -20,11 +18,13 @@ import {
   wrapRequestHandler
 } from "io-functions-commons/dist/src/utils/request_middleware";
 import {
+  IResponseErrorConflict,
   IResponseErrorForbiddenNotAuthorized,
   IResponseErrorGone,
   IResponseErrorInternal,
   IResponseSuccessAccepted,
   IResponseSuccessRedirectToResource,
+  ResponseErrorConflict,
   ResponseErrorForbiddenNotAuthorized,
   ResponseErrorGone,
   ResponseErrorInternal,
@@ -57,6 +57,9 @@ import {
 } from "../utils/orchestrators";
 
 import { Millisecond } from "italia-ts-commons/lib/units";
+import { FamilyMembers } from "../generated/models/FamilyMembers";
+import { BonusLeaseModel, RetrievedBonusLease } from "../models/bonus_lease";
+import { generateFamilyUID } from "../utils/hash";
 
 const checkOrchestratorIsRunning = (
   client: DurableOrchestrationClient,
@@ -243,7 +246,7 @@ const createBonusActivation = (
   const retriableBonusActivationTask = tryCatch(
     genRandomBonusCode,
     toError
-  ).foldTaskEither(
+  ).foldTaskEither<Error | TransientError, RetrievedBonusActivation>(
     _ => fromEither(left(_)),
     (bonusCode: BonusCode) =>
       fromQueryEitherToRetriableTask(() => {
@@ -273,10 +276,32 @@ const createBonusActivation = (
   );
 };
 
+const acquireLockForUserFamily = (
+  bonusLeaseModel: BonusLeaseModel,
+  familyMembers: FamilyMembers
+): TaskEither<IResponseErrorConflict, RetrievedBonusLease> => {
+  const familyUID = generateFamilyUID(familyMembers) as NonEmptyString;
+  return fromQueryEither(() =>
+    bonusLeaseModel.create(
+      {
+        id: familyUID,
+        kind: "INewBonusLease"
+      },
+      familyUID
+    )
+  ).mapLeft(err =>
+    // consider any error a failure for lease already present
+    ResponseErrorConflict(
+      `Failed while acquiring lease for familiUID ${familyUID}: ${err.message}`
+    )
+  );
+};
+
 type StartBonusActivationResponse =
   | IResponseErrorInternal
   | IResponseErrorForbiddenNotAuthorized
   | IResponseErrorGone
+  | IResponseErrorConflict
   | IResponseSuccessAccepted
   | IResponseSuccessRedirectToResource<BonusActivation, BonusActivation>;
 
@@ -287,31 +312,23 @@ type IStartBonusActivationHandler = (
 
 export function StartBonusActivationHandler(
   bonusActivationModel: BonusActivationModel,
+  bonusLeaseModel: BonusLeaseModel,
   eligibilityCheckModel: EligibilityCheckModel
 ): IStartBonusActivationHandler {
   return async (context, fiscalCode) => {
     const client = df.getClient(context);
 
-    return sequenceT(taskEitherSeq)(
-      checkEligibilityCheckIsRunning(client, fiscalCode) as TaskEither<
-        StartBonusActivationResponse,
-        false
-      >,
-      checkBonusActivationIsRunning(client, fiscalCode) as TaskEither<
-        StartBonusActivationResponse,
-        false
-      >,
-      getLatestValidDSU(eligibilityCheckModel, fiscalCode) as TaskEither<
-        StartBonusActivationResponse,
-        Dsu
-      >
-    )
-
-      .chain(_ => {
-        // TODO: lock for familiuid
-        return taskEither.of(_);
-      })
-      .chain(([, , dsu]) =>
+    return taskEither
+      .of<StartBonusActivationResponse, void>(void 0)
+      .chain(_ => checkEligibilityCheckIsRunning(client, fiscalCode))
+      .chain(_ => checkBonusActivationIsRunning(client, fiscalCode))
+      .chain(_ => getLatestValidDSU(eligibilityCheckModel, fiscalCode))
+      .chain((dsu: Dsu) =>
+        acquireLockForUserFamily(bonusLeaseModel, dsu.familyMembers).map(
+          _ => dsu
+        )
+      )
+      .chain((dsu: Dsu) =>
         createBonusActivation(bonusActivationModel, fiscalCode, dsu)
       )
       .chain(_ => {
@@ -333,10 +350,12 @@ export function StartBonusActivationHandler(
 
 export function StartBonusActivation(
   bonusActivationModel: BonusActivationModel,
+  bonusLeaseModel: BonusLeaseModel,
   eligibilityCheckModel: EligibilityCheckModel
 ): express.RequestHandler {
   const handler = StartBonusActivationHandler(
     bonusActivationModel,
+    bonusLeaseModel,
     eligibilityCheckModel
   );
 

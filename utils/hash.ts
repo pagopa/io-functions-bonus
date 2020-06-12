@@ -1,5 +1,5 @@
 import * as crypto from "crypto";
-import { FamilyMembers } from "../generated/definitions/FamilyMembers";
+import { FamilyMembers } from "../generated/models/FamilyMembers";
 
 export const toHash = (s: string): string => {
   const hash = crypto.createHash("sha256");
@@ -10,7 +10,7 @@ export const toHash = (s: string): string => {
 export const generateFamilyUID = (familyMembers: FamilyMembers): string =>
   toHash(
     Array.from(familyMembers)
-      .map(_ => _.fiscal_code)
+      .map(_ => _.fiscalCode)
       .sort((a, b) => a.localeCompare(b))
       .join("")
   );
