@@ -12,11 +12,6 @@
       "type": "http",
       "direction": "out",
       "name": "res"
-    },
-    {
-      "name": "starter",
-      "type": "durableClient",
-      "direction": "in"
     }
   ],
   "scriptFile": "../dist/GetAllBonusActivations/index.js"
