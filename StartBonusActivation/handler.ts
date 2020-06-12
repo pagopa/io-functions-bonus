@@ -254,6 +254,7 @@ const createBonusActivation = (
           applicantFiscalCode: fiscalCode,
           createdAt: new Date(),
           dsuRequest: dsu,
+          familyUID: generateFamilyUID(dsu.familyMembers),
           id: bonusCode as BonusCode & NonEmptyString,
           kind: "INewBonusActivation",
           status: BonusActivationStatusEnum.PROCESSING
@@ -280,7 +281,7 @@ const acquireLockForUserFamily = (
   bonusLeaseModel: BonusLeaseModel,
   familyMembers: FamilyMembers
 ): TaskEither<IResponseErrorConflict, NonEmptyString> => {
-  const familyUID = generateFamilyUID(familyMembers) as NonEmptyString;
+  const familyUID = generateFamilyUID(familyMembers);
   return fromQueryEither(() =>
     bonusLeaseModel.create(
       {
@@ -379,7 +380,6 @@ export function StartBonusActivation(
     bonusLeaseModel,
     eligibilityCheckModel
   );
-
   const middlewaresWrap = withRequestMiddlewares(
     // Extract Azure Functions bindings
     ContextMiddleware(),

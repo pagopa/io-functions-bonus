@@ -3,8 +3,11 @@
  */
 
 import { rights } from "fp-ts/lib/Array";
-import { Either } from "fp-ts/lib/Either";
+import { Either, isLeft } from "fp-ts/lib/Either";
+import * as NonEmptyArray from "fp-ts/lib/NonEmptyArray";
+import { isNone } from "fp-ts/lib/Option";
 import * as t from "io-ts";
+import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { BonusVacanzaBase as ApiBonusVacanzaBase } from "../generated/ade/BonusVacanzaBase";
 import { BonusActivation as ApiBonusActivation } from "../generated/definitions/BonusActivation";
@@ -34,10 +37,23 @@ import { MaxBonusTaxBenefit } from "../generated/definitions/MaxBonusTaxBenefit"
 import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
 import { Timestamp } from "../generated/definitions/Timestamp";
 import { BonusActivation } from "../generated/models/BonusActivation";
+import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 import { EligibilityCheck } from "../generated/models/EligibilityCheck";
+import { FamilyMemberCount } from "../generated/models/FamilyMemberCount";
 import { UserBonus } from "../models/user_bonus";
+import { generateFamilyUID } from "./hash";
 import { renameObjectKeys } from "./rename_keys";
 import { camelCaseToSnakeCase, snakeCaseToCamelCase } from "./strings";
+
+// 150 EUR for one member families
+const ONE_FAMILY_MEMBER_AMOUNT = 150 as MaxBonusAmount;
+// 250 EUR for two member families
+const TWO_FAMILY_MEMBERS_AMOUNT = 250 as MaxBonusAmount;
+// 500 EUR for three or more member families
+const THREE_OR_MORE_FAMILY_MEMBERS_AMOUNT = 500 as MaxBonusAmount;
+
+// Max tax benefit is 20% of max bonus amount
+const TAX_BENEFIT_PERCENT = 20;
 
 /**
  * Maps EligibilityCheck API object into an EligibilityCheck domain object
@@ -68,23 +84,31 @@ export const toApiEligibilityCheck = (
  */
 export const toModelBonusActivation = (
   apiObj: ApiBonusActivation
-): Either<t.Errors, BonusActivation> => {
+): Either<t.Errors, BonusActivationWithFamilyUID> => {
   const camelCasedUntypedObj = renameObjectKeys(apiObj, k =>
     snakeCaseToCamelCase(k)
   );
-  return BonusActivation.decode(camelCasedUntypedObj);
+  return BonusActivation.decode(camelCasedUntypedObj).chain(base =>
+    BonusActivationWithFamilyUID.decode({
+      ...base,
+      familyUID: generateFamilyUID(base.dsuRequest.familyMembers)
+    })
+  );
 };
 
 /**
- * Maps BonusActivation API object into an BonusActivation domain object
+ * Maps BonusActivationWithFamilyUID Domain object into an BonusActivation api object
  */
 export const toApiBonusActivation = (
-  domainObj: BonusActivation
+  domainObj: BonusActivationWithFamilyUID
 ): Either<t.Errors, ApiBonusActivation> => {
   const snakeCasedUntypedObj = renameObjectKeys(domainObj, k =>
     camelCaseToSnakeCase(k)
   );
-  return ApiBonusActivation.decode(snakeCasedUntypedObj);
+  return ApiBonusActivation.decode({
+    ...snakeCasedUntypedObj,
+    family_members: undefined
+  });
 };
 
 /**
@@ -115,22 +139,36 @@ export const toApiUserBonus = (domainObj: UserBonus): BonusActivationItem => {
   };
 };
 
-function calculateMaxBonusAmount(
-  numberOfFamilyMembers: number
+/**
+ * Returns the maximum bonus amount in Euros from the total number of family
+ * members.
+ */
+function calculateMaxBonusAmountFromFamilyMemberCount(
+  familyMemberCount: FamilyMemberCount
 ): MaxBonusAmount {
-  return (numberOfFamilyMembers > 2
-    ? 500
-    : numberOfFamilyMembers === 2
-    ? 250
-    : numberOfFamilyMembers === 1
-    ? 150
-    : 0) as MaxBonusAmount;
+  if (familyMemberCount > 2) {
+    return THREE_OR_MORE_FAMILY_MEMBERS_AMOUNT;
+  }
+  if (familyMemberCount === 2) {
+    return TWO_FAMILY_MEMBERS_AMOUNT;
+  }
+  if (familyMemberCount === 1) {
+    return ONE_FAMILY_MEMBER_AMOUNT;
+  }
+  throw new Error(
+    `FATAL: family member count is not greater than 0 [${familyMemberCount}]`
+  );
 }
 
+/**
+ * Calculate the max amount of tax benefit from a MaxBonusAmount
+ */
 function calculateMaxBonusTaxBenefit(
   maxBonusAmount: MaxBonusAmount
 ): MaxBonusTaxBenefit {
-  return (maxBonusAmount / 5) as MaxBonusTaxBenefit;
+  return Math.floor(
+    (TAX_BENEFIT_PERCENT * maxBonusAmount) / 100
+  ) as MaxBonusTaxBenefit;
 }
 
 export const toEligibilityCheckFromDSU = (
@@ -138,11 +176,41 @@ export const toEligibilityCheckFromDSU = (
   fiscalCode: FiscalCode,
   validBefore: Timestamp
 ): ApiEligibilityCheck => {
-  const bonusValue = calculateMaxBonusAmount(
-    data.DatiIndicatore?.Componenti ? data.DatiIndicatore.Componenti.length : 0
+  const maybeFamilyMembers = NonEmptyArray.fromArray([
+    ...(data.DatiIndicatore?.Componenti || [])
+  ]);
+
+  if (isNone(maybeFamilyMembers)) {
+    return EligibilityCheckFailure.encode({
+      error: ErrorEnum.INTERNAL_ERROR,
+      error_description: `DatiIndicatore.Componenti is empty`,
+      id: (fiscalCode as unknown) as NonEmptyString,
+      status: ErrorStatusEnum.FAILURE
+    });
+  }
+  const familyMembers = maybeFamilyMembers.value;
+
+  const validatedFamilyMemberCount = FamilyMemberCount.decode(
+    familyMembers.length()
   );
 
-  const familyMembers: FamilyMembers = data.DatiIndicatore?.Componenti
+  if (isLeft(validatedFamilyMemberCount)) {
+    return EligibilityCheckFailure.encode({
+      error: ErrorEnum.INTERNAL_ERROR,
+      error_description: `Family member count is out of range [${readableReport(
+        validatedFamilyMemberCount.value
+      )}]`,
+      id: (fiscalCode as unknown) as NonEmptyString,
+      status: ErrorStatusEnum.FAILURE
+    });
+  }
+  const familyMemberCount = validatedFamilyMemberCount.value;
+
+  const bonusValue = calculateMaxBonusAmountFromFamilyMemberCount(
+    familyMemberCount
+  );
+
+  const validFamilyMembers: FamilyMembers = data.DatiIndicatore?.Componenti
     ? rights(
         data.DatiIndicatore.Componenti.map(c =>
           FamilyMember.decode({
@@ -174,7 +242,7 @@ export const toEligibilityCheckFromDSU = (
         dsu_created_at: data.DatiIndicatore.DataPresentazioneDSU,
         dsu_protocol_id: (data.DatiIndicatore.ProtocolloDSU ||
           "") as NonEmptyString,
-        family_members: familyMembers,
+        family_members: validFamilyMembers,
         has_discrepancies:
           data.DatiIndicatore.PresenzaDifformita === SiNoTypeEnum.SI,
         isee_type: data.DatiIndicatore.TipoIndicatore,

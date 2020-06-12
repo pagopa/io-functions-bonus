@@ -208,6 +208,10 @@ definitions:
     minLength: 12
     maxLength: 12
     pattern: "^[ACEFGHLMNPRUV3469]{12}$"
+  FamilyUID:
+    description: An hash code that identifies univocally a family
+    type: string
+    minLength: 16
   InstanceId:
     type: object
     properties:
@@ -426,6 +430,17 @@ definitions:
       - status
       - dsu_request
       - created_at
+  BonusActivationWithFamilyUID:
+    title: BonusActivation with FamilyUID
+    description: includes the FamilyUID along with BonusActivation for troubleshooting reasons
+    allOf:
+      - $ref: "#/definitions/BonusActivation"
+      - type: object
+        properties:
+          familyUID:
+            $ref: "#/definitions/FamilyUID"
+        required:
+          - familyUID
   BonusActivationItem:
     type: object
     properties:
@@ -499,6 +514,8 @@ definitions:
     properties:
       Componenti:
         type: array
+        minItems: 1
+        maxItems: 50
         items:
           $ref: "#/definitions/NucleoType"
         x-nullable: true
@@ -559,3 +576,8 @@ definitions:
     enum:
       - SI
       - "NO"
+  FamilyMemberCount:
+    description: Describes the count of members in a family, we also define some sane limits
+    type: integer
+    minimum: 1
+    maximum: 50

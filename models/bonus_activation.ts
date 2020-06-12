@@ -6,7 +6,7 @@ import { DocumentDbModel } from "io-functions-commons/dist/src/utils/documentdb_
 import * as t from "io-ts";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { pick, tag } from "italia-ts-commons/lib/types";
-import { BonusActivation } from "../generated/models/BonusActivation";
+import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 import { BonusCode } from "../generated/models/BonusCode";
 import { keys } from "../utils/types";
 
@@ -19,7 +19,10 @@ interface IRetrievedBonusActivation {
   readonly kind: "IRetrievedBonusActivation";
 }
 export const RetrievedBonusActivation = tag<IRetrievedBonusActivation>()(
-  t.intersection([BonusActivation, DocumentDbUtils.RetrievedDocument])
+  t.intersection([
+    BonusActivationWithFamilyUID,
+    DocumentDbUtils.RetrievedDocument
+  ])
 );
 export type RetrievedBonusActivation = t.TypeOf<
   typeof RetrievedBonusActivation
@@ -29,7 +32,7 @@ interface INewBonusActivationTag {
   readonly kind: "INewBonusActivation";
 }
 export const NewBonusActivation = tag<INewBonusActivationTag>()(
-  t.intersection([BonusActivation, DocumentDbUtils.NewDocument])
+  t.intersection([BonusActivationWithFamilyUID, DocumentDbUtils.NewDocument])
 );
 export type NewBonusActivation = t.TypeOf<typeof NewBonusActivation>;
 
@@ -42,13 +45,13 @@ function toRetrieved(
   } as RetrievedBonusActivation;
 }
 
-function toBaseType(o: RetrievedBonusActivation): BonusActivation {
+function toBaseType(o: RetrievedBonusActivation): BonusActivationWithFamilyUID {
   // removes attributes of RetrievedBonusActivation which aren't of BonusActivation
-  return pick(keys(BonusActivation._A), o);
+  return pick(keys(BonusActivationWithFamilyUID._A), o);
 }
 
 export class BonusActivationModel extends DocumentDbModel<
-  BonusActivation,
+  BonusActivationWithFamilyUID,
   NewBonusActivation,
   RetrievedBonusActivation
 > {
@@ -69,7 +72,10 @@ export class BonusActivationModel extends DocumentDbModel<
     bonusId: BonusCode,
     fiscalCode: FiscalCode
   ): Promise<
-    Either<DocumentDb.QueryError, Option<{ bonusActivation: BonusActivation }>>
+    Either<
+      DocumentDb.QueryError,
+      Option<{ bonusActivation: BonusActivationWithFamilyUID }>
+    >
   > {
     return DocumentDbUtils.queryOneDocument(
       this.dbClient,
