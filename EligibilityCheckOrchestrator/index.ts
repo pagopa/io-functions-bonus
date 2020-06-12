@@ -7,6 +7,7 @@ import { MessageContent } from "io-functions-commons/dist/generated/definitions/
 import { ActivityResult as DeleteEligibilityCheckActivityResult } from "../DeleteEligibilityCheckActivity/handler";
 import { ActivityResult } from "../EligibilityCheckActivity/handler";
 import { EligibilityCheck as ApiEligibilityCheck } from "../generated/definitions/EligibilityCheck";
+import { EligibilityCheck } from "../generated/definitions/EligibilityCheck";
 import { EligibilityCheckFailure } from "../generated/definitions/EligibilityCheckFailure";
 import { EligibilityCheckSuccessConflict } from "../generated/definitions/EligibilityCheckSuccessConflict";
 import { EligibilityCheckSuccessEligible } from "../generated/definitions/EligibilityCheckSuccessEligible";
@@ -41,6 +42,8 @@ export const handler = function*(
   context.df.setCustomStatus("RUNNING");
   const orchestratorInput = context.df.getInput();
   // tslint:disable-next-line: no-let
+  let validatedEligibilityCheck: EligibilityCheck;
+  // tslint:disable-next-line: no-let
   let eligibilityCheckResponse: ActivityResult;
   try {
     const deleteEligibilityCheckResponse = yield context.df.callActivity(
@@ -67,15 +70,31 @@ export const handler = function*(
       kind: "FAILURE",
       reason: "ActivityResult decoding error"
     });
+
     if (eligibilityCheckResponse.kind !== "SUCCESS") {
       throw new Error(
         `Unexpected response from EligibilityCheckActivity: [${eligibilityCheckResponse.reason}]`
       );
     }
+    const eligibilityCheck = toApiEligibilityCheckFromDSU(
+      eligibilityCheckResponse.data,
+      eligibilityCheckResponse.fiscalCode,
+      eligibilityCheckResponse.validBefore
+    );
+    const undecodedValidatedEligibilityCheck = yield context.df.callActivity(
+      "ValidateEligibilityCheckActivity",
+      eligibilityCheck
+    );
+    validatedEligibilityCheck = EligibilityCheck.decode(
+      undecodedValidatedEligibilityCheck
+    ).getOrElseL(error => {
+      throw new Error(`Decoding Error: [${readableReport(error)}]`);
+    });
+
     yield context.df.callActivityWithRetry(
       "UpsertEligibilityCheckActivity",
       retryOptions,
-      eligibilityCheckResponse
+      validatedEligibilityCheck
     );
   } catch (err) {
     context.log.error("EligibilityCheckOrchestrator|ERROR|%s", err);
@@ -90,25 +109,8 @@ export const handler = function*(
     addSeconds(context.df.currentUtcDateTime, NOTIFICATION_DELAY_SECONDS)
   );
 
-  const errorOrEligibilityCheck = toApiEligibilityCheckFromDSU(
-    eligibilityCheckResponse.data,
-    eligibilityCheckResponse.fiscalCode,
-    eligibilityCheckResponse.validBefore
-  );
-
-  if (isLeft(errorOrEligibilityCheck)) {
-    context.log.error(
-      `Cannot decode EligibilityCheck From DSU: ${readableReport(
-        errorOrEligibilityCheck.value
-      )}`
-    );
-    return eligibilityCheckResponse;
-  }
-
-  const eligibilityCheck = errorOrEligibilityCheck.value;
-
   // send push notification with eligibility details
-  const maybeMessage = getMessage(eligibilityCheck);
+  const maybeMessage = getMessage(validatedEligibilityCheck);
 
   if (isSome(maybeMessage)) {
     yield context.df.callActivityWithRetry(
@@ -129,7 +131,7 @@ export const handler = function*(
     );
   }
 
-  return eligibilityCheckResponse;
+  return validatedEligibilityCheck;
 };
 
 export const index = df.orchestrator(handler);
