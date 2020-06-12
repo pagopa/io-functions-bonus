@@ -32,6 +32,13 @@ import {
   ResponseSuccessRedirectToResource
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import {
+  MaxRetries,
+  RetriableTask,
+  RetryAborted,
+  TransientError,
+  withRetries
+} from "italia-ts-commons/lib/tasks";
 import { BonusActivation } from "../generated/models/BonusActivation";
 import { BonusActivationStatusEnum } from "../generated/models/BonusActivationStatus";
 import { BonusCode } from "../generated/models/BonusCode";
@@ -39,13 +46,17 @@ import { Dsu } from "../generated/models/Dsu";
 import { EligibilityCheckSuccessEligible } from "../generated/models/EligibilityCheckSuccessEligible";
 import {
   BonusActivationModel,
-  NewBonusActivation
+  NewBonusActivation,
+  RetrievedBonusActivation
 } from "../models/bonus_activation";
 import { EligibilityCheckModel } from "../models/eligibility_check";
+import { genRandomBonusCode } from "../utils/bonusCode";
 import {
   makeStartBonusActivationOrchestratorId,
   makeStartEligibilityCheckOrchestratorId
 } from "../utils/orchestrators";
+
+import { Millisecond } from "italia-ts-commons/lib/units";
 
 const checkOrchestratorIsRunning = (
   client: DurableOrchestrationClient,
@@ -64,7 +75,6 @@ const makeBonusActivationResourceUri = (
  * Converts a Promise<Either> into a TaskEither
  * This is needed because our models return unconvenient type. Both left and rejection cases are handled as a TaskEither left
  * @param lazyPromise a lazy promise to convert
- * @param queryName an optional name for the query, for logging purpose
  *
  * @returns either the query result or a query failure
  */
@@ -74,6 +84,32 @@ const fromQueryEither = <R>(
   tryCatch(lazyPromise, toError).chain(errorOrResult =>
     fromEither(errorOrResult).mapLeft(toError)
   );
+
+/**
+ * Converts a Promise<Either> into a RetriableTask
+ * This is needed because our models return unconvenient type. Both left and rejection cases are handled as a TaskEither left
+ * @param lazyPromise a lazy promise to convert
+ * @param shouldRetry a function that define which kind of query error must be treated as retrieable
+ *
+ * @returns either the query result or a query failure
+ */
+const fromQueryEitherToRetriableTask = <R>(
+  lazyPromise: () => Promise<Either<QueryError | Error, R>>,
+  shouldRetry: (q: QueryError) => boolean
+): RetriableTask<Error, R> => {
+  return tryCatch(lazyPromise, _ => _ as QueryError | Error)
+    .foldTaskEither<Error | QueryError, R>(
+      _ => fromEither(left(_)),
+      _ => fromEither(_)
+    )
+    .mapLeft(errorOrQueryError => {
+      return errorOrQueryError instanceof Error
+        ? errorOrQueryError
+        : shouldRetry(errorOrQueryError)
+        ? TransientError
+        : toError(errorOrQueryError);
+    });
+};
 
 /**
  * Check if the current user has a pending activation request.
@@ -148,7 +184,7 @@ const checkEligibilityCheckIsRunning = (
  *
  * @returns either a valid DSU or a response relative to the state of the DSU
  */
-const getLastValidDSU = (
+const getLatestValidDSU = (
   eligibilityCheckModel: EligibilityCheckModel,
   fiscalCode: FiscalCode
 ): TaskEither<
@@ -172,7 +208,7 @@ const getLastValidDSU = (
           | IResponseErrorInternal,
           Dsu
         >
-      >(fromEither(left(ResponseErrorInternal(`Cannot find DSU`))), doc =>
+      >(fromEither(left(ResponseErrorForbiddenNotAuthorized)), doc =>
         // the found document is not in eligible status
         !EligibilityCheckSuccessEligible.is(doc)
           ? fromEither(left(ResponseErrorForbiddenNotAuthorized))
@@ -196,23 +232,46 @@ const getLastValidDSU = (
 const createBonusActivation = (
   bonusActivationModel: BonusActivationModel,
   fiscalCode: FiscalCode,
-  dsu: Dsu
-): TaskEither<IResponseErrorInternal, BonusActivation> =>
-  fromQueryEither(() => {
-    // TODO: generate bonus code with provided algorithm
-    const bonusCode = "any code" as BonusCode & NonEmptyString;
-    const bonusActivation: NewBonusActivation = {
-      applicantFiscalCode: fiscalCode,
-      createdAt: new Date(),
-      dsuRequest: dsu,
-      id: bonusCode,
-      kind: "INewBonusActivation",
-      status: BonusActivationStatusEnum.PROCESSING
-    };
-    return bonusActivationModel.create(bonusActivation, fiscalCode);
-  }).mapLeft(err =>
-    ResponseErrorInternal(`Error creating BonusActivation: ${err.message}`)
+  dsu: Dsu,
+  maxAttempts: number = 5
+): TaskEither<IResponseErrorInternal, BonusActivation> => {
+  const shouldRetry = (err: QueryError) => {
+    // CosmosDB conflict: primary key violation
+    return err.code === 409;
+  };
+
+  const retriableBonusActivationTask = tryCatch(
+    genRandomBonusCode,
+    toError
+  ).foldTaskEither(
+    _ => fromEither(left(_)),
+    (bonusCode: BonusCode) =>
+      fromQueryEitherToRetriableTask(() => {
+        const bonusActivation: NewBonusActivation = {
+          applicantFiscalCode: fiscalCode,
+          createdAt: new Date(),
+          dsuRequest: dsu,
+          id: bonusCode as BonusCode & NonEmptyString,
+          kind: "INewBonusActivation",
+          status: BonusActivationStatusEnum.PROCESSING
+        };
+        return bonusActivationModel.create(bonusActivation, fiscalCode);
+      }, shouldRetry)
   );
+
+  return withRetries<Error, RetrievedBonusActivation>(
+    maxAttempts,
+    () => 50 as Millisecond
+  )(retriableBonusActivationTask).mapLeft(errorOrMaxRetry =>
+    errorOrMaxRetry === MaxRetries || errorOrMaxRetry === RetryAborted
+      ? ResponseErrorInternal(
+          `Error creating BonusActivation: cannot create a db record after ${maxAttempts} attemps`
+        )
+      : ResponseErrorInternal(
+          `Error creating BonusActivation: ${errorOrMaxRetry.message}`
+        )
+  );
+};
 
 type StartBonusActivationResponse =
   | IResponseErrorInternal
@@ -242,7 +301,7 @@ export function StartBonusActivationHandler(
         StartBonusActivationResponse,
         false
       >,
-      getLastValidDSU(eligibilityCheckModel, fiscalCode) as TaskEither<
+      getLatestValidDSU(eligibilityCheckModel, fiscalCode) as TaskEither<
         StartBonusActivationResponse,
         Dsu
       >
@@ -253,7 +312,6 @@ export function StartBonusActivationHandler(
         return taskEither.of(_);
       })
       .chain(([, , dsu]) =>
-        // TODO: iterate bonusActivationModel.create to be sure the code is unique
         createBonusActivation(bonusActivationModel, fiscalCode, dsu)
       )
       .chain(_ => {
