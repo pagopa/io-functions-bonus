@@ -280,7 +280,7 @@ const acquireLockForUserFamily = (
   bonusLeaseModel: BonusLeaseModel,
   family: FamilyMembers
 ): TaskEither<IResponseErrorConflict, RetrievedBonusLease> => {
-  const familiUID = generateFamilyUID(family) as NonEmptyString;
+  const familyUID = generateFamilyUID(family) as NonEmptyString;
   return fromQueryEither(() =>
     bonusLeaseModel.create(
       {
