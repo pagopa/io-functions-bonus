@@ -39,7 +39,6 @@ import {
   TransientError,
   withRetries
 } from "italia-ts-commons/lib/tasks";
-import { BonusActivation } from "../generated/models/BonusActivation";
 import { BonusActivationStatusEnum } from "../generated/models/BonusActivationStatus";
 import { BonusCode } from "../generated/models/BonusCode";
 import { Dsu } from "../generated/models/Dsu";
@@ -56,9 +55,15 @@ import {
   makeStartEligibilityCheckOrchestratorId
 } from "../utils/orchestrators";
 
+import { readableReport } from "italia-ts-commons/lib/reporters";
 import { Millisecond } from "italia-ts-commons/lib/units";
+import { BonusActivation as ApiBonusActivation } from "../generated/definitions/BonusActivation";
+import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 import { FamilyMembers } from "../generated/models/FamilyMembers";
-import { BonusLeaseModel, RetrievedBonusLease } from "../models/bonus_lease";
+import { FamilyUID } from "../generated/models/FamilyUID";
+import { BonusLeaseModel } from "../models/bonus_lease";
+import { OrchestratorInput } from "../StartBonusActivationOrchestrator/handler";
+import { toApiBonusActivation } from "../utils/conversions";
 import { generateFamilyUID } from "../utils/hash";
 
 const checkOrchestratorIsRunning = (
@@ -235,9 +240,10 @@ const getLatestValidDSU = (
 const createBonusActivation = (
   bonusActivationModel: BonusActivationModel,
   fiscalCode: FiscalCode,
+  familyUID: FamilyUID,
   dsu: Dsu,
   maxAttempts: number = 5
-): TaskEither<IResponseErrorInternal, BonusActivation> => {
+): TaskEither<IResponseErrorInternal, BonusActivationWithFamilyUID> => {
   const shouldRetry = (err: QueryError) => {
     // CosmosDB conflict: primary key violation
     return err.code === 409;
@@ -254,7 +260,7 @@ const createBonusActivation = (
           applicantFiscalCode: fiscalCode,
           createdAt: new Date(),
           dsuRequest: dsu,
-          familyUID: generateFamilyUID(dsu.familyMembers),
+          familyUID,
           id: bonusCode as BonusCode & NonEmptyString,
           kind: "INewBonusActivation",
           status: BonusActivationStatusEnum.PROCESSING
@@ -277,11 +283,20 @@ const createBonusActivation = (
   );
 };
 
+/**
+ * Try to acquire a lease for the current family.
+ * This is user as a lock: given that a bonus can be requested only once per family, this operation succeeeds only if no lease has been acquired (and not released) before
+ *
+ * @param bonusLeaseModel an instance of BonusLeaseModel
+ * @param familyMembers the family of the requesting user
+ *
+ * @returns either a conflict error or the unique hash id of the family
+ */
 const acquireLockForUserFamily = (
   bonusLeaseModel: BonusLeaseModel,
   familyMembers: FamilyMembers
 ): TaskEither<IResponseErrorConflict, NonEmptyString> => {
-  const familyUID = generateFamilyUID(familyMembers);
+  const familyUID: FamilyUID = generateFamilyUID(familyMembers);
   return fromQueryEither(() =>
     bonusLeaseModel.create(
       {
@@ -300,13 +315,50 @@ const acquireLockForUserFamily = (
   );
 };
 
+/**
+ * Start a new instance of StartBonusActivationOrchestrator
+ *
+ * @param client an instance of durable function client
+ * @param bonusActivation a record of bonus activation
+ * @param fiscalCode the fiscal code of the requesting user. Needed to make a unique id for the orchestrator instance
+ *
+ * @returns either an internal error or the id of the created orchestrator
+ */
+const runStartBonusActivationOrchestrator = (
+  client: DurableOrchestrationClient,
+  bonusActivation: BonusActivationWithFamilyUID,
+  fiscalCode: FiscalCode
+): TaskEither<IResponseErrorInternal, string> =>
+  fromEither(OrchestratorInput.decode({ bonusActivation }))
+    .mapLeft(err =>
+      // validate input here, so we can make the http handler fail too. This shouldn't happen anyway
+      ResponseErrorInternal(
+        `Error validating orchestrator input: ${readableReport(err)}`
+      )
+    )
+    .chain(orchestratorInput =>
+      tryCatch(
+        () =>
+          client.startNew(
+            "StartBonusActivationOrchestrator",
+            makeStartBonusActivationOrchestratorId(fiscalCode),
+            orchestratorInput
+          ),
+        _ =>
+          // can it fail?
+          ResponseErrorInternal(
+            `Error starting the orchestrator: ${toError(_).message}`
+          )
+      )
+    );
+
 type StartBonusActivationResponse =
   | IResponseErrorInternal
   | IResponseErrorForbiddenNotAuthorized
   | IResponseErrorGone
   | IResponseErrorConflict
   | IResponseSuccessAccepted
-  | IResponseSuccessRedirectToResource<BonusActivation, BonusActivation>;
+  | IResponseSuccessRedirectToResource<ApiBonusActivation, ApiBonusActivation>;
 
 type IStartBonusActivationHandler = (
   context: Context,
@@ -333,37 +385,32 @@ export function StartBonusActivationHandler(
         ).map(familyUID => ({ familyUID, dsu }))
       )
       .chain(({ familyUID, dsu }) =>
-        createBonusActivation(
-          bonusActivationModel,
-          fiscalCode,
-          dsu
-        ).map(bonusActivation => ({ familyUID, bonusActivation }))
+        createBonusActivation(bonusActivationModel, fiscalCode, familyUID, dsu)
       )
-      .chain(({ familyUID, bonusActivation }) =>
-        tryCatch(
-          () =>
-            client.startNew(
-              "StartBonusActivationOrchestrator",
-              makeStartBonusActivationOrchestratorId(fiscalCode),
-              {
-                bonusActivation,
-                familyUID
-              }
-            ),
-          _ =>
-            // can it fail?
-            ResponseErrorInternal(
-              `Error starting the orchestrator: ${toError(_).message}`
-            )
+      .chain(bonusActivation =>
+        runStartBonusActivationOrchestrator(
+          client,
+          bonusActivation,
+          fiscalCode
         ).map(_ => bonusActivation)
+      )
+      .chain(bonusActivation =>
+        fromEither(toApiBonusActivation(bonusActivation)).mapLeft(err =>
+          // validate output
+          ResponseErrorInternal(
+            `Error converting bonusActivation to apiBonusActivation: ${readableReport(
+              err
+            )}`
+          )
+        )
       )
       .fold(
         l => l,
-        bonusActivation =>
+        apiBonusActivation =>
           ResponseSuccessRedirectToResource(
-            bonusActivation,
-            makeBonusActivationResourceUri(fiscalCode, bonusActivation.id),
-            bonusActivation
+            apiBonusActivation,
+            makeBonusActivationResourceUri(fiscalCode, apiBonusActivation.id),
+            apiBonusActivation
           )
       )
       .run();
