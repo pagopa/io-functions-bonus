@@ -232,19 +232,18 @@ const getLatestValidDSU = (
 const createBonusActivation = (
   bonusActivationModel: BonusActivationModel,
   fiscalCode: FiscalCode,
-  dsu: Dsu
+  dsu: Dsu,
+  maxAttempts: number = 5
 ): TaskEither<IResponseErrorInternal, BonusActivation> => {
-  const maxAttempts = 5;
-
   const shouldRetry = (err: QueryError) => {
-    // pk violation
+    // CosmosDB conflict: primary key violation
     return err.code === 409;
   };
 
   const retriableBonusActivationTask = tryCatch(
     genRandomBonusCode,
     toError
-  ).foldTaskEither<Error | TransientError, RetrievedBonusActivation>(
+  ).foldTaskEither(
     _ => fromEither(left(_)),
     (bonusCode: BonusCode) =>
       fromQueryEitherToRetriableTask(() => {
