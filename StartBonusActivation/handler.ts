@@ -280,19 +280,19 @@ const acquireLockForUserFamily = (
   bonusLeaseModel: BonusLeaseModel,
   familyMembers: FamilyMembers
 ): TaskEither<IResponseErrorConflict, RetrievedBonusLease> => {
-  const familyUID = generateFamilyUID(family) as NonEmptyString;
+  const familyUID = generateFamilyUID(familyMembers) as NonEmptyString;
   return fromQueryEither(() =>
     bonusLeaseModel.create(
       {
         id: familyUID,
         kind: "INewBonusLease"
       },
-      familiUID
+      familyUID
     )
   ).mapLeft(err =>
     // consider any error a failure for lease already present
     ResponseErrorConflict(
-      `Failed while acquiring lease for familiUID ${familiUID}: ${err.message}`
+      `Failed while acquiring lease for familiUID ${familyUID}: ${err.message}`
     )
   );
 };
