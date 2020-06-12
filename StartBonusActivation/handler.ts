@@ -284,7 +284,7 @@ const acquireLockForUserFamily = (
   return fromQueryEither(() =>
     bonusLeaseModel.create(
       {
-        id: familiUID,
+        id: familyUID,
         kind: "INewBonusLease"
       },
       familiUID
