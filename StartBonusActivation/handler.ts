@@ -290,7 +290,7 @@ const acquireLockForUserFamily = (
       familiUID
     )
   ).mapLeft(err =>
-    // consider any error a failure for lease already prensent
+    // consider any error a failure for lease already present
     ResponseErrorConflict(
       `Failed while acquiring lease for familiUID ${familiUID}: ${err.message}`
     )
