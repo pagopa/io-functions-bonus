@@ -254,6 +254,7 @@ const createBonusActivation = (
           applicantFiscalCode: fiscalCode,
           createdAt: new Date(),
           dsuRequest: dsu,
+          familyUID: generateFamilyUID(dsu.familyMembers),
           id: bonusCode as BonusCode & NonEmptyString,
           kind: "INewBonusActivation",
           status: BonusActivationStatusEnum.PROCESSING
