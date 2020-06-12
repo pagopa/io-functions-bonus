@@ -29,8 +29,10 @@ import {
   NewBonusLease,
   RetrievedBonusLease
 } from "../models/bonus_lease";
+import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 
 export const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
+export const aFamilyUID: string = "aFamilyUid";
 
 export const aDsu: Dsu = {
   dsuCreatedAt: new Date(),
@@ -122,8 +124,13 @@ export const aBonusActivation: BonusActivation = {
   }
 };
 
-export const aRetrievedBonusActivation: RetrievedBonusActivation = {
+export const aBonusActivationWithFamilyUID: BonusActivationWithFamilyUID = {
   ...aBonusActivation,
+  familyUID: aFamilyUID
+};
+
+export const aRetrievedBonusActivation: RetrievedBonusActivation = {
+  ...aBonusActivationWithFamilyUID,
   _self: "xyz",
   _ts: 123,
   id: aBonusActivationId,
@@ -131,12 +138,10 @@ export const aRetrievedBonusActivation: RetrievedBonusActivation = {
 };
 
 export const aNewBonusActivation: NewBonusActivation = {
-  ...aBonusActivation,
+  ...aBonusActivationWithFamilyUID,
   id: aBonusActivationId,
   kind: "INewBonusActivation"
 };
-
-export const aFamilyUID: string = "aFamilyUid";
 
 export const aBonusLease: BonusLease = {
   id: aFamilyUID as NonEmptyString
