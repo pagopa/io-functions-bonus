@@ -6,34 +6,23 @@ import { secureExpressApp } from "io-functions-commons/dist/src/utils/express";
 import { setAppContext } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import createAzureFunctionHandler from "io-functions-express/dist/src/createAzureFunctionsHandler";
 import {
-  BONUS_ACTIVATION_COLLECTION_NAME,
-  BonusActivationModel
-} from "../models/bonus_activation";
-import {
-  ELIGIBILITY_CHECK_COLLECTION_NAME,
-  EligibilityCheckModel
-} from "../models/eligibility_check";
+  USER_BONUS_COLLECTION_NAME,
+  UserBonusModel
+} from "../models/user_bonus";
 import { documentClient } from "../utils/cosmosdb";
-import { StartBonusActivation } from "./handler";
+import { GetAllBonusActivations } from "./handler";
 
 const cosmosDbName = getRequiredStringEnv("COSMOSDB_BONUS_DATABASE_NAME");
 
 const documentDbDatabaseUrl = documentDbUtils.getDatabaseUri(cosmosDbName);
-
-const eligibilityCheckModel = new EligibilityCheckModel(
-  documentClient,
-  documentDbUtils.getCollectionUri(
-    documentDbDatabaseUrl,
-    ELIGIBILITY_CHECK_COLLECTION_NAME
-  )
+const userBonusCollectionUrl = documentDbUtils.getCollectionUri(
+  documentDbDatabaseUrl,
+  USER_BONUS_COLLECTION_NAME
 );
 
-const bonusActivationModel = new BonusActivationModel(
+const userBonusModel = new UserBonusModel(
   documentClient,
-  documentDbUtils.getCollectionUri(
-    documentDbDatabaseUrl,
-    BONUS_ACTIVATION_COLLECTION_NAME
-  )
+  userBonusCollectionUrl
 );
 
 // Setup Express
@@ -41,9 +30,9 @@ const app = express();
 secureExpressApp(app);
 
 // Add express route
-app.post(
+app.get(
   "/api/v1/bonus/vacanze/activations/:fiscalcode",
-  StartBonusActivation(bonusActivationModel, eligibilityCheckModel)
+  GetAllBonusActivations(userBonusModel)
 );
 
 const azureFunctionHandler = createAzureFunctionHandler(app);

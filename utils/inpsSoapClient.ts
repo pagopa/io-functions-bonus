@@ -61,16 +61,19 @@ const INPS_SERVICE_PROTOCOL = UrlFromString.decode(
   .map(url => url.protocol)
   .getOrElse("https");
 
+const fetchAgent =
+  INPS_SERVICE_PROTOCOL === "http"
+    ? agent.getHttpFetch(process.env)
+    : agent.getHttpsFetch(process.env, {
+        cert: process.env.INPS_SERVICE_CERT,
+        key: process.env.INPS_SERVICE_KEY
+      });
+
 const fetchWithTimeout = setFetchTimeout(
   DEFAULT_REQUEST_TIMEOUT_MS as Millisecond,
-  AbortableFetch(
-    INPS_SERVICE_PROTOCOL === "http"
-      ? agent.getHttpFetch(process.env)
-      : agent.getHttpsFetch(process.env)
-  )
+  AbortableFetch(fetchAgent)
 );
 
-// TODO: pass client certificate
 const httpFetch = toFetch(fetchWithTimeout);
 
 export interface ISoapClientAsync {
