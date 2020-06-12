@@ -10,15 +10,15 @@ import {
   BonusActivationModel
 } from "../models/bonus_activation";
 import {
+  BONUS_LEASE_COLLECTION_NAME,
+  BonusLeaseModel
+} from "../models/bonus_lease";
+import {
   ELIGIBILITY_CHECK_COLLECTION_NAME,
   EligibilityCheckModel
 } from "../models/eligibility_check";
 import { documentClient } from "../utils/cosmosdb";
 import { StartBonusActivation } from "./handler";
-import {
-  BonusLeaseModel,
-  BONUS_LEASE_COLLECTION_NAME
-} from "../models/bonus_lease";
 
 const cosmosDbName = getRequiredStringEnv("COSMOSDB_BONUS_DATABASE_NAME");
 

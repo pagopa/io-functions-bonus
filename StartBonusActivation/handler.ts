@@ -4,13 +4,11 @@ import { QueryError } from "documentdb";
 import * as df from "durable-functions";
 import { DurableOrchestrationClient } from "durable-functions/lib/src/durableorchestrationclient";
 import * as express from "express";
-import { sequenceT } from "fp-ts/lib/Apply";
 import { Either, left, right, toError } from "fp-ts/lib/Either";
 import {
   fromEither,
   TaskEither,
   taskEither,
-  taskEitherSeq,
   tryCatch
 } from "fp-ts/lib/TaskEither";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
@@ -20,18 +18,18 @@ import {
   wrapRequestHandler
 } from "io-functions-commons/dist/src/utils/request_middleware";
 import {
+  IResponseErrorConflict,
   IResponseErrorForbiddenNotAuthorized,
   IResponseErrorGone,
   IResponseErrorInternal,
   IResponseSuccessAccepted,
   IResponseSuccessRedirectToResource,
+  ResponseErrorConflict,
   ResponseErrorForbiddenNotAuthorized,
   ResponseErrorGone,
   ResponseErrorInternal,
   ResponseSuccessAccepted,
-  ResponseSuccessRedirectToResource,
-  ResponseErrorConflict,
-  IResponseErrorConflict
+  ResponseSuccessRedirectToResource
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import {
@@ -60,8 +58,8 @@ import {
 
 import { Millisecond } from "italia-ts-commons/lib/units";
 import { FamilyMembers } from "../generated/models/FamilyMembers";
-import { generateFamilyUID } from "../utils/hash";
 import { BonusLeaseModel, RetrievedBonusLease } from "../models/bonus_lease";
+import { generateFamilyUID } from "../utils/hash";
 
 const checkOrchestratorIsRunning = (
   client: DurableOrchestrationClient,
