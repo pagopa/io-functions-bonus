@@ -10,17 +10,12 @@ import {
   mockStatusRunning
 } from "../../__mocks__/durable-functions";
 import {
-  aBonusId,
-  aDsu,
   aEligibilityCheckSuccessEligibleExpired,
   aEligibilityCheckSuccessEligibleValid,
   aEligibilityCheckSuccessIneligible,
   aRetrievedBonusActivation
 } from "../../__mocks__/mocks";
-import {
-  BonusActivationModel,
-  NewBonusActivation
-} from "../../models/bonus_activation";
+import { BonusActivationModel } from "../../models/bonus_activation";
 import { EligibilityCheckModel } from "../../models/eligibility_check";
 import {
   makeStartBonusActivationOrchestratorId,
