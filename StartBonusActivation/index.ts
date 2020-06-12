@@ -15,6 +15,10 @@ import {
 } from "../models/eligibility_check";
 import { documentClient } from "../utils/cosmosdb";
 import { StartBonusActivation } from "./handler";
+import {
+  BonusLeaseModel,
+  BONUS_LEASE_COLLECTION_NAME
+} from "../models/bonus_lease";
 
 const cosmosDbName = getRequiredStringEnv("COSMOSDB_BONUS_DATABASE_NAME");
 
@@ -36,6 +40,14 @@ const bonusActivationModel = new BonusActivationModel(
   )
 );
 
+const bonusLeaseModel = new BonusLeaseModel(
+  documentClient,
+  documentDbUtils.getCollectionUri(
+    documentDbDatabaseUrl,
+    BONUS_LEASE_COLLECTION_NAME
+  )
+);
+
 // Setup Express
 const app = express();
 secureExpressApp(app);
@@ -43,7 +55,11 @@ secureExpressApp(app);
 // Add express route
 app.post(
   "/api/v1/bonus/vacanze/activations/:fiscalcode",
-  StartBonusActivation(bonusActivationModel, eligibilityCheckModel)
+  StartBonusActivation(
+    bonusActivationModel,
+    bonusLeaseModel,
+    eligibilityCheckModel
+  )
 );
 
 const azureFunctionHandler = createAzureFunctionHandler(app);

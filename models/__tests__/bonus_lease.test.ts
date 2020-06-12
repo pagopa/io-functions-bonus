@@ -20,9 +20,7 @@ const aCollectionUri = DocumentDbUtils.getCollectionUri(
 );
 
 const aFamilyUID = "AAABBB80A01C123D" as NonEmptyString;
-const aBonusId = "AAAAAAAAAAAA" as NonEmptyString & BonusCode;
 const aBonusLease: BonusLease = {
-  bonusId: aBonusId,
   id: aFamilyUID
 };
 

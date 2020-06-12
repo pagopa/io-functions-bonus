@@ -13,9 +13,11 @@ import {
   aEligibilityCheckSuccessEligibleExpired,
   aEligibilityCheckSuccessEligibleValid,
   aEligibilityCheckSuccessIneligible,
-  aRetrievedBonusActivation
+  aRetrievedBonusActivation,
+  aRetrievedBonusLease
 } from "../../__mocks__/mocks";
 import { BonusActivationModel } from "../../models/bonus_activation";
+import { BonusLeaseModel } from "../../models/bonus_lease";
 import { EligibilityCheckModel } from "../../models/eligibility_check";
 import {
   makeStartBonusActivationOrchestratorId,
@@ -36,16 +38,23 @@ const mockEligibilityCheckFind = jest.fn().mockImplementation(async () =>
   // happy path: retrieve a valid eligible check
   right(some(aEligibilityCheckSuccessEligibleValid))
 );
+const mockEligibilityCheckModel = ({
+  find: mockEligibilityCheckFind
+} as unknown) as EligibilityCheckModel;
 
 const mockBonusActivationCreate = jest.fn().mockImplementation(async _ => {
   return right(aRetrievedBonusActivation);
 });
-const mockEligibilityCheckModel = ({
-  find: mockEligibilityCheckFind
-} as unknown) as EligibilityCheckModel;
 const mockBonusActivationModel = ({
   create: mockBonusActivationCreate
 } as unknown) as BonusActivationModel;
+
+const mockBonusLeaseCreate = jest.fn().mockImplementation(async _ => {
+  return right(aRetrievedBonusLease);
+});
+const mockBonusLeaseModel = ({
+  create: mockBonusLeaseCreate
+} as unknown) as BonusLeaseModel;
 
 const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
 
@@ -66,6 +75,7 @@ describe("StartBonusActivationHandler", () => {
     );
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
+      mockBonusLeaseModel,
       mockEligibilityCheckModel
     );
 
@@ -81,6 +91,7 @@ describe("StartBonusActivationHandler", () => {
 
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
+      mockBonusLeaseModel,
       mockEligibilityCheckModel
     );
 
@@ -95,6 +106,7 @@ describe("StartBonusActivationHandler", () => {
     );
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
+      mockBonusLeaseModel,
       mockEligibilityCheckModel
     );
 
@@ -107,6 +119,7 @@ describe("StartBonusActivationHandler", () => {
     mockEligibilityCheckFind.mockImplementationOnce(async _ => right(none));
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
+      mockBonusLeaseModel,
       mockEligibilityCheckModel
     );
 
@@ -121,6 +134,7 @@ describe("StartBonusActivationHandler", () => {
     );
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
+      mockBonusLeaseModel,
       mockEligibilityCheckModel
     );
 
@@ -135,6 +149,7 @@ describe("StartBonusActivationHandler", () => {
     });
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
+      mockBonusLeaseModel,
       mockEligibilityCheckModel
     );
 
@@ -149,6 +164,7 @@ describe("StartBonusActivationHandler", () => {
     });
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
+      mockBonusLeaseModel,
       mockEligibilityCheckModel
     );
 
@@ -165,6 +181,7 @@ describe("StartBonusActivationHandler", () => {
     });
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
+      mockBonusLeaseModel,
       mockEligibilityCheckModel
     );
 
@@ -180,6 +197,10 @@ describe("StartBonusActivationHandler", () => {
   });
 
   // TODO: fix this test
+  // This test has value because asserts that the retry logic for the bonus generation works as expected.
+  // The code implement a well-tested withRetries helper, so the mechanism should be ok.
+  // However, this test doesn't work as mockBonusActivationCreate is called more than once.
+  // Given that this test is based on jest mocks, I'm keen to think that the error is in the test, not in the code. It must be tried on integration test, though.
   it.skip("should not retry bonus code generation on a generic query error", async () => {
     mockBonusActivationCreate.mockImplementationOnce(async _ => {
       return left({
@@ -188,6 +209,7 @@ describe("StartBonusActivationHandler", () => {
     });
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
+      mockBonusLeaseModel,
       mockEligibilityCheckModel
     );
 
@@ -198,12 +220,17 @@ describe("StartBonusActivationHandler", () => {
   });
 
   // TODO: fix this test
+  // This test has value because asserts that the retry logic for the bonus generation works as expected.
+  // The code implement a well-tested withRetries helper, so the mechanism should be ok.
+  // However, this test doesn't work as mockBonusActivationCreate is called more than once.
+  // Given that this test is based on jest mocks, I'm keen to think that the error is in the test, not in the code. It must be tried on integration test, though.
   it.skip("should not retry bonus code generation on a generic query error", async () => {
     mockBonusActivationCreate.mockImplementationOnce(async _ => {
       throw new Error("any error");
     });
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
+      mockBonusLeaseModel,
       mockEligibilityCheckModel
     );
 
@@ -213,9 +240,25 @@ describe("StartBonusActivationHandler", () => {
     expect(response.kind).toBe("IResponseErrorInternal");
   });
 
+  it("should return a conflict if fails acquire the lease", async () => {
+    mockBonusLeaseCreate.mockImplementationOnce(async _ => {
+      throw new Error("any error");
+    });
+    const handler = StartBonusActivationHandler(
+      mockBonusActivationModel,
+      mockBonusLeaseModel,
+      mockEligibilityCheckModel
+    );
+
+    const response = await handler(context, aFiscalCode);
+
+    expect(response.kind).toBe("IResponseErrorConflict");
+  });
+
   it("should return the reference to the executed orchestrator", async () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
+      mockBonusLeaseModel,
       mockEligibilityCheckModel
     );
 

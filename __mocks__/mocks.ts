@@ -13,6 +13,10 @@ import {
   EligibilityCheckSuccessEligible,
   StatusEnum as EligibilityCheckSuccessEligibleStatus
 } from "../generated/models/EligibilityCheckSuccessEligible";
+import {
+  EligibilityCheckSuccessIneligible,
+  StatusEnum as EligibilityCheckSuccessIneligibleStatus
+} from "../generated/models/EligibilityCheckSuccessIneligible";
 import { MaxBonusAmount } from "../generated/models/MaxBonusAmount";
 import { MaxBonusTaxBenefit } from "../generated/models/MaxBonusTaxBenefit";
 import {
@@ -20,9 +24,10 @@ import {
   RetrievedBonusActivation
 } from "../models/bonus_activation";
 import {
-  EligibilityCheckSuccessIneligible,
-  StatusEnum as EligibilityCheckSuccessIneligibleStatus
-} from "../generated/models/EligibilityCheckSuccessIneligible";
+  BonusLease,
+  RetrievedBonusLease,
+  NewBonusLease
+} from "../models/bonus_lease";
 
 export const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
 
@@ -34,6 +39,11 @@ export const aDsu: Dsu = {
       fiscalCode: aFiscalCode,
       name: "Mario" as NonEmptyString,
       surname: "Rossi" as NonEmptyString
+    },
+    {
+      fiscalCode: "CCCDDD80A01C123D" as FiscalCode,
+      name: "Chiara" as NonEmptyString,
+      surname: "Bianchi" as NonEmptyString
     }
   ],
   hasDiscrepancies: false,
@@ -123,4 +133,22 @@ export const aNewBonusActivation: NewBonusActivation = {
   ...aBonusActivation,
   id: aBonusActivationId,
   kind: "INewBonusActivation"
+};
+
+export const aFamilyUID: string = "aFamilyUid";
+
+export const aBonusLease: BonusLease = {
+  id: aFamilyUID as NonEmptyString
+};
+
+export const aNewBonusLease: NewBonusLease = {
+  ...aBonusLease,
+  kind: "INewBonusLease"
+};
+
+export const aRetrievedBonusLease: RetrievedBonusLease = {
+  ...aBonusLease,
+  _self: "xyz",
+  _ts: 123,
+  kind: "IRetrievedBonusLease"
 };

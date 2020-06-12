@@ -1,17 +1,17 @@
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
-import { FamilyMembers } from "../../generated/definitions/FamilyMembers";
+import { FamilyMembers } from "../../generated/models/FamilyMembers";
 import { generateFamilyUID, toHash } from "../hash";
 
 const firstFiscalCode = "AAABAB01C02D123Z" as FiscalCode;
 const secondFiscalCode = "AAABBB01C02D123Z" as FiscalCode;
 const familyMembers: FamilyMembers = [
   {
-    fiscal_code: secondFiscalCode,
+    fiscalCode: secondFiscalCode,
     name: "AAA" as NonEmptyString,
     surname: "BBB" as NonEmptyString
   },
   {
-    fiscal_code: firstFiscalCode,
+    fiscalCode: firstFiscalCode,
     name: "AAA" as NonEmptyString,
     surname: "BBB" as NonEmptyString
   }

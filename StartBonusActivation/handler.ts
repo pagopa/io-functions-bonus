@@ -29,7 +29,9 @@ import {
   ResponseErrorGone,
   ResponseErrorInternal,
   ResponseSuccessAccepted,
-  ResponseSuccessRedirectToResource
+  ResponseSuccessRedirectToResource,
+  ResponseErrorConflict,
+  IResponseErrorConflict
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import {
@@ -57,6 +59,9 @@ import {
 } from "../utils/orchestrators";
 
 import { Millisecond } from "italia-ts-commons/lib/units";
+import { FamilyMembers } from "../generated/models/FamilyMembers";
+import { generateFamilyUID } from "../utils/hash";
+import { BonusLeaseModel, RetrievedBonusLease } from "../models/bonus_lease";
 
 const checkOrchestratorIsRunning = (
   client: DurableOrchestrationClient,
@@ -274,10 +279,32 @@ const createBonusActivation = (
   );
 };
 
+const acquireLockForUserFamily = (
+  bonusLeaseModel: BonusLeaseModel,
+  family: FamilyMembers
+): TaskEither<IResponseErrorConflict, RetrievedBonusLease> => {
+  const familiUID = generateFamilyUID(family) as NonEmptyString;
+  return fromQueryEither(() =>
+    bonusLeaseModel.create(
+      {
+        id: familiUID,
+        kind: "INewBonusLease"
+      },
+      familiUID
+    )
+  ).mapLeft(err =>
+    // consider any error a failure for lease already prensent
+    ResponseErrorConflict(
+      `Failed while acquiring lease for familiUID ${familiUID}: ${err.message}`
+    )
+  );
+};
+
 type StartBonusActivationResponse =
   | IResponseErrorInternal
   | IResponseErrorForbiddenNotAuthorized
   | IResponseErrorGone
+  | IResponseErrorConflict
   | IResponseSuccessAccepted
   | IResponseSuccessRedirectToResource<BonusActivation, BonusActivation>;
 
@@ -288,31 +315,23 @@ type IStartBonusActivationHandler = (
 
 export function StartBonusActivationHandler(
   bonusActivationModel: BonusActivationModel,
+  bonusLeaseModel: BonusLeaseModel,
   eligibilityCheckModel: EligibilityCheckModel
 ): IStartBonusActivationHandler {
   return async (context, fiscalCode) => {
     const client = df.getClient(context);
 
-    return sequenceT(taskEitherSeq)(
-      checkEligibilityCheckIsRunning(client, fiscalCode) as TaskEither<
-        StartBonusActivationResponse,
-        false
-      >,
-      checkBonusActivationIsRunning(client, fiscalCode) as TaskEither<
-        StartBonusActivationResponse,
-        false
-      >,
-      getLatestValidDSU(eligibilityCheckModel, fiscalCode) as TaskEither<
-        StartBonusActivationResponse,
-        Dsu
-      >
-    )
-
-      .chain(_ => {
-        // TODO: lock for familiuid
-        return taskEither.of(_);
-      })
-      .chain(([, , dsu]) =>
+    return taskEither
+      .of<StartBonusActivationResponse, void>(void 0)
+      .chain(_ => checkEligibilityCheckIsRunning(client, fiscalCode))
+      .chain(_ => checkBonusActivationIsRunning(client, fiscalCode))
+      .chain(_ => getLatestValidDSU(eligibilityCheckModel, fiscalCode))
+      .chain((dsu: Dsu) =>
+        acquireLockForUserFamily(bonusLeaseModel, dsu.familyMembers).map(
+          _ => dsu
+        )
+      )
+      .chain((dsu: Dsu) =>
         createBonusActivation(bonusActivationModel, fiscalCode, dsu)
       )
       .chain(_ => {
@@ -334,10 +353,12 @@ export function StartBonusActivationHandler(
 
 export function StartBonusActivation(
   bonusActivationModel: BonusActivationModel,
+  bonusLeaseModel: BonusLeaseModel,
   eligibilityCheckModel: EligibilityCheckModel
 ): express.RequestHandler {
   const handler = StartBonusActivationHandler(
     bonusActivationModel,
+    bonusLeaseModel,
     eligibilityCheckModel
   );
 
