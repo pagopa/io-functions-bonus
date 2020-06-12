@@ -1,6 +1,6 @@
 swagger: "2.0"
 info:
-  version: 1.1.0
+  version: 1.2.0
   title: IO Bonus API
   contact:
     name: IO team
@@ -219,14 +219,18 @@ definitions:
       - id
   MaxBonusAmount:
     description: Max bonus amount in euro
-    type: integer
-    minimum: 150
-    maximum: 500
+    type: string
+    x-extensible-enum:
+      - "EUR_150"
+      - "EUR_250"
+      - "EUR_500"
   MaxBonusTaxBenefit:
     description: Max bonus tax benefit in euro
-    type: integer
-    minimum: 30
-    maximum: 100
+    type: string
+    x-extensible-enum:
+      - "EUR_30"
+      - "EUR_50"
+      - "EUR_100"
   FamilyMember:
     type: object
     properties:

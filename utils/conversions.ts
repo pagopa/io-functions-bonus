@@ -32,8 +32,14 @@ import {
 } from "../generated/definitions/EligibilityCheckSuccessIneligible";
 import { FamilyMember } from "../generated/definitions/FamilyMember";
 import { FamilyMembers } from "../generated/definitions/FamilyMembers";
-import { MaxBonusAmount } from "../generated/definitions/MaxBonusAmount";
-import { MaxBonusTaxBenefit } from "../generated/definitions/MaxBonusTaxBenefit";
+import {
+  MaxBonusAmount,
+  MaxBonusAmountEnum
+} from "../generated/definitions/MaxBonusAmount";
+import {
+  MaxBonusTaxBenefit,
+  MaxBonusTaxBenefitEnum
+} from "../generated/definitions/MaxBonusTaxBenefit";
 import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
 import { Timestamp } from "../generated/definitions/Timestamp";
 import { BonusActivation } from "../generated/models/BonusActivation";
@@ -44,14 +50,11 @@ import { renameObjectKeys } from "./rename_keys";
 import { camelCaseToSnakeCase, snakeCaseToCamelCase } from "./strings";
 
 // 150 EUR for one member families
-const ONE_FAMILY_MEMBER_AMOUNT = 150 as MaxBonusAmount;
+const ONE_FAMILY_MEMBER_AMOUNT = MaxBonusAmountEnum.EUR_150;
 // 250 EUR for two member families
-const TWO_FAMILY_MEMBERS_AMOUNT = 250 as MaxBonusAmount;
+const TWO_FAMILY_MEMBERS_AMOUNT = MaxBonusAmountEnum.EUR_250;
 // 500 EUR for three or more member families
-const THREE_OR_MORE_FAMILY_MEMBERS_AMOUNT = 500 as MaxBonusAmount;
-
-// Max tax benefit is 20% of max bonus amount
-const TAX_BENEFIT_PERCENT = 20;
+const THREE_OR_MORE_FAMILY_MEMBERS_AMOUNT = MaxBonusAmountEnum.EUR_500;
 
 /**
  * Maps EligibilityCheck API object into an EligibilityCheck domain object
@@ -112,7 +115,10 @@ export const toApiBonusVacanzaBase = (
     codiceFiscaleDichiarante: domainObject.applicantFiscalCode,
     dataGenerazione: domainObject.createdAt.toISOString(),
     flagDifformitaIsee: domainObject.dsuRequest.hasDiscrepancies ? 1 : 0,
-    importoMassimo: domainObject.dsuRequest.maxAmount,
+    importoMassimo: parseInt(
+      domainObject.dsuRequest.maxAmount.replace("EUR_", ""),
+      10
+    ),
     nucleoFamiliare: domainObject.dsuRequest.familyMembers.map(_ => ({
       codiceFiscale: _.fiscalCode
     }))
@@ -156,9 +162,14 @@ function calculateMaxBonusAmountFromFamilyMemberCount(
 function calculateMaxBonusTaxBenefit(
   maxBonusAmount: MaxBonusAmount
 ): MaxBonusTaxBenefit {
-  return Math.floor(
-    (TAX_BENEFIT_PERCENT * maxBonusAmount) / 100
-  ) as MaxBonusTaxBenefit;
+  switch (maxBonusAmount) {
+    case MaxBonusAmountEnum.EUR_150:
+      return MaxBonusTaxBenefitEnum.EUR_30;
+    case MaxBonusAmountEnum.EUR_250:
+      return MaxBonusTaxBenefitEnum.EUR_50;
+    case MaxBonusAmountEnum.EUR_500:
+      return MaxBonusTaxBenefitEnum.EUR_100;
+  }
 }
 
 export const toEligibilityCheckFromDSU = (

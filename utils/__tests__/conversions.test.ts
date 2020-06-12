@@ -42,14 +42,13 @@ import {
 } from "../../generated/definitions/EligibilityCheckSuccessIneligible";
 import { EligibilityCheck } from "../../generated/models/EligibilityCheck";
 
-import { IWithinRangeIntegerTag } from "italia-ts-commons/lib/numbers";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { BonusVacanzaBase as ApiBonusVacanzaBase } from "../../generated/ade/BonusVacanzaBase";
 import { BonusActivationStatusEnum as ApiBonusActivationStatusEnum } from "../../generated/definitions/BonusActivationStatus";
 import { BonusCode as BonusCodeApi } from "../../generated/definitions/BonusCode";
-import { MaxBonusAmount } from "../../generated/definitions/MaxBonusAmount";
-import { MaxBonusTaxBenefit } from "../../generated/definitions/MaxBonusTaxBenefit";
+import { MaxBonusAmountEnum } from "../../generated/definitions/MaxBonusAmount";
+import { MaxBonusTaxBenefitEnum } from "../../generated/definitions/MaxBonusTaxBenefit";
 import { BonusActivationStatusEnum } from "../../generated/models/BonusActivationStatus";
 import { BonusCode as BonusCodeModel } from "../../generated/models/BonusCode";
 
@@ -70,8 +69,8 @@ const anElibigleApiObject: ApiEligibilityCheckSuccessEligible = {
     ],
     has_discrepancies: true,
     isee_type: "some isee type" as NonEmptyString,
-    max_amount: 200 as MaxBonusAmount,
-    max_tax_benefit: 50 as MaxBonusTaxBenefit,
+    max_amount: MaxBonusAmountEnum.EUR_250,
+    max_tax_benefit: MaxBonusTaxBenefitEnum.EUR_50,
     request_id: "123" as NonEmptyString
   },
   id: (aFiscalCode as unknown) as NonEmptyString,
@@ -106,8 +105,8 @@ const anEligibleDomainObject: EligibilityCheckSuccessEligible = {
     ],
     hasDiscrepancies: true,
     iseeType: "some isee type",
-    maxAmount: 200 as MaxBonusAmount,
-    maxTaxBenefit: 50 as MaxBonusTaxBenefit,
+    maxAmount: MaxBonusAmountEnum.EUR_250,
+    maxTaxBenefit: MaxBonusTaxBenefitEnum.EUR_50,
     requestId: "123" as NonEmptyString
   },
   id: (aFiscalCode as unknown) as NonEmptyString,
@@ -145,9 +144,9 @@ const aBonusActivationDomainObject: BonusActivation = {
       }
     ],
 
-    maxAmount: (200 as unknown) as IWithinRangeIntegerTag<150, 501> & number,
+    maxAmount: MaxBonusAmountEnum.EUR_250,
 
-    maxTaxBenefit: (100 as unknown) as IWithinRangeIntegerTag<30, 101> & number,
+    maxTaxBenefit: MaxBonusTaxBenefitEnum.EUR_50,
 
     requestId: "aRequestId" as NonEmptyString,
 
@@ -179,10 +178,9 @@ const aBonusActivationApiObject: ApiBonusActivation = {
       }
     ],
 
-    max_amount: (200 as unknown) as IWithinRangeIntegerTag<150, 501> & number,
+    max_amount: MaxBonusAmountEnum.EUR_250,
 
-    max_tax_benefit: (100 as unknown) as IWithinRangeIntegerTag<30, 101> &
-      number,
+    max_tax_benefit: MaxBonusTaxBenefitEnum.EUR_50,
 
     request_id: "aRequestId" as NonEmptyString,
 
