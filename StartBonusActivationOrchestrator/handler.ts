@@ -11,7 +11,7 @@ import { SendBonusActivationFailure } from "../SendBonusActivationActivity/handl
 import { toApiBonusVacanzaBase } from "../utils/conversions";
 
 export const OrchestratorInput = t.interface({
-  bonusActivationRequest: BonusActivation,
+  bonusActivation: BonusActivation,
   familyUID: t.string
 });
 export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
@@ -35,7 +35,7 @@ export const handler = function*(
     return false;
   }
   const errorOrBonusVacanzaBase = toApiBonusVacanzaBase(
-    errorOrStartBonusActivationOrchestratorInput.value.bonusActivationRequest
+    errorOrStartBonusActivationOrchestratorInput.value.bonusActivation
   );
   if (isLeft(errorOrBonusVacanzaBase)) {
     context.log.error(`${logPrefix}|Error decoding bonus activation request`);

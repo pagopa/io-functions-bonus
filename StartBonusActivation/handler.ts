@@ -279,7 +279,7 @@ const createBonusActivation = (
 const acquireLockForUserFamily = (
   bonusLeaseModel: BonusLeaseModel,
   family: FamilyMembers
-): TaskEither<IResponseErrorConflict, RetrievedBonusLease> => {
+): TaskEither<IResponseErrorConflict, NonEmptyString> => {
   const familiUID = generateFamilyUID(family) as NonEmptyString;
   return fromQueryEither(() =>
     bonusLeaseModel.create(
@@ -289,11 +289,13 @@ const acquireLockForUserFamily = (
       },
       familiUID
     )
-  ).mapLeft(err =>
-    // consider any error a failure for lease already prensent
-    ResponseErrorConflict(
-      `Failed while acquiring lease for familiUID ${familiUID}: ${err.message}`
-    )
+  ).bimap(
+    err =>
+      // consider any error a failure for lease already prensent
+      ResponseErrorConflict(
+        `Failed while acquiring lease for familiUID ${familiUID}: ${err.message}`
+      ),
+    _ => familiUID
   );
 };
 
@@ -324,17 +326,36 @@ export function StartBonusActivationHandler(
       .chain(_ => checkBonusActivationIsRunning(client, fiscalCode))
       .chain(_ => getLatestValidDSU(eligibilityCheckModel, fiscalCode))
       .chain((dsu: Dsu) =>
-        acquireLockForUserFamily(bonusLeaseModel, dsu.familyMembers).map(
-          _ => dsu
-        )
+        acquireLockForUserFamily(
+          bonusLeaseModel,
+          dsu.familyMembers
+        ).map(familyUID => ({ familyUID, dsu }))
       )
-      .chain((dsu: Dsu) =>
-        createBonusActivation(bonusActivationModel, fiscalCode, dsu)
+      .chain(({ familyUID, dsu }) =>
+        createBonusActivation(
+          bonusActivationModel,
+          fiscalCode,
+          dsu
+        ).map(bonusActivation => ({ familyUID, bonusActivation }))
       )
-      .chain(_ => {
-        // TODO: call orchestrator
-        return taskEither.of(_);
-      })
+      .chain(({ familyUID, bonusActivation }) =>
+        tryCatch(
+          () =>
+            client.startNew(
+              "StartBonusActivationOrchestrator",
+              makeStartBonusActivationOrchestratorId(fiscalCode),
+              {
+                bonusActivation,
+                familyUID
+              }
+            ),
+          _ =>
+            // can it fail?
+            ResponseErrorInternal(
+              `Error starting the orchestrator: ${toError(_).message}`
+            )
+        ).map(_ => bonusActivation)
+      )
       .fold(
         l => l,
         bonusActivation =>
