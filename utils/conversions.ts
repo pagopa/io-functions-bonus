@@ -42,13 +42,20 @@ import { FamilyMemberCount } from "../generated/models/FamilyMemberCount";
 import { UserBonus } from "../models/user_bonus";
 import { renameObjectKeys } from "./rename_keys";
 import { camelCaseToSnakeCase, snakeCaseToCamelCase } from "./strings";
+import {
+  WithinRangeInteger,
+  IWithinRangeIntegerTag
+} from "italia-ts-commons/lib/numbers";
 
 // 150 EUR for one member families
-const ONE_FAMILY_MEMBER_AMOUNT = 150 as MaxBonusAmount;
+const ONE_FAMILY_MEMBER_AMOUNT = 150 as number &
+  IWithinRangeIntegerTag<150, 151>;
 // 250 EUR for two member families
-const TWO_FAMILY_MEMBERS_AMOUNT = 250 as MaxBonusAmount;
+const TWO_FAMILY_MEMBERS_AMOUNT = 250 as number &
+  IWithinRangeIntegerTag<250, 251>;
 // 500 EUR for three or more member families
-const THREE_OR_MORE_FAMILY_MEMBERS_AMOUNT = 500 as MaxBonusAmount;
+const THREE_OR_MORE_FAMILY_MEMBERS_AMOUNT = 500 as number &
+  IWithinRangeIntegerTag<500, 501>;
 
 // Max tax benefit is 20% of max bonus amount
 const TAX_BENEFIT_PERCENT = 20;
@@ -156,9 +163,12 @@ function calculateMaxBonusAmountFromFamilyMemberCount(
 function calculateMaxBonusTaxBenefit(
   maxBonusAmount: MaxBonusAmount
 ): MaxBonusTaxBenefit {
-  return Math.floor(
-    (TAX_BENEFIT_PERCENT * maxBonusAmount) / 100
-  ) as MaxBonusTaxBenefit;
+  switch (maxBonusAmount) {
+    case ONE_FAMILY_MEMBER_AMOUNT:
+    case TWO_FAMILY_MEMBERS_AMOUNT:
+    case THREE_OR_MORE_FAMILY_MEMBERS_AMOUNT:
+      return 1 as MaxBonusTaxBenefit;
+  }
 }
 
 export const toEligibilityCheckFromDSU = (

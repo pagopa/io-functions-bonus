@@ -220,7 +220,24 @@ definitions:
   MaxBonusAmount:
     description: Max bonus amount in euro
     type: integer
+    oneOf:
+      - $ref: "#/definitions/MaxBonusAmount150"
+      - $ref: "#/definitions/MaxBonusAmount250"
+      - $ref: "#/definitions/MaxBonusAmount500"
+  MaxBonusAmount150:
+    description: Max bonus amount in euro (150)
+    type: integer
     minimum: 150
+    maximum: 150
+  MaxBonusAmount250:
+    description: Max bonus amount in euro (150)
+    type: integer
+    minimum: 250
+    maximum: 250
+  MaxBonusAmount500:
+    description: Max bonus amount in euro (150)
+    type: integer
+    minimum: 500
     maximum: 500
   MaxBonusTaxBenefit:
     description: Max bonus tax benefit in euro
