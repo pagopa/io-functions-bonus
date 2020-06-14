@@ -166,6 +166,20 @@ export const toEligibilityCheckFromDSU = (
   fiscalCode: FiscalCode,
   validBefore: Timestamp
 ): ApiEligibilityCheck => {
+  if (data.Esito !== EsitoEnum.OK) {
+    return EligibilityCheckFailure.encode({
+      error:
+        data.Esito === EsitoEnum.DATI_NON_TROVATI
+          ? ErrorEnum.DATA_NOT_FOUND
+          : data.Esito === EsitoEnum.RICHIESTA_INVALIDA
+          ? ErrorEnum.INVALID_REQUEST
+          : ErrorEnum.INTERNAL_ERROR,
+      error_description: data.DescrizioneErrore || `ERROR: Esito=${data.Esito}`,
+      id: (fiscalCode as unknown) as NonEmptyString,
+      status: ErrorStatusEnum.FAILURE
+    });
+  }
+
   const maybeFamilyMembers = NonEmptyArray.fromArray([
     ...(data.DatiIndicatore?.Componenti || [])
   ]);
@@ -211,20 +225,6 @@ export const toEligibilityCheckFromDSU = (
         )
       )
     : [];
-
-  if (data.Esito !== EsitoEnum.OK) {
-    return EligibilityCheckFailure.encode({
-      error:
-        data.Esito === EsitoEnum.DATI_NON_TROVATI
-          ? ErrorEnum.DATA_NOT_FOUND
-          : data.Esito === EsitoEnum.RICHIESTA_INVALIDA
-          ? ErrorEnum.INVALID_REQUEST
-          : ErrorEnum.INTERNAL_ERROR,
-      error_description: data.DescrizioneErrore || "Esito value is not OK",
-      id: (fiscalCode as unknown) as NonEmptyString,
-      status: ErrorStatusEnum.FAILURE
-    });
-  }
 
   if (data.DatiIndicatore?.SottoSoglia === SiNoTypeEnum.SI) {
     return (EligibilityCheckSuccessEligible.encode({
