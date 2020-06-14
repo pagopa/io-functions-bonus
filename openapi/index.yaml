@@ -220,30 +220,62 @@ definitions:
   MaxBonusAmount:
     description: Max bonus amount in euro
     type: integer
-    oneOf:
+    x-one-of: true
+    allOf:
       - $ref: "#/definitions/MaxBonusAmount150"
       - $ref: "#/definitions/MaxBonusAmount250"
       - $ref: "#/definitions/MaxBonusAmount500"
   MaxBonusAmount150:
+    type: object
     description: Max bonus amount in euro (150)
-    type: integer
-    minimum: 150
-    maximum: 150
+    properties:
+      max_amount:
+        type: integer
+        minimum: 150
+        maximum: 150
+        default: 150
+      max_tax_benefit:
+        type: integer
+        minimum: 30
+        maximum: 30
+        default: 30
+    required:
+      - max_amount
+      - max_tax_benefit
   MaxBonusAmount250:
-    description: Max bonus amount in euro (150)
-    type: integer
-    minimum: 250
-    maximum: 250
+    type: object
+    description: Max bonus amount in euro (250)
+    properties:
+      max_amount:
+        type: integer
+        minimum: 250
+        maximum: 250
+        default: 250
+      max_tax_benefit:
+        type: integer
+        minimum: 50
+        maximum: 50
+        default: 50
+    required:
+      - max_amount
+      - max_tax_benefit
   MaxBonusAmount500:
-    description: Max bonus amount in euro (150)
-    type: integer
-    minimum: 500
-    maximum: 500
-  MaxBonusTaxBenefit:
-    description: Max bonus tax benefit in euro
-    type: integer
-    minimum: 30
-    maximum: 100
+    type: object
+    description: Max bonus amount in euro (500)
+    properties:
+      max_amount:
+        type: integer
+        minimum: 500
+        maximum: 500
+        default: 500
+      max_tax_benefit:
+        type: integer
+        minimum: 100
+        maximum: 100
+        default: 100
+    required:
+      - max_amount
+      - max_tax_benefit
   FamilyMember:
     type: object
     properties:
@@ -264,41 +296,39 @@ definitions:
     items:
       $ref: "#/definitions/FamilyMember"
   Dsu:
-    type: object
-    properties:
-      family_members:
-        $ref: "#/definitions/FamilyMembers"
-      max_amount:
-        $ref: "#/definitions/MaxBonusAmount"
-      max_tax_benefit:
-        $ref: "#/definitions/MaxBonusTaxBenefit"
-      request_id:
-        type: string
-        minLength: 1
-        description: IdRichiesta
-      isee_type:
-        type: string
-        description: TipoIndicatoreType
-      dsu_protocol_id:
-        type: string
-        minLength: 1
-        description: ProtocolloDSU
-      dsu_created_at:
-        type: string
-        format: date
-        description: DataPresentazioneDSU
-      has_discrepancies:
-        type: boolean
-        description: PresenzaDifformita
-    required:
-      - family_members
-      - max_amount
-      - max_tax_benefit
-      - request_id
-      - isee_type
-      - dsu_protocol_id
-      - dsu_created_at
-      - has_discrepancies
+    allOf:
+      - $ref: "#/definitions/MaxBonusAmount"
+      - type: object
+        properties:
+          family_members:
+            $ref: "#/definitions/FamilyMembers"
+          request_id:
+            type: string
+            minLength: 1
+            description: IdRichiesta
+          isee_type:
+            type: string
+            description: TipoIndicatoreType
+          dsu_protocol_id:
+            type: string
+            minLength: 1
+            description: ProtocolloDSU
+          dsu_created_at:
+            type: string
+            format: date
+            description: DataPresentazioneDSU
+          has_discrepancies:
+            type: boolean
+            description: PresenzaDifformita
+        required:
+          - family_members
+          - max_amount
+          - max_tax_benefit
+          - request_id
+          - isee_type
+          - dsu_protocol_id
+          - dsu_created_at
+          - has_discrepancies
   EligibilityCheckSuccessEligible:
     type: object
     title: Eligibility check success
