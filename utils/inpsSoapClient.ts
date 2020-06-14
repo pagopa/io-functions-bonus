@@ -54,8 +54,8 @@ const getSOAPRequest = (
 
 const INPS_NAMESPACE = "http://inps.it/ConsultazioneISEE";
 
-// 5 seconds timeout by default
-const DEFAULT_REQUEST_TIMEOUT_MS = 5000;
+// 10 seconds timeout by default
+const DEFAULT_REQUEST_TIMEOUT_MS = 10000;
 
 // http when developing locally
 const INPS_SERVICE_PROTOCOL = UrlFromString.decode(
@@ -198,13 +198,16 @@ export function createClient(endpoint: NonEmptyString): ISoapClientAsync {
           method: "POST"
         });
 
+        const responseBody = await response.text();
+
         if (response.status !== 200) {
           throw new Error(
-            `Unexpected response from INPS|RESPONSE=${toString(response)})`
+            `Unexpected response from INPS|RESPONSE=${
+              response.status
+            }:${toString(responseBody)}`
           );
         }
 
-        const responseBody = await response.text();
         return parseSoapResponse(responseBody).fold(
           err => {
             throw new Error(
