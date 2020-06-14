@@ -24,14 +24,14 @@ const eligibilityCheckResponse: ActivityResult = {
       TipoIndicatore: "ISEE",
       Componenti: [
         {
-          CodiceFiscale: "SPNDNL80R13C523K",
+          CodiceFiscale: "SPNDNL81R14C523K",
           Cognome: "Rossi",
           Nome: "Mario"
         }
       ]
     }
   },
-  fiscalCode: "SPNDNL80R13C523K" as FiscalCode,
+  fiscalCode: "SPNDNL81R14C523K" as FiscalCode,
   kind: "SUCCESS",
   validBefore: new Date()
 };
