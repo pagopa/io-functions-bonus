@@ -27,9 +27,13 @@ export const RetryOptions = jest.fn(() => ({}));
 
 export const context = ({
   log: {
-    error: jest.fn(),
-    info: jest.fn(),
-    verbose: jest.fn(),
-    warn: jest.fn()
+    // tslint:disable-next-line: no-console
+    error: jest.fn().mockImplementation(console.log),
+    // tslint:disable-next-line: no-console
+    info: jest.fn().mockImplementation(console.log),
+    // tslint:disable-next-line: no-console
+    verbose: jest.fn().mockImplementation(console.log),
+    // tslint:disable-next-line: no-console
+    warn: jest.fn().mockImplementation(console.log)
   }
 } as any) as Context;
