@@ -129,13 +129,13 @@ function calculateMaxBonusAmountFromFamilyMemberCount(
   familyMemberCount: FamilyMemberCount
 ): MaxBonusAmount {
   if (familyMemberCount > 2) {
-    return MaxBonusAmount500;
+    return MaxBonusAmount500.decode({});
   }
   if (familyMemberCount === 2) {
-    return MaxBonusAmount250;
+    return MaxBonusAmount250.decode({});
   }
   if (familyMemberCount === 1) {
-    return MaxBonusAmount150;
+    return MaxBonusAmount150.decode({});
   }
   throw new Error(
     `FATAL: family member count is not greater than 0 [${familyMemberCount}]`

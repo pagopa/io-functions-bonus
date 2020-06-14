@@ -239,9 +239,6 @@ definitions:
         minimum: 30
         maximum: 30
         default: 30
-    required:
-      - max_amount
-      - max_tax_benefit
   MaxBonusAmount250:
     type: object
     description: Max bonus amount in euro (250)
@@ -256,9 +253,6 @@ definitions:
         minimum: 50
         maximum: 50
         default: 50
-    required:
-      - max_amount
-      - max_tax_benefit
   MaxBonusAmount500:
     type: object
     description: Max bonus amount in euro (500)
@@ -273,9 +267,6 @@ definitions:
         minimum: 100
         maximum: 100
         default: 100
-    required:
-      - max_amount
-      - max_tax_benefit
   FamilyMember:
     type: object
     properties:
