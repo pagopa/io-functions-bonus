@@ -18,8 +18,6 @@ import {
   StatusEnum as EligibilityCheckSuccessIneligibleStatus
 } from "../generated/models/EligibilityCheckSuccessIneligible";
 
-import { MaxBonusAmount } from "../generated/models/MaxBonusAmount";
-import { MaxBonusTaxBenefit } from "../generated/models/MaxBonusTaxBenefit";
 import {
   NewBonusActivation,
   RetrievedBonusActivation
@@ -49,8 +47,8 @@ export const aDsu: Dsu = {
   ],
   hasDiscrepancies: false,
   iseeType: "iseeType",
-  maxAmount: 200 as MaxBonusAmount,
-  maxTaxBenefit: 80 as MaxBonusTaxBenefit,
+  maxAmount: 250,
+  maxTaxBenefit: 50,
   requestId: "aRequestId" as NonEmptyString
 };
 

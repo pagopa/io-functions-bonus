@@ -217,16 +217,6 @@ definitions:
         description: The identifier of the created request.
     required:
       - id
-  MaxBonusAmount:
-    description: Max bonus amount in euro
-    type: integer
-    minimum: 150
-    maximum: 500
-  MaxBonusTaxBenefit:
-    description: Max bonus tax benefit in euro
-    type: integer
-    minimum: 30
-    maximum: 100
   FamilyMember:
     type: object
     properties:
@@ -252,9 +242,9 @@ definitions:
       family_members:
         $ref: "#/definitions/FamilyMembers"
       max_amount:
-        $ref: "#/definitions/MaxBonusAmount"
+        type: integer
       max_tax_benefit:
-        $ref: "#/definitions/MaxBonusTaxBenefit"
+        type: integer
       request_id:
         type: string
         minLength: 1
