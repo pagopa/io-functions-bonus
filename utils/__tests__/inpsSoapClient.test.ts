@@ -65,6 +65,13 @@ const anotherTemporaryErrorResponse = `<s:Envelope xmlns:s="http://schemas.xmlso
 	</s:Body>
 </s:Envelope>`;
 
+const aTemporaryFault = `<env:Envelope xmlns:soap11="http://schemas.xmlsoap.org/soap/envelope/" 
+xmlns:soap12="http://www.w3.org/2003/05/soap-envelope" xmlns:env="http://www.w3.org/2003/05/soap-envelope">
+<env:Body>
+<env:Fault>
+<faultstring>Risposta del servizio non conforme</faultstring>
+</env:Fault></env:Body></env:Envelope>`;
+
 describe("InpsSoapClient", () => {
   it("should parse OK response", () => {
     const res = parseSoapResponse(anOKResponse);
@@ -94,6 +101,16 @@ describe("InpsSoapClient", () => {
     expect(isLeft(res)).toBeTruthy();
     if (isLeft(res)) {
       expect(res.value.message).toContain("DATABASE_OFFLINE");
+    }
+  });
+
+  it("should parse TEMPORARY FAULT response", () => {
+    const res = parseSoapResponse(aTemporaryFault);
+    expect(isLeft(res)).toBeTruthy();
+    if (isLeft(res)) {
+      expect(res.value.message).toContain(
+        "Missing ConsultazioneSogliaIndicatoreResult"
+      );
     }
   });
 
