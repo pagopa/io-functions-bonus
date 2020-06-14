@@ -2,7 +2,6 @@
  * Map API objects to domain objects
  */
 
-import { rights } from "fp-ts/lib/Array";
 import { Either, isLeft } from "fp-ts/lib/Either";
 import * as NonEmptyArray from "fp-ts/lib/NonEmptyArray";
 import { isNone } from "fp-ts/lib/Option";
@@ -30,8 +29,6 @@ import {
   EligibilityCheckSuccessIneligible as ApiEligibilityCheckSuccessIneligible,
   StatusEnum as IneligibleStatus
 } from "../generated/definitions/EligibilityCheckSuccessIneligible";
-import { FamilyMember } from "../generated/definitions/FamilyMember";
-import { FamilyMembers } from "../generated/definitions/FamilyMembers";
 import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
 import { Timestamp } from "../generated/definitions/Timestamp";
 import { BonusActivation } from "../generated/models/BonusActivation";
@@ -164,6 +161,8 @@ export const toApiEligibilityCheckFromDSU = (
     });
   }
 
+  // EsitoEnum = OK
+
   const maybeFamilyMembers = NonEmptyArray.fromArray([
     ...(data.DatiIndicatore?.Componenti || [])
   ]);
@@ -198,24 +197,18 @@ export const toApiEligibilityCheckFromDSU = (
     familyMemberCount
   );
 
-  const validFamilyMembers: FamilyMembers = data.DatiIndicatore?.Componenti
-    ? rights(
-        data.DatiIndicatore.Componenti.map(c =>
-          FamilyMember.decode({
-            fiscal_code: c.CodiceFiscale,
-            name: c.Nome,
-            surname: c.Cognome
-          })
-        )
-      )
-    : [];
-
   if (data.DatiIndicatore?.SottoSoglia === SiNoTypeEnum.SI) {
     return ApiEligibilityCheckSuccessEligible.decode({
       dsu_request: {
         dsu_created_at: data.DatiIndicatore.DataPresentazioneDSU,
         dsu_protocol_id: data.DatiIndicatore.ProtocolloDSU,
-        family_members: validFamilyMembers,
+        family_members: familyMembers
+          .map(_ => ({
+            fiscal_code: _.CodiceFiscale,
+            name: _.Nome,
+            surname: _.Cognome
+          }))
+          .toArray(),
         has_discrepancies:
           data.DatiIndicatore.PresenzaDifformita === SiNoTypeEnum.SI,
         isee_type: data.DatiIndicatore.TipoIndicatore,
