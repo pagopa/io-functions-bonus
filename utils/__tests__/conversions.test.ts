@@ -79,7 +79,7 @@ const anElibigleApiObject: ApiEligibilityCheckSuccessEligible = {
     isee_type: "some isee type" as NonEmptyString,
     max_amount: 250,
     max_tax_benefit: 50,
-    request_id: "123" as NonEmptyString
+    request_id: 123
   },
   id: (aFiscalCode as unknown) as NonEmptyString,
   status: ApiEligibilityCheckSuccessEligibleEnum.ELIGIBLE,
@@ -115,7 +115,7 @@ const anEligibleDomainObject: EligibilityCheckSuccessEligible = {
     iseeType: "some isee type",
     maxAmount: 250,
     maxTaxBenefit: 50,
-    requestId: "123" as NonEmptyString
+    requestId: 123
   },
   id: (aFiscalCode as unknown) as NonEmptyString,
   status: EligibilityCheckSuccessEligibleStatusEnum.ELIGIBLE,
@@ -156,7 +156,7 @@ const aBonusActivationDomainObject: BonusActivation = {
 
     maxTaxBenefit: 50,
 
-    requestId: "aRequestId" as NonEmptyString,
+    requestId: 123,
 
     iseeType: "aISEEtype",
 
@@ -190,7 +190,7 @@ const aBonusActivationApiObject: ApiBonusActivation = {
 
     max_tax_benefit: 50,
 
-    request_id: "aRequestId" as NonEmptyString,
+    request_id: 123,
 
     isee_type: "aISEEtype",
 

@@ -6,42 +6,33 @@ import { isSome, none, Option, some } from "fp-ts/lib/Option";
 import { MessageContent } from "io-functions-commons/dist/generated/definitions/MessageContent";
 import { ActivityResult as DeleteEligibilityCheckActivityResult } from "../DeleteEligibilityCheckActivity/handler";
 import { ActivityResult } from "../EligibilityCheckActivity/handler";
-import {
-  EligibilityCheck,
-  EligibilityCheck as ApiEligibilityCheck
-} from "../generated/definitions/EligibilityCheck";
+import { EligibilityCheck as ApiEligibilityCheck } from "../generated/definitions/EligibilityCheck";
 import { EligibilityCheckFailure } from "../generated/definitions/EligibilityCheckFailure";
 import { EligibilityCheckSuccessConflict } from "../generated/definitions/EligibilityCheckSuccessConflict";
 import { EligibilityCheckSuccessEligible } from "../generated/definitions/EligibilityCheckSuccessEligible";
 import { EligibilityCheckSuccessIneligible } from "../generated/definitions/EligibilityCheckSuccessIneligible";
-import { toEligibilityCheckFromDSU } from "../utils/conversions";
+import { toApiEligibilityCheckFromDSU } from "../utils/conversions";
 import { MESSAGES } from "../utils/messages";
 import { retryOptions } from "../utils/retryPolicy";
 
+import { isLeft } from "fp-ts/lib/Either";
+import { readableReport } from "italia-ts-commons/lib/reporters";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
 
 const NOTIFICATION_DELAY_SECONDS = 10;
 
-export const getMessage = (
-  eligibilityCheck: ApiEligibilityCheck
-): Option<MessageContent> => {
-  // we need to decode before calling is()
-  return EligibilityCheck.decode(eligibilityCheck).fold(
-    _ => none,
-    _ =>
-      EligibilityCheckFailure.is(_)
-        ? some(MESSAGES.EligibilityCheckFailure())
-        : EligibilityCheckSuccessEligible.is(_) &&
-          _.dsu_request.has_discrepancies
-        ? some(MESSAGES.EligibilityCheckSuccessEligibleWithDiscrepancies())
-        : EligibilityCheckSuccessEligible.is(_)
-        ? some(MESSAGES.EligibilityCheckSuccessEligible())
-        : EligibilityCheckSuccessIneligible.is(_)
-        ? some(MESSAGES.EligibilityCheckSuccessIneligible())
-        : EligibilityCheckSuccessConflict.is(_)
-        ? some(MESSAGES.EligibilityCheckConflict())
-        : none
-  );
+export const getMessage = (_: ApiEligibilityCheck): Option<MessageContent> => {
+  return EligibilityCheckFailure.is(_)
+    ? some(MESSAGES.EligibilityCheckFailure())
+    : EligibilityCheckSuccessEligible.is(_) && _.dsu_request.has_discrepancies
+    ? some(MESSAGES.EligibilityCheckSuccessEligibleWithDiscrepancies())
+    : EligibilityCheckSuccessEligible.is(_)
+    ? some(MESSAGES.EligibilityCheckSuccessEligible())
+    : EligibilityCheckSuccessIneligible.is(_)
+    ? some(MESSAGES.EligibilityCheckSuccessIneligible())
+    : EligibilityCheckSuccessConflict.is(_)
+    ? some(MESSAGES.EligibilityCheckConflict())
+    : none;
 };
 
 export const handler = function*(
@@ -99,11 +90,22 @@ export const handler = function*(
     addSeconds(context.df.currentUtcDateTime, NOTIFICATION_DELAY_SECONDS)
   );
 
-  const eligibilityCheck = toEligibilityCheckFromDSU(
+  const errorOrEligibilityCheck = toApiEligibilityCheckFromDSU(
     eligibilityCheckResponse.data,
     eligibilityCheckResponse.fiscalCode,
     eligibilityCheckResponse.validBefore
   );
+
+  if (isLeft(errorOrEligibilityCheck)) {
+    context.log.error(
+      `Cannot decode EligibilityCheck From DSU: ${readableReport(
+        errorOrEligibilityCheck.value
+      )}`
+    );
+    return eligibilityCheckResponse;
+  }
+
+  const eligibilityCheck = errorOrEligibilityCheck.value;
 
   // send push notification with eligibility details
   const maybeMessage = getMessage(eligibilityCheck);

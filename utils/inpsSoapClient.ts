@@ -54,8 +54,11 @@ const getSOAPRequest = (
 
 const INPS_NAMESPACE = "http://inps.it/ConsultazioneISEE";
 
-// 5 seconds timeout by default
-const DEFAULT_REQUEST_TIMEOUT_MS = 5000;
+const INPS_SOAP_ACTION =
+  "http://inps.it/ConsultazioneISEE/ISvcConsultazione/ConsultazioneSogliaIndicatore";
+
+// 10 seconds timeout by default
+const DEFAULT_REQUEST_TIMEOUT_MS = 10000;
 
 // http when developing locally
 const INPS_SERVICE_PROTOCOL = UrlFromString.decode(
@@ -167,9 +170,11 @@ export function parseSoapResponse(
     .chain(
       fromPredicate(
         _ =>
+          // Final states
           _.Esito === EsitoEnum.OK ||
           _.Esito === EsitoEnum.DATI_NON_TROVATI ||
           _.Esito === EsitoEnum.RICHIESTA_INVALIDA,
+        // Retry for DATABASE_OFFLINE, ERRORE_INTERNO
         err =>
           new Error(
             `INPS SOAP Error: [Esito:${err.Esito}|Message:${err.DescrizioneErrore}]`
@@ -193,18 +198,22 @@ export function createClient(endpoint: NonEmptyString): ISoapClientAsync {
 
         const response = await httpFetch(`${endpoint}`, {
           body: requestPayload,
+          headers: {
+            SOAPAction: INPS_SOAP_ACTION
+          },
           method: "POST"
         });
 
+        const responseBody = await response.text();
+
         if (response.status !== 200) {
           throw new Error(
-            `Unexpected response from INPS|RESPONSE=${toString(
+            `Unexpected response from INPS|RESPONSE=${
               response.status
-            )})`
+            }:${toString(responseBody)}`
           );
         }
 
-        const responseBody = await response.text();
         return parseSoapResponse(responseBody).fold(
           err => {
             throw new Error(

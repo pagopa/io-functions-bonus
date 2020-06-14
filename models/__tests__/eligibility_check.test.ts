@@ -36,7 +36,7 @@ const aEligibilityCheckSuccess: EligibilityCheckSuccess = {
     iseeType: "some isee type",
     maxAmount: 250,
     maxTaxBenefit: 50,
-    requestId: "123" as NonEmptyString
+    requestId: 123
   },
   id: (aFiscalCode as unknown) as NonEmptyString,
   status: EligibilityCheckSuccessEligibleStatus.ELIGIBLE,
