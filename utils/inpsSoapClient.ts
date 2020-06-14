@@ -159,21 +159,23 @@ export function createClient(endpoint: NonEmptyString): ISoapClientAsync {
             .chain(_ => {
               return ConsultazioneSogliaIndicatoreResponse.decode({
                 ..._,
-                DatiIndicatore: {
-                  ..._.DatiIndicatore,
-                  Componenti: Array.from(
-                    xmlDocument.getElementsByTagNameNS(
-                      INPS_NAMESPACE,
-                      "Componente"
-                    )
-                  ).map(familyMemberElement => ({
-                    CodiceFiscale: familyMemberElement.getAttribute(
-                      "CodiceFiscale"
-                    ),
-                    Cognome: familyMemberElement.getAttribute("Cognome"),
-                    Nome: familyMemberElement.getAttribute("Nome")
-                  }))
-                }
+                DatiIndicatore: _.DatiIndicatore
+                  ? {
+                      ..._.DatiIndicatore,
+                      Componenti: Array.from(
+                        xmlDocument.getElementsByTagNameNS(
+                          INPS_NAMESPACE,
+                          "Componente"
+                        )
+                      ).map(familyMemberElement => ({
+                        CodiceFiscale: familyMemberElement.getAttribute(
+                          "CodiceFiscale"
+                        ),
+                        Cognome: familyMemberElement.getAttribute("Cognome"),
+                        Nome: familyMemberElement.getAttribute("Nome")
+                      }))
+                    }
+                  : undefined
               }).mapLeft(error => {
                 return new Error(
                   `Unexpected response: [Error: ${readableReport(error)}]`
