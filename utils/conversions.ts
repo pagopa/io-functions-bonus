@@ -32,8 +32,6 @@ import {
 } from "../generated/definitions/EligibilityCheckSuccessIneligible";
 import { FamilyMember } from "../generated/definitions/FamilyMember";
 import { FamilyMembers } from "../generated/definitions/FamilyMembers";
-import { MaxBonusAmount } from "../generated/definitions/MaxBonusAmount";
-import { MaxBonusTaxBenefit } from "../generated/definitions/MaxBonusTaxBenefit";
 import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
 import { Timestamp } from "../generated/definitions/Timestamp";
 import { BonusActivation } from "../generated/models/BonusActivation";
@@ -43,15 +41,12 @@ import { UserBonus } from "../models/user_bonus";
 import { renameObjectKeys } from "./rename_keys";
 import { camelCaseToSnakeCase, snakeCaseToCamelCase } from "./strings";
 
-// 150 EUR for one member families
-const ONE_FAMILY_MEMBER_AMOUNT = 150 as MaxBonusAmount;
-// 250 EUR for two member families
-const TWO_FAMILY_MEMBERS_AMOUNT = 250 as MaxBonusAmount;
-// 500 EUR for three or more member families
-const THREE_OR_MORE_FAMILY_MEMBERS_AMOUNT = 500 as MaxBonusAmount;
-
-// Max tax benefit is 20% of max bonus amount
-const TAX_BENEFIT_PERCENT = 20;
+import {
+  BonusAmount,
+  OneFamilyMemberBonus,
+  ThreeOrMoreFamilyMembersBonus,
+  TwoFamilyMembersBonus
+} from "../models/bonus_amount";
 
 /**
  * Maps EligibilityCheck API object into an EligibilityCheck domain object
@@ -133,32 +128,21 @@ export const toApiUserBonus = (domainObj: UserBonus): BonusActivationItem => {
  * Returns the maximum bonus amount in Euros from the total number of family
  * members.
  */
-function calculateMaxBonusAmountFromFamilyMemberCount(
+export function calculateMaxBonusAmountFromFamilyMemberCount(
   familyMemberCount: FamilyMemberCount
-): MaxBonusAmount {
+): BonusAmount {
   if (familyMemberCount > 2) {
-    return THREE_OR_MORE_FAMILY_MEMBERS_AMOUNT;
+    return ThreeOrMoreFamilyMembersBonus;
   }
   if (familyMemberCount === 2) {
-    return TWO_FAMILY_MEMBERS_AMOUNT;
+    return TwoFamilyMembersBonus;
   }
   if (familyMemberCount === 1) {
-    return ONE_FAMILY_MEMBER_AMOUNT;
+    return OneFamilyMemberBonus;
   }
   throw new Error(
     `FATAL: family member count is not greater than 0 [${familyMemberCount}]`
   );
-}
-
-/**
- * Calculate the max amount of tax benefit from a MaxBonusAmount
- */
-function calculateMaxBonusTaxBenefit(
-  maxBonusAmount: MaxBonusAmount
-): MaxBonusTaxBenefit {
-  return Math.floor(
-    (TAX_BENEFIT_PERCENT * maxBonusAmount) / 100
-  ) as MaxBonusTaxBenefit;
 }
 
 export const toApiEligibilityCheckFromDSU = (
@@ -235,8 +219,8 @@ export const toApiEligibilityCheckFromDSU = (
         has_discrepancies:
           data.DatiIndicatore.PresenzaDifformita === SiNoTypeEnum.SI,
         isee_type: data.DatiIndicatore.TipoIndicatore,
-        max_amount: bonusValue,
-        max_tax_benefit: calculateMaxBonusTaxBenefit(bonusValue),
+        max_amount: bonusValue.max_amount,
+        max_tax_benefit: bonusValue.max_tax_benefit,
         request_id: data.IdRichiesta
       },
       id: fiscalCode,

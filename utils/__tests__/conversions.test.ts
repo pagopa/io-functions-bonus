@@ -1,9 +1,12 @@
 // tslint:disable: no-duplicate-string
 
+import * as fc from "fast-check";
+
 import { isLeft, isRight } from "fp-ts/lib/Either";
 import { EligibilityCheck as ApiEligibilityCheck } from "../../generated/definitions/EligibilityCheck";
 
 import {
+  calculateMaxBonusAmountFromFamilyMemberCount,
   toApiBonusActivation,
   toApiBonusVacanzaBase,
   toApiEligibilityCheck,
@@ -48,10 +51,14 @@ import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { BonusVacanzaBase as ApiBonusVacanzaBase } from "../../generated/ade/BonusVacanzaBase";
 import { BonusActivationStatusEnum as ApiBonusActivationStatusEnum } from "../../generated/definitions/BonusActivationStatus";
 import { BonusCode as BonusCodeApi } from "../../generated/definitions/BonusCode";
-import { MaxBonusAmount } from "../../generated/definitions/MaxBonusAmount";
-import { MaxBonusTaxBenefit } from "../../generated/definitions/MaxBonusTaxBenefit";
 import { BonusActivationStatusEnum } from "../../generated/models/BonusActivationStatus";
 import { BonusCode as BonusCodeModel } from "../../generated/models/BonusCode";
+import { FamilyMemberCount } from "../../generated/models/FamilyMemberCount";
+import {
+  OneFamilyMemberBonus,
+  ThreeOrMoreFamilyMembersBonus,
+  TwoFamilyMembersBonus
+} from "../../models/bonus_amount";
 
 const aFiscalCode = "SPNDNL80R13C523K" as FiscalCode;
 
@@ -70,8 +77,8 @@ const anElibigleApiObject: ApiEligibilityCheckSuccessEligible = {
     ],
     has_discrepancies: true,
     isee_type: "some isee type" as NonEmptyString,
-    max_amount: 200 as MaxBonusAmount,
-    max_tax_benefit: 50 as MaxBonusTaxBenefit,
+    max_amount: 250,
+    max_tax_benefit: 50,
     request_id: 123
   },
   id: (aFiscalCode as unknown) as NonEmptyString,
@@ -106,8 +113,8 @@ const anEligibleDomainObject: EligibilityCheckSuccessEligible = {
     ],
     hasDiscrepancies: true,
     iseeType: "some isee type",
-    maxAmount: 200 as MaxBonusAmount,
-    maxTaxBenefit: 50 as MaxBonusTaxBenefit,
+    maxAmount: 250,
+    maxTaxBenefit: 50,
     requestId: 123
   },
   id: (aFiscalCode as unknown) as NonEmptyString,
@@ -145,9 +152,9 @@ const aBonusActivationDomainObject: BonusActivation = {
       }
     ],
 
-    maxAmount: (200 as unknown) as IWithinRangeIntegerTag<150, 501> & number,
+    maxAmount: 250,
 
-    maxTaxBenefit: (100 as unknown) as IWithinRangeIntegerTag<30, 101> & number,
+    maxTaxBenefit: 50,
 
     requestId: 123,
 
@@ -179,10 +186,9 @@ const aBonusActivationApiObject: ApiBonusActivation = {
       }
     ],
 
-    max_amount: (200 as unknown) as IWithinRangeIntegerTag<150, 501> & number,
+    max_amount: 250,
 
-    max_tax_benefit: (100 as unknown) as IWithinRangeIntegerTag<30, 101> &
-      number,
+    max_tax_benefit: 50,
 
     request_id: 123,
 
@@ -355,5 +361,32 @@ describe("ApiBonusVacanzaBaseFromModel", () => {
         `Valid domain object must be decoded: ${readableReport(result.value)}`
       );
     }
+  });
+});
+
+describe("calculateMaxBonusAmountFromFamilyMemberCount", () => {
+  it("should calculate the correct bonus amount and tax benefit for families with one member", () => {
+    expect(
+      calculateMaxBonusAmountFromFamilyMemberCount(1 as FamilyMemberCount)
+    ).toEqual(OneFamilyMemberBonus);
+  });
+  it("should calculate the correct bonus amount and tax benefit for families with two members", () => {
+    expect(
+      calculateMaxBonusAmountFromFamilyMemberCount(2 as FamilyMemberCount)
+    ).toEqual(TwoFamilyMembersBonus);
+  });
+  it("should calculate the correct bonus amount and tax benefit for families with three or more members", () => {
+    fc.assert(
+      fc.property(
+        fc.maxSafeNat().filter(_ => _ >= 3),
+        members => {
+          expect(
+            calculateMaxBonusAmountFromFamilyMemberCount(
+              members as FamilyMemberCount
+            )
+          ).toEqual(ThreeOrMoreFamilyMembersBonus);
+        }
+      )
+    );
   });
 });
