@@ -130,5 +130,4 @@ export const handler = function*(
   return eligibilityCheckResponse;
 };
 
-const index = df.orchestrator(handler);
-export default index;
+export const index = df.orchestrator(handler);
