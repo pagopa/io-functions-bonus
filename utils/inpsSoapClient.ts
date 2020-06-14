@@ -200,9 +200,7 @@ export function createClient(endpoint: NonEmptyString): ISoapClientAsync {
 
         if (response.status !== 200) {
           throw new Error(
-            `Unexpected response from INPS|RESPONSE=${toString(
-              response.status
-            )})`
+            `Unexpected response from INPS|RESPONSE=${toString(response)})`
           );
         }
 
