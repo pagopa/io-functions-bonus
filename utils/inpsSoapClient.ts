@@ -54,6 +54,9 @@ const getSOAPRequest = (
 
 const INPS_NAMESPACE = "http://inps.it/ConsultazioneISEE";
 
+const INPS_SOAP_ACTION =
+  "http://inps.it/ConsultazioneISEE/ISvcConsultazione/ConsultazioneSogliaIndicatore";
+
 // 10 seconds timeout by default
 const DEFAULT_REQUEST_TIMEOUT_MS = 10000;
 
@@ -195,6 +198,9 @@ export function createClient(endpoint: NonEmptyString): ISoapClientAsync {
 
         const response = await httpFetch(`${endpoint}`, {
           body: requestPayload,
+          headers: {
+            SOAPAction: INPS_SOAP_ACTION
+          },
           method: "POST"
         });
 
