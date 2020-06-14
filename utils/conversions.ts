@@ -164,6 +164,8 @@ export const toApiEligibilityCheckFromDSU = (
     });
   }
 
+  // EsitoEnum = OK
+
   const maybeFamilyMembers = NonEmptyArray.fromArray([
     ...(data.DatiIndicatore?.Componenti || [])
   ]);
@@ -198,24 +200,18 @@ export const toApiEligibilityCheckFromDSU = (
     familyMemberCount
   );
 
-  const validFamilyMembers: FamilyMembers = data.DatiIndicatore?.Componenti
-    ? rights(
-        data.DatiIndicatore.Componenti.map(c =>
-          FamilyMember.decode({
-            fiscal_code: c.CodiceFiscale,
-            name: c.Nome,
-            surname: c.Cognome
-          })
-        )
-      )
-    : [];
-
   if (data.DatiIndicatore?.SottoSoglia === SiNoTypeEnum.SI) {
     return ApiEligibilityCheckSuccessEligible.decode({
       dsu_request: {
         dsu_created_at: data.DatiIndicatore.DataPresentazioneDSU,
         dsu_protocol_id: data.DatiIndicatore.ProtocolloDSU,
-        family_members: validFamilyMembers,
+        family_members: familyMembers
+          .map(_ => ({
+            fiscal_code: _.CodiceFiscale,
+            name: _.Nome,
+            surname: _.Cognome
+          }))
+          .toArray(),
         has_discrepancies:
           data.DatiIndicatore.PresenzaDifformita === SiNoTypeEnum.SI,
         isee_type: data.DatiIndicatore.TipoIndicatore,
