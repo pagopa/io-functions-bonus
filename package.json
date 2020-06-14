@@ -3,7 +3,7 @@
   "description": "",
   "author": "IO team",
   "repository": "https://github.com/pagopa/io-functions-bonus",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "license": "MIT",
   "scripts": {
     "prebuild": "shx rm -rf dist && yarn generate",
