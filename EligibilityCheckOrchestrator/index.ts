@@ -6,16 +6,37 @@
 
 import { addSeconds } from "date-fns";
 import * as df from "durable-functions";
+import { none, Option, some } from "fp-ts/lib/Option";
+import { MessageContent } from "io-functions-commons/dist/generated/definitions/MessageContent";
 import { ActivityResult as DeleteEligibilityCheckActivityResult } from "../DeleteEligibilityCheckActivity/handler";
 import { ActivityResult } from "../EligibilityCheckActivity/handler";
-import { EligibilityCheckFailure } from "../generated/models/EligibilityCheckFailure";
-import { EligibilityCheckSuccessEligible } from "../generated/models/EligibilityCheckSuccessEligible";
-import { EligibilityCheckSuccessIneligible } from "../generated/models/EligibilityCheckSuccessIneligible";
+import { EligibilityCheck as ApiEligibilityCheck } from "../generated/definitions/EligibilityCheck";
+import { EligibilityCheckFailure } from "../generated/definitions/EligibilityCheckFailure";
+import { EligibilityCheckSuccessConflict } from "../generated/definitions/EligibilityCheckSuccessConflict";
+import { EligibilityCheckSuccessEligible } from "../generated/definitions/EligibilityCheckSuccessEligible";
+import { EligibilityCheckSuccessIneligible } from "../generated/definitions/EligibilityCheckSuccessIneligible";
 import { toEligibilityCheckFromDSU } from "../utils/conversions";
 import { MESSAGES } from "../utils/messages";
 import { retryOptions } from "../utils/retryPolicy";
 
 const NOTIFICATION_DELAY_SECONDS = 10;
+
+const getMessage = (
+  eligibilityCheck: ApiEligibilityCheck
+): Option<MessageContent> => {
+  return EligibilityCheckFailure.is(eligibilityCheck)
+    ? some(MESSAGES.EligibilityCheckFailure())
+    : EligibilityCheckSuccessEligible.is(eligibilityCheck) &&
+      eligibilityCheck.dsu_request.has_discrepancies
+    ? some(MESSAGES.EligibilityCheckSuccessEligibleWithDiscrepancies())
+    : EligibilityCheckSuccessEligible.is(eligibilityCheck)
+    ? some(MESSAGES.EligibilityCheckSuccessEligible())
+    : EligibilityCheckSuccessIneligible.is(eligibilityCheck)
+    ? some(MESSAGES.EligibilityCheckSuccessIneligible())
+    : EligibilityCheckSuccessConflict.is(eligibilityCheck)
+    ? some(MESSAGES.EligibilityCheckConflict())
+    : none;
+};
 
 const EligibilityCheckOrchestrator = df.orchestrator(function*(
   context: IOrchestrationFunctionContext
@@ -79,15 +100,8 @@ const EligibilityCheckOrchestrator = df.orchestrator(function*(
   );
 
   // send push notification with eligibility details
-  yield context.df.callActivity(
-    "SendMessageActivity",
-    EligibilityCheckFailure.is(eligibilityCheck)
-      ? MESSAGES.EligibilityCheckFailure()
-      : EligibilityCheckSuccessEligible.is(eligibilityCheck)
-      ? MESSAGES.EligibilityCheckSuccessEligible()
-      : EligibilityCheckSuccessIneligible.is(eligibilityCheck)
-      ? MESSAGES.EligibilityCheckSuccessIneligible()
-      : {}
+  getMessage(eligibilityCheck).map(
+    message => yield context.df.callActivity("SendMessageActivity", message)
   );
 
   return eligibilityCheckResponse;
