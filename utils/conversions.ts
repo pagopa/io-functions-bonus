@@ -8,7 +8,7 @@ import * as NonEmptyArray from "fp-ts/lib/NonEmptyArray";
 import { isNone } from "fp-ts/lib/Option";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { BonusVacanzaBase as ApiBonusVacanzaBase } from "../generated/ade/BonusVacanzaBase";
 import { BonusActivation as ApiBonusActivation } from "../generated/definitions/BonusActivation";
 import { BonusActivationItem } from "../generated/definitions/BonusActivationItem";
@@ -18,16 +18,16 @@ import {
 } from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
 import { EligibilityCheck as ApiEligibilityCheck } from "../generated/definitions/EligibilityCheck";
 import {
-  EligibilityCheckFailure,
+  EligibilityCheckFailure as ApiEligibilityCheckFailure,
   ErrorEnum
 } from "../generated/definitions/EligibilityCheckFailure";
 import { StatusEnum as ErrorStatusEnum } from "../generated/definitions/EligibilityCheckFailure";
 import {
-  EligibilityCheckSuccessEligible,
+  EligibilityCheckSuccessEligible as ApiEligibilityCheckSuccessEligible,
   StatusEnum as EligibleStatus
 } from "../generated/definitions/EligibilityCheckSuccessEligible";
 import {
-  EligibilityCheckSuccessIneligible,
+  EligibilityCheckSuccessIneligible as ApiEligibilityCheckSuccessIneligible,
   StatusEnum as IneligibleStatus
 } from "../generated/definitions/EligibilityCheckSuccessIneligible";
 import { FamilyMember } from "../generated/definitions/FamilyMember";
@@ -161,13 +161,13 @@ function calculateMaxBonusTaxBenefit(
   ) as MaxBonusTaxBenefit;
 }
 
-export const toEligibilityCheckFromDSU = (
+export const toApiEligibilityCheckFromDSU = (
   data: ConsultazioneSogliaIndicatoreResponse,
   fiscalCode: FiscalCode,
   validBefore: Timestamp
-): ApiEligibilityCheck => {
+): Either<t.Errors, ApiEligibilityCheck> => {
   if (data.Esito !== EsitoEnum.OK) {
-    return EligibilityCheckFailure.encode({
+    return ApiEligibilityCheckFailure.decode({
       error:
         data.Esito === EsitoEnum.DATI_NON_TROVATI
           ? ErrorEnum.DATA_NOT_FOUND
@@ -175,7 +175,7 @@ export const toEligibilityCheckFromDSU = (
           ? ErrorEnum.INVALID_REQUEST
           : ErrorEnum.INTERNAL_ERROR,
       error_description: data.DescrizioneErrore || `ERROR: Esito=${data.Esito}`,
-      id: (fiscalCode as unknown) as NonEmptyString,
+      id: fiscalCode,
       status: ErrorStatusEnum.FAILURE
     });
   }
@@ -185,10 +185,10 @@ export const toEligibilityCheckFromDSU = (
   ]);
 
   if (isNone(maybeFamilyMembers)) {
-    return EligibilityCheckFailure.encode({
+    return ApiEligibilityCheckFailure.decode({
       error: ErrorEnum.INTERNAL_ERROR,
       error_description: `DatiIndicatore.Componenti is empty`,
-      id: (fiscalCode as unknown) as NonEmptyString,
+      id: fiscalCode,
       status: ErrorStatusEnum.FAILURE
     });
   }
@@ -199,12 +199,12 @@ export const toEligibilityCheckFromDSU = (
   );
 
   if (isLeft(validatedFamilyMemberCount)) {
-    return EligibilityCheckFailure.encode({
+    return ApiEligibilityCheckFailure.decode({
       error: ErrorEnum.INTERNAL_ERROR,
       error_description: `Family member count is out of range [${readableReport(
         validatedFamilyMemberCount.value
       )}]`,
-      id: (fiscalCode as unknown) as NonEmptyString,
+      id: fiscalCode,
       status: ErrorStatusEnum.FAILURE
     });
   }
@@ -227,27 +227,25 @@ export const toEligibilityCheckFromDSU = (
     : [];
 
   if (data.DatiIndicatore?.SottoSoglia === SiNoTypeEnum.SI) {
-    return (EligibilityCheckSuccessEligible.encode({
+    return ApiEligibilityCheckSuccessEligible.decode({
       dsu_request: {
         dsu_created_at: data.DatiIndicatore.DataPresentazioneDSU,
-        dsu_protocol_id: (data.DatiIndicatore.ProtocolloDSU ||
-          "") as NonEmptyString,
+        dsu_protocol_id: data.DatiIndicatore.ProtocolloDSU,
         family_members: validFamilyMembers,
         has_discrepancies:
           data.DatiIndicatore.PresenzaDifformita === SiNoTypeEnum.SI,
         isee_type: data.DatiIndicatore.TipoIndicatore,
         max_amount: bonusValue,
         max_tax_benefit: calculateMaxBonusTaxBenefit(bonusValue),
-        // tslint:disable-next-line: no-useless-cast
-        request_id: data.IdRichiesta.toString() as NonEmptyString
+        request_id: data.IdRichiesta
       },
-      id: (fiscalCode as unknown) as NonEmptyString,
+      id: fiscalCode,
       status: EligibleStatus.ELIGIBLE,
       valid_before: validBefore
-    }) as unknown) as EligibilityCheckSuccessEligible;
+    });
   } else {
-    return EligibilityCheckSuccessIneligible.encode({
-      id: (fiscalCode as unknown) as NonEmptyString,
+    return ApiEligibilityCheckSuccessIneligible.decode({
+      id: fiscalCode,
       status: IneligibleStatus.INELIGIBLE
     });
   }
