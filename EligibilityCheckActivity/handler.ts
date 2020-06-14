@@ -62,22 +62,17 @@ export const getEligibilityCheckActivityHandler = (
         return err;
       })
       .fold(
-        err =>
-          // Reject fail the Activity execution
-          // If called with `callActivityWithRetry` the execution will be restarted
-          Promise.reject(
-            ActivityResultFailure.encode({
-              kind: "FAILURE",
-              reason: err.message
-            })
-          ),
-        _ =>
-          Promise.resolve({
-            data: _.dsu,
-            fiscalCode: _.fiscalCode,
-            kind: "SUCCESS" as "SUCCESS",
-            validBefore: addHours(new Date(), 24)
-          })
+        // Reject / trow fail the Activity execution
+        // If called with `callActivityWithRetry` the execution will be restarted
+        err => {
+          throw err;
+        },
+        async _ => ({
+          data: _.dsu,
+          fiscalCode: _.fiscalCode,
+          kind: "SUCCESS" as "SUCCESS",
+          validBefore: addHours(new Date(), 24)
+        })
       )
       .run();
   };

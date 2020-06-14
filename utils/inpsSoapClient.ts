@@ -167,9 +167,11 @@ export function parseSoapResponse(
     .chain(
       fromPredicate(
         _ =>
+          // Final states
           _.Esito === EsitoEnum.OK ||
           _.Esito === EsitoEnum.DATI_NON_TROVATI ||
           _.Esito === EsitoEnum.RICHIESTA_INVALIDA,
+        // Retry for DATABASE_OFFLINE, ERRORE_INTERNO
         err =>
           new Error(
             `INPS SOAP Error: [Esito:${err.Esito}|Message:${err.DescrizioneErrore}]`
