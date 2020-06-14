@@ -256,8 +256,7 @@ definitions:
       max_tax_benefit:
         $ref: "#/definitions/MaxBonusTaxBenefit"
       request_id:
-        type: string
-        minLength: 1
+        type: integer
         description: IdRichiesta
       isee_type:
         type: string

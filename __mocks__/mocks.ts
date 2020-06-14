@@ -51,7 +51,7 @@ export const aDsu: Dsu = {
   iseeType: "iseeType",
   maxAmount: 200 as MaxBonusAmount,
   maxTaxBenefit: 80 as MaxBonusTaxBenefit,
-  requestId: "aRequestId" as NonEmptyString
+  requestId: 123
 };
 
 export const aEligibilityCheckSuccessEligible: EligibilityCheckSuccessEligible = {
@@ -110,7 +110,7 @@ export const aBonusActivation: BonusActivation = {
 
     maxTaxBenefit: (100 as unknown) as IWithinRangeIntegerTag<30, 101> & number,
 
-    requestId: "aRequestId" as NonEmptyString,
+    requestId: 123,
 
     iseeType: "aISEEtype",
 

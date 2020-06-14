@@ -10,7 +10,7 @@ import {
   EligibilityCheckModel
 } from "../models/eligibility_check";
 import {
-  toEligibilityCheckFromDSU,
+  toApiEligibilityCheckFromDSU,
   toModelEligibilityCheck
 } from "../utils/conversions";
 
@@ -46,8 +46,12 @@ export function getUpsertEligibilityCheckActivityHandler(
         _ => new Error(`Error decoding ActivityInput: [${readableReport(_)}]`)
       )
     )
-      .map<EligibilityCheck>(({ data, fiscalCode, validBefore }) => {
-        return toEligibilityCheckFromDSU(data, fiscalCode, validBefore);
+      .chain<EligibilityCheck>(({ data, fiscalCode, validBefore }) => {
+        return fromEither(
+          toApiEligibilityCheckFromDSU(data, fiscalCode, validBefore).mapLeft(
+            errs => new Error(readableReport(errs))
+          )
+        );
       })
       .chain(eligibilityCheck =>
         tryCatch(
