@@ -2,7 +2,6 @@
  * Map API objects to domain objects
  */
 
-import { rights } from "fp-ts/lib/Array";
 import { Either, isLeft } from "fp-ts/lib/Either";
 import * as NonEmptyArray from "fp-ts/lib/NonEmptyArray";
 import { isNone } from "fp-ts/lib/Option";
@@ -30,8 +29,6 @@ import {
   EligibilityCheckSuccessIneligible as ApiEligibilityCheckSuccessIneligible,
   StatusEnum as IneligibleStatus
 } from "../generated/definitions/EligibilityCheckSuccessIneligible";
-import { FamilyMember } from "../generated/definitions/FamilyMember";
-import { FamilyMembers } from "../generated/definitions/FamilyMembers";
 import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
 import { Timestamp } from "../generated/definitions/Timestamp";
 import { BonusActivation } from "../generated/models/BonusActivation";
