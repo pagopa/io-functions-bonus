@@ -6,6 +6,7 @@ import { ActivityResult as DeleteEligibilityCheckActivityResult } from "../../De
 import { ActivityResult } from "../../EligibilityCheckActivity/handler";
 import { EsitoEnum } from "../../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
 import { SiNoTypeEnum } from "../../generated/definitions/SiNoType";
+import { toApiEligibilityCheckFromDSU } from "../../utils/conversions";
 import { handler } from "../index";
 
 const deleteEligibilityCheckActivityResult: DeleteEligibilityCheckActivityResult = {
@@ -36,6 +37,12 @@ const eligibilityCheckResponse: ActivityResult = {
   validBefore: new Date()
 };
 
+const eligibilityCheck = toApiEligibilityCheckFromDSU(
+  eligibilityCheckResponse.data,
+  eligibilityCheckResponse.fiscalCode,
+  eligibilityCheckResponse.validBefore
+);
+
 const anInput = "foobar";
 
 const contextMockWithDf = {
@@ -44,12 +51,14 @@ const contextMockWithDf = {
     callActivity: jest
       .fn()
       // 1 DeleteEligibilityCheckActivity
-      .mockReturnValueOnce(deleteEligibilityCheckActivityResult),
+      .mockReturnValueOnce(deleteEligibilityCheckActivityResult)
+      // 3 ValidateEligibilityCheckActivity
+      .mockReturnValueOnce(eligibilityCheck.value),
     callActivityWithRetry: jest
       .fn()
       // 2 EligibilityCheckActivity
       .mockReturnValueOnce(eligibilityCheckResponse)
-      // 3 UpsertEligibilityCheckActivity
+      // 4 UpsertEligibilityCheckActivity
       .mockReturnValueOnce("UpsertEligibilityCheckActivity")
       // 5 SendMessageActivity
       .mockReturnValueOnce("SendMessageActivity"),
@@ -75,17 +84,21 @@ describe("EligibilityCheckOrchestrator", () => {
     const res2 = orchestrator.next(res1.value);
     expect(res2.value).toEqual(eligibilityCheckResponse);
 
-    // 3 UpsertEligibilityCheckActivity
+    // 3 ValidateEligibilityCheckActivity
     const res3 = orchestrator.next(res2.value);
-    expect(res3.value).toEqual("UpsertEligibilityCheckActivity");
+    expect(res3.value).toEqual(eligibilityCheck.value);
 
-    // 4 CreateTimer
+    // 4 UpsertEligibilityCheckActivity
     const res4 = orchestrator.next(res3.value);
-    expect(res4.value).toEqual("CreateTimer");
+    expect(res4.value).toEqual("UpsertEligibilityCheckActivity");
 
-    // 5 SendMessageActivity
+    // 5 CreateTimer
     const res5 = orchestrator.next(res4.value);
-    expect(res5.value).toEqual("SendMessageActivity");
+    expect(res5.value).toEqual("CreateTimer");
+
+    // 6 SendMessageActivity
+    const res6 = orchestrator.next(res5.value);
+    expect(res6.value).toEqual("SendMessageActivity");
 
     expect(contextMockWithDf.df.createTimer).toHaveBeenCalledTimes(1);
     expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(

@@ -3,16 +3,12 @@ import { isLeft } from "fp-ts/lib/Either";
 import { fromEither, tryCatch } from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
-import { ActivityResultSuccess as ActivityInput } from "../EligibilityCheckActivity/handler";
 import { EligibilityCheck } from "../generated/definitions/EligibilityCheck";
 import {
   ELIGIBILITY_CHECK_MODEL_PK_FIELD,
   EligibilityCheckModel
 } from "../models/eligibility_check";
-import {
-  toApiEligibilityCheckFromDSU,
-  toModelEligibilityCheck
-} from "../utils/conversions";
+import { toModelEligibilityCheck } from "../utils/conversions";
 
 export const ActivityResultSuccess = t.interface({
   kind: t.literal("SUCCESS")
@@ -42,17 +38,10 @@ export function getUpsertEligibilityCheckActivityHandler(
 ): ISaveEligibilityCheckHandler {
   return (context: Context, input: unknown) => {
     return fromEither(
-      ActivityInput.decode(input).mapLeft(
+      EligibilityCheck.decode(input).mapLeft(
         _ => new Error(`Error decoding ActivityInput: [${readableReport(_)}]`)
       )
     )
-      .chain<EligibilityCheck>(({ data, fiscalCode, validBefore }) => {
-        return fromEither(
-          toApiEligibilityCheckFromDSU(data, fiscalCode, validBefore).mapLeft(
-            errs => new Error(readableReport(errs))
-          )
-        );
-      })
       .chain(eligibilityCheck =>
         tryCatch(
           () => {
