@@ -10,7 +10,9 @@ import {
   TypeofApiCall
 } from "italia-ts-commons/lib/requests";
 
+import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { BonusVacanzaError } from "../generated/ade/BonusVacanzaError";
+import { BonusVacanzaWithoutMac as ApiBonusVacanzaWithoutMac } from "../generated/ade/BonusVacanzaWithoutMac";
 import {
   richiestaBonusDefaultDecoder,
   RichiestaBonusT
@@ -40,7 +42,7 @@ export function ADEClient(
     method: "post",
     query: _ => ({}),
     response_decoder: richiestaBonusDefaultDecoder(),
-    url: () => `/BonusVacanzeWeb/rest/richiestaBonus`
+    url: () => `/BonusVacanzeWeb/rest/bonusVacanze/richiestaBonus`
   };
 
   return {
@@ -170,3 +172,22 @@ export const BonusVacanzaInvalidRequestError = t.union(
   ],
   "BonusVacanzaInvalidRequestError"
 );
+
+/**
+ * Used to compute hmac
+ *
+ * codiceFiscaleDichiarante+codiceBuono+importoMassimo+dataGenerazione
+ * ("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")+flagDifformita+cfnucleo1+cfnucleo2+…cfnucleoN
+ */
+export function serializeBonus(bv: ApiBonusVacanzaWithoutMac): NonEmptyString {
+  return [
+    bv.codiceFiscaleDichiarante,
+    bv.codiceBuono,
+    bv.importoMassimo.toString(),
+    bv.dataGenerazione.toISOString(),
+    bv.flagDifformitaIsee.toString(),
+    ...bv.nucleoFamiliare
+      ?.map(_ => _.codiceFiscale)
+      .sort((a, b) => a.localeCompare(b))
+  ].join("") as NonEmptyString;
+}

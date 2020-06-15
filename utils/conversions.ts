@@ -7,7 +7,7 @@ import * as NonEmptyArray from "fp-ts/lib/NonEmptyArray";
 import { isNone } from "fp-ts/lib/Option";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { BonusVacanzaBase as ApiBonusVacanzaBase } from "../generated/ade/BonusVacanzaBase";
 import { BonusActivation as ApiBonusActivation } from "../generated/definitions/BonusActivation";
 import { BonusActivationItem } from "../generated/definitions/BonusActivationItem";
@@ -36,16 +36,18 @@ import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivatio
 import { EligibilityCheck } from "../generated/models/EligibilityCheck";
 import { FamilyMemberCount } from "../generated/models/FamilyMemberCount";
 import { UserBonus } from "../models/user_bonus";
-import { generateFamilyUID } from "./hash";
+import { generateFamilyUID, toHmac } from "./hash";
 import { renameObjectKeys } from "./rename_keys";
 import { camelCaseToSnakeCase, snakeCaseToCamelCase } from "./strings";
 
+import { BonusVacanzaWithoutMac as ApiBonusVacanzaWithoutMac } from "../generated/ade/BonusVacanzaWithoutMac";
 import {
   BonusAmount,
   OneFamilyMemberBonus,
   ThreeOrMoreFamilyMembersBonus,
   TwoFamilyMembersBonus
 } from "../models/bonus_amount";
+import { serializeBonus } from "./adeClient";
 
 /**
  * Maps EligibilityCheck API object into an EligibilityCheck domain object
@@ -105,9 +107,10 @@ export const toApiBonusActivation = (
  * Maps BonusActivation domain object into an ADE BonusVacanzaBase API object
  */
 export const toApiBonusVacanzaBase = (
+  secret: NonEmptyString,
   domainObject: BonusActivation
 ): Either<t.Errors, ApiBonusVacanzaBase> => {
-  return ApiBonusVacanzaBase.decode({
+  return ApiBonusVacanzaWithoutMac.decode({
     codiceBuono: domainObject.id,
     codiceFiscaleDichiarante: domainObject.applicantFiscalCode,
     dataGenerazione: domainObject.createdAt.toISOString(),
@@ -116,7 +119,12 @@ export const toApiBonusVacanzaBase = (
     nucleoFamiliare: domainObject.dsuRequest.familyMembers.map(_ => ({
       codiceFiscale: _.fiscalCode
     }))
-  });
+  }).chain(apiBonusVacanzaWithoutMac =>
+    ApiBonusVacanzaBase.decode({
+      ...apiBonusVacanzaWithoutMac,
+      mac: toHmac(secret, serializeBonus(apiBonusVacanzaWithoutMac))
+    })
+  );
 };
 
 /**
