@@ -58,7 +58,7 @@ const aNewEligibilityCheck: NewEligibilityCheck = {
 };
 
 describe("EligibilityCheckModel#create", () => {
-  it("should create a new EligibilityCheck", async () => {
+  it.only("should create a new EligibilityCheck", async () => {
     const clientMock = {
       createDocument: jest.fn((_, __, ___, cb) =>
         cb(undefined, aRetrievedEligibilityCheck)

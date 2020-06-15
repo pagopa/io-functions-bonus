@@ -37,10 +37,11 @@ export const NewUserBonus = tag<INewUserBonusTag>()(
 export type NewUserBonus = t.TypeOf<typeof NewUserBonus>;
 
 function toRetrieved(result: DocumentDb.RetrievedDocument): RetrievedUserBonus {
-  return RetrievedUserBonus.decode(result).getOrElseL(errs => {
-    throw new Error(
-      `Retrieved result wasn't a RetrievedUserBonus: ${readableReport(errs)}`
-    );
+  return RetrievedUserBonus.decode({
+    ...result,
+    kind: "IRetrievedUserBonus"
+  }).getOrElseL(err => {
+    throw new Error(`Failed decoding retrieved object: ${readableReport(err)}`);
   });
 }
 
