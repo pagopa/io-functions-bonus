@@ -28,7 +28,11 @@ export function getValidateEligibilityCheckActivityHandler(
           return fromEither(right(eligibilityCheck));
         }
         const familyUID = generateFamilyUID(
-          eligibilityCheck.dsu_request.family_members
+          eligibilityCheck.dsu_request.family_members.map(familyMember => ({
+            fiscalCode: familyMember.fiscal_code,
+            name: familyMember.name,
+            surname: familyMember.surname
+          }))
         );
         return tryCatch(
           () => bonusLeaseModel.find(familyUID, familyUID),

@@ -16,7 +16,6 @@ import { toApiEligibilityCheckFromDSU } from "../utils/conversions";
 import { MESSAGES } from "../utils/messages";
 import { retryOptions } from "../utils/retryPolicy";
 
-import { isLeft } from "fp-ts/lib/Either";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
 
