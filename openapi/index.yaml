@@ -211,7 +211,7 @@ definitions:
   FamilyUID:
     description: An hash code that identifies univocally a family
     type: string
-    minLength: 16
+    minLength: 1
   InstanceId:
     type: object
     properties:
