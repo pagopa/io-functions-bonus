@@ -15,7 +15,7 @@ import {
 } from "../conversions";
 
 import { BonusActivation as ApiBonusActivation } from "../../generated/definitions/BonusActivation";
-import { BonusActivation } from "../../generated/models/BonusActivation";
+import { BonusActivationWithFamilyUID } from "../../generated/models/BonusActivationWithFamilyUID";
 import {
   EligibilityCheckFailure,
   ErrorEnum as EligibilityCheckFailureErrorEnum,
@@ -53,12 +53,14 @@ import { BonusActivationStatusEnum as ApiBonusActivationStatusEnum } from "../..
 import { BonusCode as BonusCodeApi } from "../../generated/definitions/BonusCode";
 import { BonusActivationStatusEnum } from "../../generated/models/BonusActivationStatus";
 import { BonusCode as BonusCodeModel } from "../../generated/models/BonusCode";
+import { FamilyMember } from "../../generated/models/FamilyMember";
 import { FamilyMemberCount } from "../../generated/models/FamilyMemberCount";
 import {
   OneFamilyMemberBonus,
   ThreeOrMoreFamilyMembersBonus,
   TwoFamilyMembersBonus
 } from "../../models/bonus_amount";
+import { generateFamilyUID } from "../hash";
 
 const aFiscalCode = "SPNDNL80R13C523K" as FiscalCode;
 
@@ -134,7 +136,15 @@ const aFailureDomainObject: EligibilityCheckFailure = {
   status: EligibilityCheckFailureStatusEnum.FAILURE
 };
 
-const aBonusActivationDomainObject: BonusActivation = {
+const familyMembers: ReadonlyArray<FamilyMember> = [
+  {
+    fiscalCode: aFiscalCode,
+    name: "MARIO" as NonEmptyString,
+    surname: "ROSSI" as NonEmptyString
+  }
+];
+
+const aBonusActivationDomainObject: BonusActivationWithFamilyUID = {
   id: "AAAAAAAAAAAA" as BonusCodeModel,
 
   applicantFiscalCode: aFiscalCode,
@@ -144,13 +154,7 @@ const aBonusActivationDomainObject: BonusActivation = {
   createdAt: new Date(),
 
   dsuRequest: {
-    familyMembers: [
-      {
-        fiscalCode: aFiscalCode,
-        name: "MARIO" as NonEmptyString,
-        surname: "ROSSI" as NonEmptyString
-      }
-    ],
+    familyMembers,
 
     maxAmount: 250,
 
@@ -165,7 +169,8 @@ const aBonusActivationDomainObject: BonusActivation = {
     dsuCreatedAt: new Date(),
 
     hasDiscrepancies: false
-  }
+  },
+  familyUID: generateFamilyUID(familyMembers)
 };
 
 const aBonusActivationApiObject: ApiBonusActivation = {
@@ -296,7 +301,7 @@ describe("ModelBonusActivationFromApi", () => {
     const apiObject = aBonusActivationApiObject;
     const result = toModelBonusActivation(apiObject);
     if (isRight(result)) {
-      expect(BonusActivation.is(result.value)).toBeTruthy();
+      expect(BonusActivationWithFamilyUID.is(result.value)).toBeTruthy();
     } else {
       fail("Valid api object must be decoded");
     }

@@ -32,9 +32,11 @@ import {
 import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
 import { Timestamp } from "../generated/definitions/Timestamp";
 import { BonusActivation } from "../generated/models/BonusActivation";
+import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 import { EligibilityCheck } from "../generated/models/EligibilityCheck";
 import { FamilyMemberCount } from "../generated/models/FamilyMemberCount";
 import { UserBonus } from "../models/user_bonus";
+import { generateFamilyUID } from "./hash";
 import { renameObjectKeys } from "./rename_keys";
 import { camelCaseToSnakeCase, snakeCaseToCamelCase } from "./strings";
 
@@ -74,20 +76,26 @@ export const toApiEligibilityCheck = (
  */
 export const toModelBonusActivation = (
   apiObj: ApiBonusActivation
-): Either<t.Errors, BonusActivation> => {
+): Either<t.Errors, BonusActivationWithFamilyUID> => {
   const camelCasedUntypedObj = renameObjectKeys(apiObj, k =>
     snakeCaseToCamelCase(k)
   );
-  return BonusActivation.decode(camelCasedUntypedObj);
+  return BonusActivation.decode(camelCasedUntypedObj).chain(base =>
+    BonusActivationWithFamilyUID.decode({
+      ...base,
+      familyUID: generateFamilyUID(base.dsuRequest.familyMembers)
+    })
+  );
 };
 
 /**
- * Maps BonusActivation API object into an BonusActivation domain object
+ * Maps BonusActivationWithFamilyUID Domain object into an BonusActivation api object
  */
 export const toApiBonusActivation = (
-  domainObj: BonusActivation
+  domainObj: BonusActivationWithFamilyUID
 ): Either<t.Errors, ApiBonusActivation> => {
-  const snakeCasedUntypedObj = renameObjectKeys(domainObj, k =>
+  const { familyUID, ...cleanDomainObject } = domainObj;
+  const snakeCasedUntypedObj = renameObjectKeys(cleanDomainObject, k =>
     camelCaseToSnakeCase(k)
   );
   return ApiBonusActivation.decode(snakeCasedUntypedObj);
