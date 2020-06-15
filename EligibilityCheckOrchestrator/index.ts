@@ -79,7 +79,13 @@ export const handler = function*(
       eligibilityCheckResponse.data,
       eligibilityCheckResponse.fiscalCode,
       eligibilityCheckResponse.validBefore
-    );
+    ).getOrElseL(error => {
+      throw new Error(
+        `Unexpected response from toApiEligibilityCheckFromDSU: [${readableReport(
+          error
+        )}]`
+      );
+    });
     const undecodedValidatedEligibilityCheck = yield context.df.callActivity(
       "ValidateEligibilityCheckActivity",
       eligibilityCheck
