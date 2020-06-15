@@ -59,12 +59,13 @@ import { readableReport } from "italia-ts-commons/lib/reporters";
 import { Millisecond } from "italia-ts-commons/lib/units";
 import { BonusActivation as ApiBonusActivation } from "../generated/definitions/BonusActivation";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
-import { FamilyMembers } from "../generated/models/FamilyMembers";
 import { FamilyUID } from "../generated/models/FamilyUID";
 import { BonusLeaseModel } from "../models/bonus_lease";
 import { OrchestratorInput } from "../StartBonusActivationOrchestrator/handler";
 import { toApiBonusActivation } from "../utils/conversions";
 import { generateFamilyUID } from "../utils/hash";
+
+export const BONUS_CREATION_MAX_ATTEMPTS = 5;
 
 const checkOrchestratorIsRunning = (
   client: DurableOrchestrationClient,
@@ -241,8 +242,7 @@ const createBonusActivation = (
   bonusActivationModel: BonusActivationModel,
   fiscalCode: FiscalCode,
   familyUID: FamilyUID,
-  dsu: Dsu,
-  maxAttempts: number = 5
+  dsu: Dsu
 ): TaskEither<IResponseErrorInternal, BonusActivationWithFamilyUID> => {
   const shouldRetry = (err: QueryError) => {
     // CosmosDB conflict: primary key violation
@@ -270,12 +270,12 @@ const createBonusActivation = (
   );
 
   return withRetries<Error, RetrievedBonusActivation>(
-    maxAttempts,
+    BONUS_CREATION_MAX_ATTEMPTS,
     () => 50 as Millisecond
   )(retriableBonusActivationTask).mapLeft(errorOrMaxRetry =>
     errorOrMaxRetry === MaxRetries || errorOrMaxRetry === RetryAborted
       ? ResponseErrorInternal(
-          `Error creating BonusActivation: cannot create a db record after ${maxAttempts} attemps`
+          `Error creating BonusActivation: cannot create a db record after ${BONUS_CREATION_MAX_ATTEMPTS} attemps`
         )
       : ResponseErrorInternal(
           `Error creating BonusActivation: ${errorOrMaxRetry.message}`
@@ -294,9 +294,8 @@ const createBonusActivation = (
  */
 const acquireLockForUserFamily = (
   bonusLeaseModel: BonusLeaseModel,
-  familyMembers: FamilyMembers
-): TaskEither<IResponseErrorConflict, NonEmptyString> => {
-  const familyUID: FamilyUID = generateFamilyUID(familyMembers);
+  familyUID: FamilyUID
+): TaskEither<IResponseErrorConflict, FamilyUID> => {
   return fromQueryEither(() =>
     bonusLeaseModel.create(
       {
@@ -309,8 +308,26 @@ const acquireLockForUserFamily = (
     err =>
       // consider any error a failure for lease already prensent
       ResponseErrorConflict(
-        `Failed while acquiring lease for familiUID ${familyUID}: ${err.message}`
+        `Failed while acquiring lease for familyUID ${familyUID}: ${err.message}`
       ),
+    _ => familyUID
+  );
+};
+
+/**
+ * Release the lock that was eventually acquired for this request. A release attempt on a lock that doesn't exist is considered successful.
+ *
+ * @param bonusLeaseModel an instance of BonusLeaseModel
+ * @param familyMembers the family of the requesting user
+ *
+ * @returns either a conflict error or the unique hash id of the family
+ */
+const relaseLockForUserFamily = (
+  bonusLeaseModel: BonusLeaseModel,
+  familyUID: FamilyUID
+): TaskEither<IResponseErrorInternal, FamilyUID> => {
+  return fromQueryEither(() => bonusLeaseModel.deleteOneById(familyUID)).bimap(
+    err => ResponseErrorInternal(`Error releasing lock: ${err.message}`),
     _ => familyUID
   );
 };
@@ -345,7 +362,6 @@ const runStartBonusActivationOrchestrator = (
             orchestratorInput
           ),
         _ =>
-          // can it fail?
           ResponseErrorInternal(
             `Error starting the orchestrator: ${toError(_).message}`
           )
@@ -378,22 +394,46 @@ export function StartBonusActivationHandler(
       .chain(_ => checkEligibilityCheckIsRunning(client, fiscalCode))
       .chain(_ => checkBonusActivationIsRunning(client, fiscalCode))
       .chain(_ => getLatestValidDSU(eligibilityCheckModel, fiscalCode))
-      .chain((dsu: Dsu) =>
-        acquireLockForUserFamily(
-          bonusLeaseModel,
-          dsu.familyMembers
-        ).map(familyUID => ({ familyUID, dsu }))
-      )
-      .chain(({ familyUID, dsu }) =>
-        createBonusActivation(bonusActivationModel, fiscalCode, familyUID, dsu)
-      )
-      .chain(bonusActivation =>
-        runStartBonusActivationOrchestrator(
-          client,
-          bonusActivation,
-          fiscalCode
-        ).map(_ => bonusActivation)
-      )
+
+      .chain<BonusActivationWithFamilyUID>((dsu: Dsu) => {
+        // this part is on a sub-chain as it handles the lock/unlock protection mechanism
+        // familyUID serves as lock context and thus is needed in scope for every sub-task
+        const familyUID = generateFamilyUID(dsu.familyMembers);
+        return (
+          taskEither
+            .of<StartBonusActivationResponse, void>(void 0)
+            .chain(_ => acquireLockForUserFamily(bonusLeaseModel, familyUID))
+            .chain(_ =>
+              createBonusActivation(
+                bonusActivationModel,
+                fiscalCode,
+                familyUID,
+                dsu
+              )
+            )
+            .chain(bonusActivation =>
+              runStartBonusActivationOrchestrator(
+                client,
+                bonusActivation,
+                fiscalCode
+              ).map(_ => bonusActivation)
+            )
+            // the following is basically:
+            // on right, just pass it
+            // on left, perform unlock but then pass the original left value
+            .foldTaskEither(
+              l =>
+                relaseLockForUserFamily(
+                  bonusLeaseModel,
+                  familyUID
+                ).foldTaskEither(
+                  _ => fromEither(left(l)),
+                  _ => fromEither(left(l))
+                ),
+              r => fromEither(right(r))
+            )
+        );
+      })
       .chain(bonusActivation =>
         fromEither(toApiBonusActivation(bonusActivation)).mapLeft(err =>
           // validate output
