@@ -275,7 +275,7 @@ const createBonusActivation = (
   )(retriableBonusActivationTask).mapLeft(errorOrMaxRetry =>
     errorOrMaxRetry === MaxRetries || errorOrMaxRetry === RetryAborted
       ? ResponseErrorInternal(
-          `Error creating BonusActivation: cannot create a db record after ${BONUS_CREATION_MAX_ATTEMPTS} attemps`
+          `Error creating BonusActivation: cannot create a db record after ${BONUS_CREATION_MAX_ATTEMPTS} attempts`
         )
       : ResponseErrorInternal(
           `Error creating BonusActivation: ${errorOrMaxRetry.message}`

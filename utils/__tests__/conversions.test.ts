@@ -79,11 +79,8 @@ const anElibigleApiObject: ApiEligibilityCheckSuccessEligible = {
     ],
     has_discrepancies: true,
     isee_type: "some isee type" as NonEmptyString,
-
-    max_amount: 250 as number & IWithinRangeIntegerTag<150, 501>,
-
-    max_tax_benefit: 50 as number & IWithinRangeIntegerTag<30, 101>,
-
+    max_amount: 250,
+    max_tax_benefit: 50,
     request_id: 123
   },
   id: (aFiscalCode as unknown) as NonEmptyString,
@@ -118,11 +115,8 @@ const anEligibleDomainObject: EligibilityCheckSuccessEligible = {
     ],
     hasDiscrepancies: true,
     iseeType: "some isee type",
-
-    maxAmount: 250 as number & IWithinRangeIntegerTag<150, 501>,
-
-    maxTaxBenefit: 50 as number & IWithinRangeIntegerTag<30, 101>,
-
+    maxAmount: 250,
+    maxTaxBenefit: 50,
     requestId: 123
   },
   id: (aFiscalCode as unknown) as NonEmptyString,
@@ -162,9 +156,9 @@ const aBonusActivationDomainObject: BonusActivationWithFamilyUID = {
   dsuRequest: {
     familyMembers,
 
-    maxAmount: 250 as number & IWithinRangeIntegerTag<150, 501>,
+    maxAmount: 250,
 
-    maxTaxBenefit: 50 as number & IWithinRangeIntegerTag<30, 101>,
+    maxTaxBenefit: 50,
 
     requestId: 123,
 
@@ -197,9 +191,9 @@ const aBonusActivationApiObject: ApiBonusActivation = {
       }
     ],
 
-    max_amount: 250 as number & IWithinRangeIntegerTag<150, 501>,
+    max_amount: 250,
 
-    max_tax_benefit: 50 as number & IWithinRangeIntegerTag<30, 101>,
+    max_tax_benefit: 50,
 
     request_id: 123,
 

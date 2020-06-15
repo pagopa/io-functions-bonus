@@ -50,8 +50,8 @@ export const aDsu: Dsu = {
   ],
   hasDiscrepancies: false,
   iseeType: "iseeType",
-  maxAmount: 250 as number & IWithinRangeIntegerTag<150, 501>,
-  maxTaxBenefit: 50 as number & IWithinRangeIntegerTag<30, 101>,
+  maxAmount: 250,
+  maxTaxBenefit: 50,
   requestId: 123
 };
 
