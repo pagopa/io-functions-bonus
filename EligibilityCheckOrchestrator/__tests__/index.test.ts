@@ -84,7 +84,7 @@ describe("EligibilityCheckOrchestrator", () => {
     const res2 = orchestrator.next(res1.value);
     expect(res2.value).toEqual(eligibilityCheckResponse);
 
-    // 3 UpsertEligibilityCheckActivity
+    // 3 ValidateEligibilityCheckActivity
     const res3 = orchestrator.next(res2.value);
     expect(res3.value).toEqual(eligibilityCheck.value);
 
