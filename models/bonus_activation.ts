@@ -40,11 +40,10 @@ export type NewBonusActivation = t.TypeOf<typeof NewBonusActivation>;
 function toRetrieved(
   result: DocumentDb.RetrievedDocument
 ): RetrievedBonusActivation {
-  return RetrievedBonusActivation.decode({
-    ...result,
-    kind: "IRetrievedBonusActivation"
-  }).getOrElseL(err => {
-    throw new Error(`Failed decoding retrieved object: ${readableReport(err)}`);
+  return RetrievedBonusActivation.decode(result).getOrElseL(err => {
+    throw new Error(
+      `Failed decoding RetrievedBonusActivation object: ${readableReport(err)}`
+    );
   });
 }
 

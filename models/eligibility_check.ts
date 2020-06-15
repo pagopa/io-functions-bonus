@@ -42,14 +42,11 @@ export type NewEligibilityCheck = t.TypeOf<typeof NewEligibilityCheck>;
 function toRetrieved(
   result: DocumentDb.RetrievedDocument
 ): RetrievedEligibilityCheck {
-  const dd = RetrievedEligibilityCheck.decode({
-    ...result,
-    kind: "IRetrievedEligibilityCheck"
-  }).getOrElseL(err => {
-    throw new Error(`Failed decoding retrieved object: ${readableReport(err)}`);
+  return RetrievedEligibilityCheck.decode(result).getOrElseL(err => {
+    throw new Error(
+      `Failed decoding RetrievedEligibilityCheck object: ${readableReport(err)}`
+    );
   });
-  console.log("reeees", result, dd);
-  return dd;
 }
 
 function toBaseType(o: RetrievedEligibilityCheck): EligibilityCheck {

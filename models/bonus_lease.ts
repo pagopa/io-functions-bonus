@@ -37,11 +37,10 @@ export type NewBonusLease = t.TypeOf<typeof NewBonusLease>;
 function toRetrieved(
   result: DocumentDb.RetrievedDocument
 ): RetrievedBonusLease {
-  return RetrievedBonusLease.decode({
-    ...result,
-    kind: "IRetrievedBonusLease"
-  }).getOrElseL(err => {
-    throw new Error(`Failed decoding retrieved object: ${readableReport(err)}`);
+  return RetrievedBonusLease.decode(result).getOrElseL(err => {
+    throw new Error(
+      `Failed decoding RetrievedBonusLease object: ${readableReport(err)}`
+    );
   });
 }
 
