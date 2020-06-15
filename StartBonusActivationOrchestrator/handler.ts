@@ -4,11 +4,14 @@ import {
   TaskSet
 } from "durable-functions/lib/src/classes";
 import { isLeft } from "fp-ts/lib/Either";
+import { getRequiredStringEnv } from "io-functions-commons/dist/src/utils/env";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 import { SendBonusActivationFailure } from "../SendBonusActivationActivity/handler";
 import { toApiBonusVacanzaBase } from "../utils/conversions";
+
+const ADE_HMAC_SECRET = getRequiredStringEnv("ADE_HMAC_SECRET");
 
 export const OrchestratorInput = t.interface({
   bonusActivation: BonusActivationWithFamilyUID
@@ -34,6 +37,7 @@ export const handler = function*(
     return false;
   }
   const errorOrBonusVacanzaBase = toApiBonusVacanzaBase(
+    ADE_HMAC_SECRET,
     errorOrStartBonusActivationOrchestratorInput.value.bonusActivation
   );
   if (isLeft(errorOrBonusVacanzaBase)) {
