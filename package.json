@@ -24,7 +24,7 @@
     "dist:zip": "zip -r dist.zip . --exclude @.funcignore --exclude .funcignore",
     "predeploy": "npm-run-all generate build dist:modules",
     "generate:definitions": "shx rm -rf ./generated/definitions && shx mkdir -p ./generated/definitions && gen-api-models --request-types --api-spec ./openapi/index.yaml --out-dir ./generated/definitions",
-    "generate:models": "shx rm -rf ./generated/models && shx mkdir -p ./generated/models && gen-api-models --camel-cased --api-spec ./openapi/index.yaml --out-dir ./generated/models",
+    "generate:models": "shx rm -rf ./generated/models && shx mkdir -p ./generated/models && gen-api-models --strict 0 --camel-cased --api-spec ./openapi/index.yaml --out-dir ./generated/models",
     "generate:ade": "shx rm -rf ./generated/ade && shx mkdir -p ./generated/ade && gen-api-models --request-types --response-decoders --camel-cased --api-spec ./openapi/ade.yaml --out-dir ./generated/ade",
     "generate": "npm-run-all generate:*"
   },

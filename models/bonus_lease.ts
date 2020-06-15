@@ -3,6 +3,7 @@ import { Either, left, right } from "fp-ts/lib/Either";
 import * as DocumentDbUtils from "io-functions-commons/dist/src/utils/documentdb";
 import { DocumentDbModel } from "io-functions-commons/dist/src/utils/documentdb_model";
 import * as t from "io-ts";
+import { readableReport } from "italia-ts-commons/lib/reporters";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { pick, tag } from "italia-ts-commons/lib/types";
 import { keys } from "../utils/types";
@@ -36,10 +37,11 @@ export type NewBonusLease = t.TypeOf<typeof NewBonusLease>;
 function toRetrieved(
   result: DocumentDb.RetrievedDocument
 ): RetrievedBonusLease {
-  return {
-    ...result,
-    kind: "IRetrievedBonusLease"
-  } as RetrievedBonusLease;
+  return RetrievedBonusLease.decode(result).getOrElseL(err => {
+    throw new Error(
+      `Failed decoding RetrievedBonusLease object: ${readableReport(err)}`
+    );
+  });
 }
 
 function toBaseType(o: RetrievedBonusLease): BonusLease {

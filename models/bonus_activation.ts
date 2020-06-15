@@ -4,6 +4,7 @@ import { Option } from "fp-ts/lib/Option";
 import * as DocumentDbUtils from "io-functions-commons/dist/src/utils/documentdb";
 import { DocumentDbModel } from "io-functions-commons/dist/src/utils/documentdb_model";
 import * as t from "io-ts";
+import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { pick, tag } from "italia-ts-commons/lib/types";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
@@ -39,10 +40,11 @@ export type NewBonusActivation = t.TypeOf<typeof NewBonusActivation>;
 function toRetrieved(
   result: DocumentDb.RetrievedDocument
 ): RetrievedBonusActivation {
-  return {
-    ...result,
-    kind: "IRetrievedBonusActivation"
-  } as RetrievedBonusActivation;
+  return RetrievedBonusActivation.decode(result).getOrElseL(err => {
+    throw new Error(
+      `Failed decoding RetrievedBonusActivation object: ${readableReport(err)}`
+    );
+  });
 }
 
 function toBaseType(o: RetrievedBonusActivation): BonusActivationWithFamilyUID {

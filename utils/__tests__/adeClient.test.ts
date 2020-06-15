@@ -5,14 +5,20 @@ import { RestResultRichiesta } from "../../generated/ade/RestResultRichiesta";
 import {
   ADEClient,
   BonusVacanzaInvalidRequestError,
-  BonusVacanzaTransientError
+  BonusVacanzaTransientError,
+  serializeBonus
 } from "../adeClient";
+
+import { NonEmptyString } from "italia-ts-commons/lib/strings";
+import { toHmac } from "../../utils/hash";
 
 const aBonusVacanzaBase: BonusVacanzaBase = {
   codiceBuono: "aCodiceBuono",
   codiceFiscaleDichiarante: "aCodiceFiscaleDichiarante",
   dataGenerazione: new Date(),
   flagDifformitaIsee: 0,
+  importoMassimo: 500,
+  mac: "xxx",
   nucleoFamiliare: [{ codiceFiscale: "aCodiceFiscale" }]
 };
 
@@ -45,7 +51,7 @@ describe("ADEClient#richiestaBonus", () => {
       bonusVacanzaBase: aBonusVacanzaBase
     });
     expect(mockFetch).toHaveBeenCalledWith(
-      "/BonusVacanzeWeb/rest/richiestaBonus",
+      "/BonusVacanzeWeb/rest/bonusVacanze/richiestaBonus",
       {
         body: JSON.stringify(aBonusVacanzaBase),
         headers: { "Content-Type": "application/json" },
@@ -197,5 +203,43 @@ describe("BonusVacanzaInvalidRequestError", () => {
           })
           .orElse(() => fail("Cannot decode payload"));
       });
+  });
+});
+
+describe("BonusVacanza#HMAC", () => {
+  it("should compute the correct hmac", () => {
+    const serialized1 =
+      "AAAAAA55A55A555AACEFGHLMNPRU5002020-06-11T08:54:31.143Z1AAAAAA55A55A555ABBBBBB88B88B888BCCCCCC99C99C999C";
+
+    const serialized2 = serializeBonus({
+      codiceBuono: "ACEFGHLMNPRU",
+      codiceFiscaleDichiarante: "AAAAAA55A55A555A",
+      dataGenerazione: new Date("2020-06-11T08:54:31.143Z"),
+      flagDifformitaIsee: 1,
+      importoMassimo: 500,
+      nucleoFamiliare: [
+        {
+          codiceFiscale: "AAAAAA55A55A555A"
+        },
+        {
+          codiceFiscale: "BBBBBB88B88B888B"
+        },
+        {
+          codiceFiscale: "CCCCCC99C99C999C"
+        }
+      ]
+    });
+    expect(serialized1).toEqual(serialized2);
+
+    const res1 = toHmac(
+      "6215825E2ED95E35129AFDACFEF2D" as NonEmptyString,
+      serialized1 as NonEmptyString
+    );
+
+    const res2 = toHmac(
+      "6215825E2ED95E35129AFDACFEF2D" as NonEmptyString,
+      serialized2
+    );
+    expect(res1).toEqual(res2);
   });
 });

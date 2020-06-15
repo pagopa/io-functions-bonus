@@ -45,7 +45,6 @@ import {
 } from "../../generated/definitions/EligibilityCheckSuccessIneligible";
 import { EligibilityCheck } from "../../generated/models/EligibilityCheck";
 
-import { IWithinRangeIntegerTag } from "italia-ts-commons/lib/numbers";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { BonusVacanzaBase as ApiBonusVacanzaBase } from "../../generated/ade/BonusVacanzaBase";
@@ -225,7 +224,7 @@ describe("ModelEligibilityCheckFromApi", () => {
     if (isRight(result)) {
       expect(EligibilityCheck.is(result.value)).toBeTruthy();
     } else {
-      fail("Valid api object must be decoded");
+      fail(`Valid api object must be decoded: ${readableReport(result.value)}`);
     }
   });
 
@@ -358,7 +357,10 @@ describe("ApiBonusActivationFromModel", () => {
 describe("ApiBonusVacanzaBaseFromModel", () => {
   it("should decode domain", () => {
     const domainObject = aBonusActivationDomainObject;
-    const result = toApiBonusVacanzaBase(domainObject);
+    const result = toApiBonusVacanzaBase(
+      "secret" as NonEmptyString,
+      domainObject
+    );
     if (isRight(result)) {
       expect(ApiBonusVacanzaBase.is(result.value)).toBeTruthy();
     } else {
