@@ -17,7 +17,7 @@ type IValidateEligibilityCheckHandler = (
 export function getValidateEligibilityCheckActivityHandler(
   bonusLeaseModel: BonusLeaseModel
 ): IValidateEligibilityCheckHandler {
-  return (_, input) => {
+  return (context, input) => {
     return fromEither(
       EligibilityCheck.decode(input).mapLeft(
         err => new Error(`Decoding Error: [${readableReport(err)}]`)
@@ -60,6 +60,7 @@ export function getValidateEligibilityCheckActivityHandler(
       })
       .fold(
         error => {
+          context.log.error("ValidateEligibilityCheckActivity|ERROR|%s", error);
           throw error;
         },
         validatedEligibilityCheck => validatedEligibilityCheck
