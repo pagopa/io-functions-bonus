@@ -33,7 +33,7 @@ import {
 } from "../models/bonus_lease";
 
 export const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
-export const aFamilyUID: string = "aFamilyUid" as FamilyUID;
+export const aFamilyUID = "aFamilyUid" as FamilyUID;
 
 export const aDsu: Dsu = {
   dsuCreatedAt: new Date(),
