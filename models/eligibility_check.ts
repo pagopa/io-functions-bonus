@@ -9,6 +9,7 @@ import { Either, left, right } from "fp-ts/lib/Either";
 import * as DocumentDbUtils from "io-functions-commons/dist/src/utils/documentdb";
 import { DocumentDbModel } from "io-functions-commons/dist/src/utils/documentdb_model";
 import * as t from "io-ts";
+import { readableReport } from "italia-ts-commons/lib/reporters";
 import { pick, tag } from "italia-ts-commons/lib/types";
 import { EligibilityCheck } from "../generated/models/EligibilityCheck";
 import { EligibilityCheckFailure } from "../generated/models/EligibilityCheckFailure";
@@ -41,10 +42,11 @@ export type NewEligibilityCheck = t.TypeOf<typeof NewEligibilityCheck>;
 function toRetrieved(
   result: DocumentDb.RetrievedDocument
 ): RetrievedEligibilityCheck {
-  return {
-    ...result,
-    kind: "IRetrievedEligibilityCheck"
-  } as RetrievedEligibilityCheck;
+  return RetrievedEligibilityCheck.decode(result).getOrElseL(err => {
+    throw new Error(
+      `Failed decoding RetrievedEligibilityCheck object: ${readableReport(err)}`
+    );
+  });
 }
 
 function toBaseType(o: RetrievedEligibilityCheck): EligibilityCheck {
