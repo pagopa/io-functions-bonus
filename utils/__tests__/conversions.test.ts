@@ -52,6 +52,7 @@ import { MaxBonusAmount } from "../../generated/definitions/MaxBonusAmount";
 import { MaxBonusTaxBenefit } from "../../generated/definitions/MaxBonusTaxBenefit";
 import { BonusActivationStatusEnum } from "../../generated/models/BonusActivationStatus";
 import { BonusCode as BonusCodeModel } from "../../generated/models/BonusCode";
+import { FamilyMember } from "../../generated/models/FamilyMember";
 import { generateFamilyUID } from "../hash";
 
 const aFiscalCode = "SPNDNL80R13C523K" as FiscalCode;
@@ -128,7 +129,7 @@ const aFailureDomainObject: EligibilityCheckFailure = {
   status: EligibilityCheckFailureStatusEnum.FAILURE
 };
 
-const familyMembers = [
+const familyMembers: ReadonlyArray<FamilyMember> = [
   {
     fiscalCode: aFiscalCode,
     name: "MARIO" as NonEmptyString,

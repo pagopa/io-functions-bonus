@@ -33,7 +33,7 @@ import {
 } from "../models/bonus_lease";
 
 export const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
-export const aFamilyUID: FamilyUID = "aFamilyUid";
+export const aFamilyUID = "aFamilyUid" as FamilyUID;
 
 export const aDsu: Dsu = {
   dsuCreatedAt: new Date(),
@@ -145,7 +145,7 @@ export const aNewBonusActivation: NewBonusActivation = {
 };
 
 export const aBonusLease: BonusLease = {
-  id: aFamilyUID as NonEmptyString
+  id: aFamilyUID
 };
 
 export const aNewBonusLease: NewBonusLease = {
