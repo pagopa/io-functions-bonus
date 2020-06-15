@@ -1,7 +1,7 @@
 swagger: '2.0'
 info:
   version: 0.0.1
-  title: Monitoraggio RestServices
+  title: Allineamento RestServices
   description: |
     **Servizi per allineamento PagoPa AE **
 host: '127.0.0.1:80'
@@ -14,7 +14,7 @@ consumes:
 produces:
   - application/json
 paths:
- /richiestaBonus:
+ /bonusVacanze/richiestaBonus:
     post:
       operationId: richiestaBonus
       description: servizio di allineamento PagoPa, Agenzia Entrate
@@ -48,6 +48,35 @@ definitions:
       result:
         $ref: '#/definitions/BonusVacanzaBase'
   BonusVacanzaBase:
+    allOf:
+      - $ref: '#/definitions/BonusVacanzaWithoutMac'
+      - type: object
+        properties:
+          mac:
+            type: string
+        required:
+          - mac
+  NucleoFamiliareElem:
+    type: object
+    properties:
+      codiceFiscale:
+        type: string
+        description: codice fiscale del componente del nucleo
+    required:
+      - codiceFiscale
+  BonusVacanzaError:
+    type: object
+    properties:
+      errorCode:
+        type: string
+        description: codice di errore
+      errorMessage:
+        type: string
+        description: descrizione dell'errore
+
+  # INTERNAL MODEL
+
+  BonusVacanzaWithoutMac:
     type: object
     properties:
       codiceBuono:
@@ -70,18 +99,10 @@ definitions:
         type: array
         items:
           $ref: '#/definitions/NucleoFamiliareElem'
-  NucleoFamiliareElem:
-    type: object
-    properties:
-      codiceFiscale:
-        type: string
-        description: codice fiscale del componente del nucleo
-  BonusVacanzaError:
-    type: object
-    properties:
-      errorCode:
-        type: string
-        description: codice di errore
-      errorMessage:
-        type: string
-        description: descrizione dell'errore
+    required:
+      - codiceBuono
+      - codiceFiscaleDichiarante
+      - importoMassimo
+      - flagDifformitaIsee
+      - dataGenerazione
+      - nucleoFamiliare

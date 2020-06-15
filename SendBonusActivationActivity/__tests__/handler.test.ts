@@ -1,8 +1,6 @@
 import { Context } from "@azure/functions";
-import { Either, isRight, Left, left, right, toError } from "fp-ts/lib/Either";
-import { fromEither, TaskEither, tryCatch } from "fp-ts/lib/TaskEither";
+import { isRight, right } from "fp-ts/lib/Either";
 import * as t from "io-ts";
-import { readableReport } from "italia-ts-commons/lib/reporters";
 import { context } from "../../__mocks__/durable-functions";
 import { BonusVacanzaBase } from "../../generated/ade/BonusVacanzaBase";
 import {
@@ -16,9 +14,25 @@ import {
   SendBonusActivationSuccess
 } from "../handler";
 
-const mockContext: Context = context;
-
-const aBonusVacanzaBase: BonusVacanzaBase = {};
+const aBonusVacanzaBase: BonusVacanzaBase = {
+  codiceBuono: "ACEFGHLMNPRU",
+  codiceFiscaleDichiarante: "AAAAAA55A55A555A",
+  dataGenerazione: new Date("2020-06-11T08:54:31.143Z"),
+  flagDifformitaIsee: 1,
+  importoMassimo: 500,
+  mac: "123",
+  nucleoFamiliare: [
+    {
+      codiceFiscale: "AAAAAA55A55A555A"
+    },
+    {
+      codiceFiscale: "BBBBBB88B88B888B"
+    },
+    {
+      codiceFiscale: "CCCCCC99C99C999C"
+    }
+  ]
+};
 const aBonusVacanzaInvalidRequestError: BonusVacanzaInvalidRequestError = {
   errorCode: "1000",
   errorMessage: "lorem ipsum"
@@ -67,6 +81,7 @@ describe("SendBonusActivationHandler", () => {
     const result = await handler(context, aBonusVacanzaBase);
 
     SendBonusActivationFailure.decode(result)
+      // tslint:disable-next-line: no-duplicate-string
       .orElse(_ => fail("Cannot decode result"))
       .map(value => {
         expect(value.reason).toEqual(aBonusVacanzaInvalidRequestError);

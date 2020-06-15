@@ -10,6 +10,16 @@ export const toHash = (s: string): NonEmptyString => {
   return hash.digest("hex") as NonEmptyString;
 };
 
+export function toHmac(
+  secret: NonEmptyString,
+  data: NonEmptyString
+): NonEmptyString {
+  return crypto
+    .createHmac("sha256", secret)
+    .update(data)
+    .digest("base64") as NonEmptyString;
+}
+
 export const generateFamilyUID = (familyMembers: FamilyMembers): FamilyUID =>
   FamilyUID.decode(
     toHash(
