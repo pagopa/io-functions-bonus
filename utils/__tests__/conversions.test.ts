@@ -225,7 +225,7 @@ describe("ModelEligibilityCheckFromApi", () => {
     if (isRight(result)) {
       expect(EligibilityCheck.is(result.value)).toBeTruthy();
     } else {
-      fail("Valid api object must be decoded");
+      fail(`Valid api object must be decoded: ${readableReport(result.value)}`);
     }
   });
 

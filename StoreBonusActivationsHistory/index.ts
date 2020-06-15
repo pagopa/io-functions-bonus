@@ -1,11 +1,21 @@
 import { AzureFunction, Context } from "@azure/functions";
-import { toBaseDoc } from "../utils/cosmosdb";
 
-const index: AzureFunction = async (
-  _: Context,
-  // tslint:disable-next-line: no-any
-  documents: readonly any[]
-) => {
+import { readableReport } from "italia-ts-commons/lib/reporters";
+
+import { CosmosDbDocumentCollection, toBaseDoc } from "../utils/cosmosdb";
+
+const index: AzureFunction = async (_: Context, input: unknown) => {
+  const decoded = CosmosDbDocumentCollection.decode(input);
+  if (decoded.isLeft()) {
+    throw Error(
+      `StoreBonusActivationsHistory: cannot decode input [${readableReport(
+        decoded.value
+      )}]`
+    );
+  }
+
+  const documents = decoded.value;
+
   return {
     bonusActivationsLogs: documents.map(d => ({
       PartitionKey: `${d.id}`,
