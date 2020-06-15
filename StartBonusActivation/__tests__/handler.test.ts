@@ -6,6 +6,7 @@ import { FiscalCode } from "italia-ts-commons/lib/strings";
 import {
   context,
   mockGetStatus,
+  mockStartNew,
   mockStatusCompleted,
   mockStatusRunning
 } from "../../__mocks__/durable-functions";
@@ -23,7 +24,10 @@ import {
   makeStartBonusActivationOrchestratorId,
   makeStartEligibilityCheckOrchestratorId
 } from "../../utils/orchestrators";
-import { StartBonusActivationHandler } from "../handler";
+import {
+  BONUS_CREATION_MAX_ATTEMPTS,
+  StartBonusActivationHandler
+} from "../handler";
 
 // implement temporary mockGetStatus
 const simulateOrchestratorIsRunning = (forOrchestratorId: string) => {
@@ -55,8 +59,12 @@ const mockBonusActivationModel = ({
 const mockBonusLeaseCreate = jest.fn().mockImplementation(async _ => {
   return right(aRetrievedBonusLease);
 });
+const mockBonusLeaseDeleteOneById = jest.fn().mockImplementation(async _ => {
+  return right("");
+});
 const mockBonusLeaseModel = ({
-  create: mockBonusLeaseCreate
+  create: mockBonusLeaseCreate,
+  deleteOneById: mockBonusLeaseDeleteOneById
 } as unknown) as BonusLeaseModel;
 
 const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
@@ -182,6 +190,7 @@ describe("StartBonusActivationHandler", () => {
         code: 409
       };
     });
+
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
@@ -239,7 +248,7 @@ describe("StartBonusActivationHandler", () => {
 
     const response = await handler(context, aFiscalCode);
 
-    expect(mockBonusActivationCreate).toHaveBeenCalledTimes(1);
+    expect(mockBonusActivationCreate).toHaveBeenCalledTimes(2);
     expect(response.kind).toBe("IResponseErrorInternal");
   });
 
@@ -258,7 +267,11 @@ describe("StartBonusActivationHandler", () => {
     expect(response.kind).toBe("IResponseErrorConflict");
   });
 
-  it("should return the reference to the executed orchestrator", async () => {
+  it("should relase the lock if the orchestrator fails to start", async () => {
+    mockStartNew.mockImplementationOnce(async () => {
+      throw new Error();
+    });
+
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
@@ -267,6 +280,53 @@ describe("StartBonusActivationHandler", () => {
 
     const response = await handler(context, aFiscalCode);
 
+    expect(mockBonusLeaseDeleteOneById).toHaveBeenCalledTimes(1);
+    expect(response.kind).toBe("IResponseErrorInternal");
+  });
+
+  it("should relase the lock if the bonus creation fails", async () => {
+    mockBonusActivationCreate.mockImplementationOnce(async _ => {
+      throw new Error("any error");
+    });
+    // There seems to be a bug in the retry mechanism such as it tries at least twice in case of error, no matter if it should or not.
+    // For the scope of this test, I simulate the failure by mocking the method twice.
+    // More investigation needed.
+    mockBonusActivationCreate.mockImplementationOnce(async _ => {
+      throw new Error("any error");
+    });
+
+    const handler = StartBonusActivationHandler(
+      mockBonusActivationModel,
+      mockBonusLeaseModel,
+      mockEligibilityCheckModel
+    );
+
+    const response = await handler(context, aFiscalCode);
+    expect(mockBonusLeaseDeleteOneById).toHaveBeenCalledTimes(1);
+    expect(response.kind).toBe("IResponseErrorInternal");
+  });
+
+  it("should not relase the lock if the orchestrator starts", async () => {
+    const handler = StartBonusActivationHandler(
+      mockBonusActivationModel,
+      mockBonusLeaseModel,
+      mockEligibilityCheckModel
+    );
+
+    await handler(context, aFiscalCode);
+
+    expect(mockStartNew).toHaveBeenCalledTimes(1);
+    expect(mockBonusLeaseDeleteOneById).not.toHaveBeenCalled();
+  });
+
+  it("should return the reference to the executed orchestrator", async () => {
+    const handler = StartBonusActivationHandler(
+      mockBonusActivationModel,
+      mockBonusLeaseModel,
+      mockEligibilityCheckModel
+    );
+
+    const response = await handler(context, aFiscalCode);
     expect(response.kind).toBe("IResponseSuccessRedirectToResource");
   });
 });

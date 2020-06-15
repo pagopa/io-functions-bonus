@@ -6,13 +6,12 @@ import {
 import { isLeft } from "fp-ts/lib/Either";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
-import { BonusActivation } from "../generated/models/BonusActivation";
+import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 import { SendBonusActivationFailure } from "../SendBonusActivationActivity/handler";
 import { toApiBonusVacanzaBase } from "../utils/conversions";
 
 export const OrchestratorInput = t.interface({
-  bonusActivationRequest: BonusActivation,
-  familyUID: t.string
+  bonusActivation: BonusActivationWithFamilyUID
 });
 export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
 
@@ -35,7 +34,7 @@ export const handler = function*(
     return false;
   }
   const errorOrBonusVacanzaBase = toApiBonusVacanzaBase(
-    errorOrStartBonusActivationOrchestratorInput.value.bonusActivationRequest
+    errorOrStartBonusActivationOrchestratorInput.value.bonusActivation
   );
   if (isLeft(errorOrBonusVacanzaBase)) {
     context.log.error(`${logPrefix}|Error decoding bonus activation request`);
@@ -73,7 +72,7 @@ export const handler = function*(
   }
   yield context.df.callActivity(
     "UnlockBonusActivationActivity",
-    errorOrStartBonusActivationOrchestratorInput.value.familyUID
+    errorOrStartBonusActivationOrchestratorInput.value.bonusActivation.familyUID
   );
   return true;
 };

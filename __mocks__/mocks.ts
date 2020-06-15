@@ -18,6 +18,8 @@ import {
   StatusEnum as EligibilityCheckSuccessIneligibleStatus
 } from "../generated/models/EligibilityCheckSuccessIneligible";
 
+import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
+import { FamilyUID } from "../generated/models/FamilyUID";
 import {
   NewBonusActivation,
   RetrievedBonusActivation
@@ -27,8 +29,6 @@ import {
   NewBonusLease,
   RetrievedBonusLease
 } from "../models/bonus_lease";
-import { FamilyUID } from "../generated/models/FamilyUID";
-import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 
 export const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
 export const aFamilyUID = "aFamilyUid" as FamilyUID;
@@ -143,7 +143,7 @@ export const aNewBonusActivation: NewBonusActivation = {
 };
 
 export const aBonusLease: BonusLease = {
-  id: aFamilyUID as NonEmptyString
+  id: aFamilyUID
 };
 
 export const aNewBonusLease: NewBonusLease = {

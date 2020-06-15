@@ -39,7 +39,6 @@ import {
   TransientError,
   withRetries
 } from "italia-ts-commons/lib/tasks";
-import { BonusActivation } from "../generated/models/BonusActivation";
 import { BonusActivationStatusEnum } from "../generated/models/BonusActivationStatus";
 import { BonusCode } from "../generated/models/BonusCode";
 import { Dsu } from "../generated/models/Dsu";
@@ -56,10 +55,17 @@ import {
   makeStartEligibilityCheckOrchestratorId
 } from "../utils/orchestrators";
 
+import { readableReport } from "italia-ts-commons/lib/reporters";
 import { Millisecond } from "italia-ts-commons/lib/units";
-import { FamilyMembers } from "../generated/models/FamilyMembers";
-import { BonusLeaseModel, RetrievedBonusLease } from "../models/bonus_lease";
+import { BonusActivation as ApiBonusActivation } from "../generated/definitions/BonusActivation";
+import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
+import { FamilyUID } from "../generated/models/FamilyUID";
+import { BonusLeaseModel } from "../models/bonus_lease";
+import { OrchestratorInput } from "../StartBonusActivationOrchestrator/handler";
+import { toApiBonusActivation } from "../utils/conversions";
 import { generateFamilyUID } from "../utils/hash";
+
+export const BONUS_CREATION_MAX_ATTEMPTS = 5;
 
 const checkOrchestratorIsRunning = (
   client: DurableOrchestrationClient,
@@ -235,9 +241,9 @@ const getLatestValidDSU = (
 const createBonusActivation = (
   bonusActivationModel: BonusActivationModel,
   fiscalCode: FiscalCode,
-  dsu: Dsu,
-  maxAttempts: number = 5
-): TaskEither<IResponseErrorInternal, BonusActivation> => {
+  familyUID: FamilyUID,
+  dsu: Dsu
+): TaskEither<IResponseErrorInternal, BonusActivationWithFamilyUID> => {
   const shouldRetry = (err: QueryError) => {
     // CosmosDB conflict: primary key violation
     return err.code === 409;
@@ -254,7 +260,7 @@ const createBonusActivation = (
           applicantFiscalCode: fiscalCode,
           createdAt: new Date(),
           dsuRequest: dsu,
-          familyUID: generateFamilyUID(dsu.familyMembers),
+          familyUID,
           id: bonusCode as BonusCode & NonEmptyString,
           kind: "INewBonusActivation",
           status: BonusActivationStatusEnum.PROCESSING
@@ -264,12 +270,12 @@ const createBonusActivation = (
   );
 
   return withRetries<Error, RetrievedBonusActivation>(
-    maxAttempts,
+    BONUS_CREATION_MAX_ATTEMPTS,
     () => 50 as Millisecond
   )(retriableBonusActivationTask).mapLeft(errorOrMaxRetry =>
     errorOrMaxRetry === MaxRetries || errorOrMaxRetry === RetryAborted
       ? ResponseErrorInternal(
-          `Error creating BonusActivation: cannot create a db record after ${maxAttempts} attemps`
+          `Error creating BonusActivation: cannot create a db record after ${BONUS_CREATION_MAX_ATTEMPTS} attempts`
         )
       : ResponseErrorInternal(
           `Error creating BonusActivation: ${errorOrMaxRetry.message}`
@@ -277,11 +283,19 @@ const createBonusActivation = (
   );
 };
 
+/**
+ * Try to acquire a lease for the current family.
+ * This is used as a lock: given that a bonus can be requested only once per family, this operation succeeeds only if no lease has been acquired (and not released) before
+ *
+ * @param bonusLeaseModel an instance of BonusLeaseModel
+ * @param familyMembers the family of the requesting user
+ *
+ * @returns either a conflict error or the unique hash id of the family
+ */
 const acquireLockForUserFamily = (
   bonusLeaseModel: BonusLeaseModel,
-  familyMembers: FamilyMembers
-): TaskEither<IResponseErrorConflict, RetrievedBonusLease> => {
-  const familyUID = generateFamilyUID(familyMembers);
+  familyUID: FamilyUID
+): TaskEither<IResponseErrorConflict, FamilyUID> => {
   return fromQueryEither(() =>
     bonusLeaseModel.create(
       {
@@ -290,13 +304,69 @@ const acquireLockForUserFamily = (
       },
       familyUID
     )
-  ).mapLeft(err =>
-    // consider any error a failure for lease already present
-    ResponseErrorConflict(
-      `Failed while acquiring lease for familiUID ${familyUID}: ${err.message}`
-    )
+  ).bimap(
+    err =>
+      // consider any error a failure for lease already prensent
+      ResponseErrorConflict(
+        `Failed while acquiring lease for familyUID ${familyUID}: ${err.message}`
+      ),
+    _ => familyUID
   );
 };
+
+/**
+ * Release the lock that was eventually acquired for this request. A release attempt on a lock that doesn't exist is considered successful.
+ *
+ * @param bonusLeaseModel an instance of BonusLeaseModel
+ * @param familyMembers the family of the requesting user
+ *
+ * @returns either a conflict error or the unique hash id of the family
+ */
+const relaseLockForUserFamily = (
+  bonusLeaseModel: BonusLeaseModel,
+  familyUID: FamilyUID
+): TaskEither<IResponseErrorInternal, FamilyUID> => {
+  return fromQueryEither(() => bonusLeaseModel.deleteOneById(familyUID)).bimap(
+    err => ResponseErrorInternal(`Error releasing lock: ${err.message}`),
+    _ => familyUID
+  );
+};
+
+/**
+ * Start a new instance of StartBonusActivationOrchestrator
+ *
+ * @param client an instance of durable function client
+ * @param bonusActivation a record of bonus activation
+ * @param fiscalCode the fiscal code of the requesting user. Needed to make a unique id for the orchestrator instance
+ *
+ * @returns either an internal error or the id of the created orchestrator
+ */
+const runStartBonusActivationOrchestrator = (
+  client: DurableOrchestrationClient,
+  bonusActivation: BonusActivationWithFamilyUID,
+  fiscalCode: FiscalCode
+): TaskEither<IResponseErrorInternal, string> =>
+  fromEither(OrchestratorInput.decode({ bonusActivation }))
+    .mapLeft(err =>
+      // validate input here, so we can make the http handler fail too. This shouldn't happen anyway
+      ResponseErrorInternal(
+        `Error validating orchestrator input: ${readableReport(err)}`
+      )
+    )
+    .chain(orchestratorInput =>
+      tryCatch(
+        () =>
+          client.startNew(
+            "StartBonusActivationOrchestrator",
+            makeStartBonusActivationOrchestratorId(fiscalCode),
+            orchestratorInput
+          ),
+        _ =>
+          ResponseErrorInternal(
+            `Error starting the orchestrator: ${toError(_).message}`
+          )
+      )
+    );
 
 type StartBonusActivationResponse =
   | IResponseErrorInternal
@@ -304,7 +374,7 @@ type StartBonusActivationResponse =
   | IResponseErrorGone
   | IResponseErrorConflict
   | IResponseSuccessAccepted
-  | IResponseSuccessRedirectToResource<BonusActivation, BonusActivation>;
+  | IResponseSuccessRedirectToResource<ApiBonusActivation, ApiBonusActivation>;
 
 type IStartBonusActivationHandler = (
   context: Context,
@@ -324,25 +394,63 @@ export function StartBonusActivationHandler(
       .chain(_ => checkEligibilityCheckIsRunning(client, fiscalCode))
       .chain(_ => checkBonusActivationIsRunning(client, fiscalCode))
       .chain(_ => getLatestValidDSU(eligibilityCheckModel, fiscalCode))
-      .chain((dsu: Dsu) =>
-        acquireLockForUserFamily(bonusLeaseModel, dsu.familyMembers).map(
-          _ => dsu
+
+      .chain<BonusActivationWithFamilyUID>((dsu: Dsu) => {
+        // this part is on a sub-chain as it handles the lock/unlock protection mechanism
+        // familyUID serves as lock context and thus is needed in scope for every sub-task
+        const familyUID = generateFamilyUID(dsu.familyMembers);
+        return (
+          taskEither
+            .of<StartBonusActivationResponse, void>(void 0)
+            .chain(_ => acquireLockForUserFamily(bonusLeaseModel, familyUID))
+            .chain(_ =>
+              createBonusActivation(
+                bonusActivationModel,
+                fiscalCode,
+                familyUID,
+                dsu
+              )
+            )
+            .chain(bonusActivation =>
+              runStartBonusActivationOrchestrator(
+                client,
+                bonusActivation,
+                fiscalCode
+              ).map(_ => bonusActivation)
+            )
+            // the following is basically:
+            // on right, just pass it
+            // on left, perform unlock but then pass the original left value
+            .foldTaskEither(
+              l =>
+                relaseLockForUserFamily(
+                  bonusLeaseModel,
+                  familyUID
+                ).foldTaskEither(
+                  _ => fromEither(left(l)),
+                  _ => fromEither(left(l))
+                ),
+              r => fromEither(right(r))
+            )
+        );
+      })
+      .chain(bonusActivation =>
+        fromEither(toApiBonusActivation(bonusActivation)).mapLeft(err =>
+          // validate output
+          ResponseErrorInternal(
+            `Error converting bonusActivation to apiBonusActivation: ${readableReport(
+              err
+            )}`
+          )
         )
       )
-      .chain((dsu: Dsu) =>
-        createBonusActivation(bonusActivationModel, fiscalCode, dsu)
-      )
-      .chain(_ => {
-        // TODO: call orchestrator
-        return taskEither.of(_);
-      })
       .fold(
         l => l,
-        bonusActivation =>
+        apiBonusActivation =>
           ResponseSuccessRedirectToResource(
-            bonusActivation,
-            makeBonusActivationResourceUri(fiscalCode, bonusActivation.id),
-            bonusActivation
+            apiBonusActivation,
+            makeBonusActivationResourceUri(fiscalCode, apiBonusActivation.id),
+            apiBonusActivation
           )
       )
       .run();
@@ -359,7 +467,6 @@ export function StartBonusActivation(
     bonusLeaseModel,
     eligibilityCheckModel
   );
-
   const middlewaresWrap = withRequestMiddlewares(
     // Extract Azure Functions bindings
     ContextMiddleware(),
