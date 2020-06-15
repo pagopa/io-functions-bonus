@@ -90,7 +90,7 @@ export const toModelBonusActivation = (
   );
   return BonusActivation.decode(camelCasedUntypedObj).chain(base =>
     BonusActivationWithFamilyUID.decode({
-      ...camelCasedUntypedObj,
+      ...base,
       familyUID: generateFamilyUID(base.dsuRequest.familyMembers)
     })
   );
@@ -102,10 +102,10 @@ export const toModelBonusActivation = (
 export const toApiBonusActivation = (
   domainObj: BonusActivationWithFamilyUID
 ): Either<t.Errors, ApiBonusActivation> => {
-  const {
-    family_members,
-    ...snakeCasedUntypedObj
-  } = renameObjectKeys(domainObj, k => camelCaseToSnakeCase(k));
+  const { familyUID, ...cleanDomainObject } = domainObj;
+  const snakeCasedUntypedObj = renameObjectKeys(cleanDomainObject, k =>
+    camelCaseToSnakeCase(k)
+  );
   return ApiBonusActivation.decode(snakeCasedUntypedObj);
 };
 
