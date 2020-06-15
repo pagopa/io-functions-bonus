@@ -1,4 +1,3 @@
-import { Context } from "@azure/functions";
 import * as documentDbUtils from "io-functions-commons/dist/src/utils/documentdb";
 import { getRequiredStringEnv } from "io-functions-commons/dist/src/utils/env";
 import {
