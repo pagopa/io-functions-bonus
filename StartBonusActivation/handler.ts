@@ -285,7 +285,7 @@ const createBonusActivation = (
 
 /**
  * Try to acquire a lease for the current family.
- * This is user as a lock: given that a bonus can be requested only once per family, this operation succeeeds only if no lease has been acquired (and not released) before
+ * This is used as a lock: given that a bonus can be requested only once per family, this operation succeeeds only if no lease has been acquired (and not released) before
  *
  * @param bonusLeaseModel an instance of BonusLeaseModel
  * @param familyMembers the family of the requesting user
