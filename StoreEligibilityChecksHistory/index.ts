@@ -8,7 +8,7 @@ const index: AzureFunction = async (_: Context, input: unknown) => {
   const decoded = CosmosDbDocumentCollection.decode(input);
   if (decoded.isLeft()) {
     throw Error(
-      `StoreBonusActivationsHistory: cannot decode input [${readableReport(
+      `StoreEligibilityChecksHistory: cannot decode input [${readableReport(
         decoded.value
       )}]`
     );
