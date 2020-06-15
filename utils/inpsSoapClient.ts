@@ -1,7 +1,9 @@
 import { format } from "date-fns";
 import {
+  Either,
   fromNullable as fromNullableEither,
   fromPredicate,
+  left,
   toError
 } from "fp-ts/lib/Either";
 import { fromNullable as fromNullableOption } from "fp-ts/lib/Option";
@@ -17,6 +19,7 @@ import {
 } from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
 import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
 
+import { toString } from "fp-ts/lib/function";
 import {
   AbortableFetch,
   setFetchTimeout,
@@ -51,8 +54,11 @@ const getSOAPRequest = (
 
 const INPS_NAMESPACE = "http://inps.it/ConsultazioneISEE";
 
-// 5 seconds timeout by default
-const DEFAULT_REQUEST_TIMEOUT_MS = 5000;
+const INPS_SOAP_ACTION =
+  "http://inps.it/ConsultazioneISEE/ISvcConsultazione/ConsultazioneSogliaIndicatore";
+
+// 10 seconds timeout by default
+const DEFAULT_REQUEST_TIMEOUT_MS = 10000;
 
 // http when developing locally
 const INPS_SERVICE_PROTOCOL = UrlFromString.decode(
@@ -82,6 +88,101 @@ export interface ISoapClientAsync {
   ) => TaskEither<Error, ConsultazioneSogliaIndicatoreResponse>;
 }
 
+export function parseSoapResponse(
+  responseBody: string
+): Either<Error, ConsultazioneSogliaIndicatoreResponse> {
+  const xmlDocument = new DOMParser().parseFromString(responseBody, "text/xml");
+
+  if (undefined === xmlDocument) {
+    return left(new Error("Cannot parse INPS XML (DOM)"));
+  }
+
+  return fromNullableEither(
+    new Error("Missing ConsultazioneSogliaIndicatoreResult")
+  )(
+    xmlDocument
+      .getElementsByTagNameNS(
+        INPS_NAMESPACE,
+        "ConsultazioneSogliaIndicatoreResult"
+      )
+      .item(0)
+  )
+    .map(_ => ({
+      IdRichiesta: fromNullableOption(
+        _.getElementsByTagNameNS(INPS_NAMESPACE, "IdRichiesta").item(0)
+      )
+        .mapNullable(id => id.textContent?.trim())
+        .map<number | string>(id => parseInt(id, 10))
+        .toUndefined(),
+
+      Esito: _.getElementsByTagNameNS(INPS_NAMESPACE, "Esito")
+        .item(0)
+        ?.textContent?.trim(),
+
+      DescrizioneErrore: _.getElementsByTagNameNS(
+        INPS_NAMESPACE,
+        "DescrizioneErrore"
+      )
+        .item(0)
+        ?.textContent?.trim(),
+
+      DatiIndicatore: fromNullableOption(
+        _.getElementsByTagNameNS(INPS_NAMESPACE, "DatiIndicatore").item(0)
+      )
+        .map(DatiIndicatore => ({
+          DataPresentazioneDSU: DatiIndicatore.getAttribute(
+            "DataPresentazioneDSU"
+          ),
+
+          ProtocolloDSU: DatiIndicatore.getAttribute("ProtocolloDSU"),
+
+          SottoSoglia: DatiIndicatore.getAttribute("SottoSoglia"),
+
+          TipoIndicatore: DatiIndicatore.getAttribute("TipoIndicatore"),
+
+          PresenzaDifformita: DatiIndicatore.getAttribute("PresenzaDifformita")
+        }))
+        .toUndefined()
+    }))
+    .chain(_ => {
+      return ConsultazioneSogliaIndicatoreResponse.decode({
+        ..._,
+        DatiIndicatore: _.DatiIndicatore
+          ? {
+              ..._.DatiIndicatore,
+              Componenti: Array.from(
+                xmlDocument.getElementsByTagNameNS(INPS_NAMESPACE, "Componente")
+              ).map(familyMemberElement => ({
+                CodiceFiscale: familyMemberElement.getAttribute(
+                  "CodiceFiscale"
+                ),
+                Cognome: familyMemberElement.getAttribute("Cognome"),
+                Nome: familyMemberElement.getAttribute("Nome")
+              }))
+            }
+          : undefined
+      }).mapLeft(error => {
+        return new Error(
+          `Unexpected response: [Error: ${readableReport(error)}]`
+        );
+      });
+    })
+    .chain(
+      fromPredicate(
+        _ =>
+          // Final states
+          _.Esito === EsitoEnum.OK ||
+          _.Esito === EsitoEnum.DATI_NON_TROVATI ||
+          _.Esito === EsitoEnum.RICHIESTA_INVALIDA,
+        // Retry for DATABASE_OFFLINE, ERRORE_INTERNO
+        err =>
+          new Error(
+            `INPS SOAP Error: [Esito:${err.Esito}|Message:${err.DescrizioneErrore}]`
+          )
+      )
+    );
+}
+
 export function createClient(endpoint: NonEmptyString): ISoapClientAsync {
   return {
     ConsultazioneSogliaIndicatore: (
@@ -97,107 +198,30 @@ export function createClient(endpoint: NonEmptyString): ISoapClientAsync {
 
         const response = await httpFetch(`${endpoint}`, {
           body: requestPayload,
+          headers: {
+            SOAPAction: INPS_SOAP_ACTION
+          },
           method: "POST"
         });
-        if (response.status === 200) {
-          const responseBody = await response.text();
-          const xmlDocument = new DOMParser().parseFromString(
-            responseBody,
-            "text/xml"
+
+        const responseBody = await response.text();
+
+        if (response.status !== 200) {
+          throw new Error(
+            `Unexpected response from INPS|RESPONSE=${
+              response.status
+            }:${toString(responseBody)}`
           );
-          return fromNullableEither(
-            new Error("Missing ConsultazioneSogliaIndicatoreResult")
-          )(
-            xmlDocument
-              .getElementsByTagNameNS(
-                INPS_NAMESPACE,
-                "ConsultazioneSogliaIndicatoreResult"
-              )
-              .item(0)
-          )
-            .map(_ => ({
-              IdRichiesta: fromNullableOption(
-                _.getElementsByTagNameNS(INPS_NAMESPACE, "IdRichiesta").item(0)
-              )
-                .mapNullable(id => id.textContent?.trim())
-                .map<number | string>(id => parseInt(id, 10))
-                .toUndefined(),
-
-              Esito: _.getElementsByTagNameNS(INPS_NAMESPACE, "Esito")
-                .item(0)
-                ?.textContent?.trim(),
-
-              DescrizioneErrore: _.getElementsByTagNameNS(
-                INPS_NAMESPACE,
-                "DescrizioneErrore"
-              )
-                .item(0)
-                ?.textContent?.trim(),
-
-              DatiIndicatore: fromNullableOption(
-                _.getElementsByTagNameNS(INPS_NAMESPACE, "DatiIndicatore").item(
-                  0
-                )
-              )
-                .map(DatiIndicatore => ({
-                  DataPresentazioneDSU: DatiIndicatore.getAttribute(
-                    "DataPresentazioneDSU"
-                  ),
-
-                  ProtocolloDSU: DatiIndicatore.getAttribute("ProtocolloDSU"),
-
-                  SottoSoglia: DatiIndicatore.getAttribute("SottoSoglia"),
-
-                  TipoIndicatore: DatiIndicatore.getAttribute("TipoIndicatore"),
-
-                  PresenzaDifformita: DatiIndicatore.getAttribute(
-                    "PresenzaDifformita"
-                  )
-                }))
-                .toUndefined()
-            }))
-            .chain(_ => {
-              return ConsultazioneSogliaIndicatoreResponse.decode({
-                ..._,
-                DatiIndicatore: {
-                  ..._.DatiIndicatore,
-                  Componenti: Array.from(
-                    xmlDocument.getElementsByTagNameNS(
-                      INPS_NAMESPACE,
-                      "Componente"
-                    )
-                  ).map(familyMemberElement => ({
-                    CodiceFiscale: familyMemberElement.getAttribute(
-                      "CodiceFiscale"
-                    ),
-                    Cognome: familyMemberElement.getAttribute("Cognome"),
-                    Nome: familyMemberElement.getAttribute("Nome")
-                  }))
-                }
-              }).mapLeft(error => {
-                return new Error(
-                  `Unexpected response: [Error: ${readableReport(error)}]`
-                );
-              });
-            })
-            .chain(
-              fromPredicate(
-                _ =>
-                  _.Esito === EsitoEnum.OK ||
-                  _.Esito === EsitoEnum.DATI_NON_TROVATI ||
-                  _.Esito === EsitoEnum.RICHIESTA_INVALIDA,
-                err =>
-                  new Error(
-                    `INPS SOAP Error: [Esito:${err.Esito}|Message:${err.DescrizioneErrore}]`
-                  )
-              )
-            )
-            .fold(
-              _ => Promise.reject(_),
-              _ => Promise.resolve(_)
-            );
         }
-        return Promise.reject(new Error("Unexpected statusCode response"));
+
+        return parseSoapResponse(responseBody).fold(
+          err => {
+            throw new Error(
+              `Cannot parse response from INPS|ERROR=${toString(err)}`
+            );
+          },
+          async parsedDsu => parsedDsu
+        );
       }, toError);
     }
   };

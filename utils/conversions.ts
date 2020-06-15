@@ -2,13 +2,12 @@
  * Map API objects to domain objects
  */
 
-import { rights } from "fp-ts/lib/Array";
 import { Either, isLeft } from "fp-ts/lib/Either";
 import * as NonEmptyArray from "fp-ts/lib/NonEmptyArray";
 import { isNone } from "fp-ts/lib/Option";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { BonusVacanzaBase as ApiBonusVacanzaBase } from "../generated/ade/BonusVacanzaBase";
 import { BonusActivation as ApiBonusActivation } from "../generated/definitions/BonusActivation";
 import { BonusActivationItem } from "../generated/definitions/BonusActivationItem";
@@ -18,22 +17,18 @@ import {
 } from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
 import { EligibilityCheck as ApiEligibilityCheck } from "../generated/definitions/EligibilityCheck";
 import {
-  EligibilityCheckFailure,
+  EligibilityCheckFailure as ApiEligibilityCheckFailure,
   ErrorEnum
 } from "../generated/definitions/EligibilityCheckFailure";
 import { StatusEnum as ErrorStatusEnum } from "../generated/definitions/EligibilityCheckFailure";
 import {
-  EligibilityCheckSuccessEligible,
+  EligibilityCheckSuccessEligible as ApiEligibilityCheckSuccessEligible,
   StatusEnum as EligibleStatus
 } from "../generated/definitions/EligibilityCheckSuccessEligible";
 import {
-  EligibilityCheckSuccessIneligible,
+  EligibilityCheckSuccessIneligible as ApiEligibilityCheckSuccessIneligible,
   StatusEnum as IneligibleStatus
 } from "../generated/definitions/EligibilityCheckSuccessIneligible";
-import { FamilyMember } from "../generated/definitions/FamilyMember";
-import { FamilyMembers } from "../generated/definitions/FamilyMembers";
-import { MaxBonusAmount } from "../generated/definitions/MaxBonusAmount";
-import { MaxBonusTaxBenefit } from "../generated/definitions/MaxBonusTaxBenefit";
 import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
 import { Timestamp } from "../generated/definitions/Timestamp";
 import { BonusActivation } from "../generated/models/BonusActivation";
@@ -45,15 +40,12 @@ import { generateFamilyUID } from "./hash";
 import { renameObjectKeys } from "./rename_keys";
 import { camelCaseToSnakeCase, snakeCaseToCamelCase } from "./strings";
 
-// 150 EUR for one member families
-const ONE_FAMILY_MEMBER_AMOUNT = 150 as MaxBonusAmount;
-// 250 EUR for two member families
-const TWO_FAMILY_MEMBERS_AMOUNT = 250 as MaxBonusAmount;
-// 500 EUR for three or more member families
-const THREE_OR_MORE_FAMILY_MEMBERS_AMOUNT = 500 as MaxBonusAmount;
-
-// Max tax benefit is 20% of max bonus amount
-const TAX_BENEFIT_PERCENT = 20;
+import {
+  BonusAmount,
+  OneFamilyMemberBonus,
+  ThreeOrMoreFamilyMembersBonus,
+  TwoFamilyMembersBonus
+} from "../models/bonus_amount";
 
 /**
  * Maps EligibilityCheck API object into an EligibilityCheck domain object
@@ -141,48 +133,53 @@ export const toApiUserBonus = (domainObj: UserBonus): BonusActivationItem => {
  * Returns the maximum bonus amount in Euros from the total number of family
  * members.
  */
-function calculateMaxBonusAmountFromFamilyMemberCount(
+export function calculateMaxBonusAmountFromFamilyMemberCount(
   familyMemberCount: FamilyMemberCount
-): MaxBonusAmount {
+): BonusAmount {
   if (familyMemberCount > 2) {
-    return THREE_OR_MORE_FAMILY_MEMBERS_AMOUNT;
+    return ThreeOrMoreFamilyMembersBonus;
   }
   if (familyMemberCount === 2) {
-    return TWO_FAMILY_MEMBERS_AMOUNT;
+    return TwoFamilyMembersBonus;
   }
   if (familyMemberCount === 1) {
-    return ONE_FAMILY_MEMBER_AMOUNT;
+    return OneFamilyMemberBonus;
   }
   throw new Error(
     `FATAL: family member count is not greater than 0 [${familyMemberCount}]`
   );
 }
 
-/**
- * Calculate the max amount of tax benefit from a MaxBonusAmount
- */
-function calculateMaxBonusTaxBenefit(
-  maxBonusAmount: MaxBonusAmount
-): MaxBonusTaxBenefit {
-  return Math.floor(
-    (TAX_BENEFIT_PERCENT * maxBonusAmount) / 100
-  ) as MaxBonusTaxBenefit;
-}
-
-export const toEligibilityCheckFromDSU = (
+export const toApiEligibilityCheckFromDSU = (
   data: ConsultazioneSogliaIndicatoreResponse,
   fiscalCode: FiscalCode,
   validBefore: Timestamp
-): ApiEligibilityCheck => {
+): Either<t.Errors, ApiEligibilityCheck> => {
+  if (data.Esito !== EsitoEnum.OK) {
+    return ApiEligibilityCheckFailure.decode({
+      error:
+        data.Esito === EsitoEnum.DATI_NON_TROVATI
+          ? ErrorEnum.DATA_NOT_FOUND
+          : data.Esito === EsitoEnum.RICHIESTA_INVALIDA
+          ? ErrorEnum.INVALID_REQUEST
+          : ErrorEnum.INTERNAL_ERROR,
+      error_description: data.DescrizioneErrore || `ERROR: Esito=${data.Esito}`,
+      id: fiscalCode,
+      status: ErrorStatusEnum.FAILURE
+    });
+  }
+
+  // EsitoEnum = OK
+
   const maybeFamilyMembers = NonEmptyArray.fromArray([
     ...(data.DatiIndicatore?.Componenti || [])
   ]);
 
   if (isNone(maybeFamilyMembers)) {
-    return EligibilityCheckFailure.encode({
+    return ApiEligibilityCheckFailure.decode({
       error: ErrorEnum.INTERNAL_ERROR,
       error_description: `DatiIndicatore.Componenti is empty`,
-      id: (fiscalCode as unknown) as NonEmptyString,
+      id: fiscalCode,
       status: ErrorStatusEnum.FAILURE
     });
   }
@@ -193,12 +190,12 @@ export const toEligibilityCheckFromDSU = (
   );
 
   if (isLeft(validatedFamilyMemberCount)) {
-    return EligibilityCheckFailure.encode({
+    return ApiEligibilityCheckFailure.decode({
       error: ErrorEnum.INTERNAL_ERROR,
       error_description: `Family member count is out of range [${readableReport(
         validatedFamilyMemberCount.value
       )}]`,
-      id: (fiscalCode as unknown) as NonEmptyString,
+      id: fiscalCode,
       status: ErrorStatusEnum.FAILURE
     });
   }
@@ -208,54 +205,32 @@ export const toEligibilityCheckFromDSU = (
     familyMemberCount
   );
 
-  const validFamilyMembers: FamilyMembers = data.DatiIndicatore?.Componenti
-    ? rights(
-        data.DatiIndicatore.Componenti.map(c =>
-          FamilyMember.decode({
-            fiscal_code: c.CodiceFiscale,
-            name: c.Nome,
-            surname: c.Cognome
-          })
-        )
-      )
-    : [];
-
-  if (data.Esito !== EsitoEnum.OK) {
-    return EligibilityCheckFailure.encode({
-      error:
-        data.Esito === EsitoEnum.DATI_NON_TROVATI
-          ? ErrorEnum.DATA_NOT_FOUND
-          : data.Esito === EsitoEnum.RICHIESTA_INVALIDA
-          ? ErrorEnum.INVALID_REQUEST
-          : ErrorEnum.INTERNAL_ERROR,
-      error_description: data.DescrizioneErrore || "Esito value is not OK",
-      id: (fiscalCode as unknown) as NonEmptyString,
-      status: ErrorStatusEnum.FAILURE
-    });
-  }
-
   if (data.DatiIndicatore?.SottoSoglia === SiNoTypeEnum.SI) {
-    return (EligibilityCheckSuccessEligible.encode({
+    return ApiEligibilityCheckSuccessEligible.decode({
       dsu_request: {
         dsu_created_at: data.DatiIndicatore.DataPresentazioneDSU,
-        dsu_protocol_id: (data.DatiIndicatore.ProtocolloDSU ||
-          "") as NonEmptyString,
-        family_members: validFamilyMembers,
+        dsu_protocol_id: data.DatiIndicatore.ProtocolloDSU,
+        family_members: familyMembers
+          .map(_ => ({
+            fiscal_code: _.CodiceFiscale,
+            name: _.Nome,
+            surname: _.Cognome
+          }))
+          .toArray(),
         has_discrepancies:
           data.DatiIndicatore.PresenzaDifformita === SiNoTypeEnum.SI,
         isee_type: data.DatiIndicatore.TipoIndicatore,
-        max_amount: bonusValue,
-        max_tax_benefit: calculateMaxBonusTaxBenefit(bonusValue),
-        // tslint:disable-next-line: no-useless-cast
-        request_id: data.IdRichiesta.toString() as NonEmptyString
+        max_amount: bonusValue.max_amount,
+        max_tax_benefit: bonusValue.max_tax_benefit,
+        request_id: data.IdRichiesta
       },
-      id: (fiscalCode as unknown) as NonEmptyString,
+      id: fiscalCode,
       status: EligibleStatus.ELIGIBLE,
       valid_before: validBefore
-    }) as unknown) as EligibilityCheckSuccessEligible;
+    });
   } else {
-    return EligibilityCheckSuccessIneligible.encode({
-      id: (fiscalCode as unknown) as NonEmptyString,
+    return ApiEligibilityCheckSuccessIneligible.decode({
+      id: fiscalCode,
       status: IneligibleStatus.INELIGIBLE
     });
   }

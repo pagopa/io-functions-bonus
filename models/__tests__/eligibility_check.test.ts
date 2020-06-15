@@ -12,8 +12,6 @@ import * as DocumentDbUtils from "io-functions-commons/dist/src/utils/documentdb
 import { EligibilityCheck } from "../../generated/models/EligibilityCheck";
 import { EligibilityCheckSuccess } from "../../generated/models/EligibilityCheckSuccess";
 import { StatusEnum as EligibilityCheckSuccessEligibleStatus } from "../../generated/models/EligibilityCheckSuccessEligible";
-import { MaxBonusAmount } from "../../generated/models/MaxBonusAmount";
-import { MaxBonusTaxBenefit } from "../../generated/models/MaxBonusTaxBenefit";
 
 const aDatabaseUri = DocumentDbUtils.getDatabaseUri("mockdb" as NonEmptyString);
 const aCollectionUri = DocumentDbUtils.getCollectionUri(
@@ -36,9 +34,9 @@ const aEligibilityCheckSuccess: EligibilityCheckSuccess = {
     ],
     hasDiscrepancies: true,
     iseeType: "some isee type",
-    maxAmount: 200 as MaxBonusAmount,
-    maxTaxBenefit: 50 as MaxBonusTaxBenefit,
-    requestId: "123" as NonEmptyString
+    maxAmount: 250,
+    maxTaxBenefit: 50,
+    requestId: 123
   },
   id: (aFiscalCode as unknown) as NonEmptyString,
   status: EligibilityCheckSuccessEligibleStatus.ELIGIBLE,

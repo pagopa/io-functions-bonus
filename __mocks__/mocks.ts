@@ -18,10 +18,6 @@ import {
   StatusEnum as EligibilityCheckSuccessIneligibleStatus
 } from "../generated/models/EligibilityCheckSuccessIneligible";
 
-import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
-import { FamilyUID } from "../generated/models/FamilyUID";
-import { MaxBonusAmount } from "../generated/models/MaxBonusAmount";
-import { MaxBonusTaxBenefit } from "../generated/models/MaxBonusTaxBenefit";
 import {
   NewBonusActivation,
   RetrievedBonusActivation
@@ -31,6 +27,8 @@ import {
   NewBonusLease,
   RetrievedBonusLease
 } from "../models/bonus_lease";
+import { FamilyUID } from "../generated/models/FamilyUID";
+import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 
 export const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
 export const aFamilyUID = "aFamilyUid" as FamilyUID;
@@ -52,9 +50,9 @@ export const aDsu: Dsu = {
   ],
   hasDiscrepancies: false,
   iseeType: "iseeType",
-  maxAmount: 200 as MaxBonusAmount,
-  maxTaxBenefit: 80 as MaxBonusTaxBenefit,
-  requestId: "aRequestId" as NonEmptyString
+  maxAmount: 250,
+  maxTaxBenefit: 50,
+  requestId: 123
 };
 
 export const aEligibilityCheckSuccessEligible: EligibilityCheckSuccessEligible = {
@@ -113,7 +111,7 @@ export const aBonusActivation: BonusActivation = {
 
     maxTaxBenefit: (100 as unknown) as IWithinRangeIntegerTag<30, 101> & number,
 
-    requestId: "aRequestId" as NonEmptyString,
+    requestId: 123,
 
     iseeType: "aISEEtype",
 
