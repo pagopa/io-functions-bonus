@@ -24,10 +24,7 @@ import {
   makeStartBonusActivationOrchestratorId,
   makeStartEligibilityCheckOrchestratorId
 } from "../../utils/orchestrators";
-import {
-  BONUS_CREATION_MAX_ATTEMPTS,
-  StartBonusActivationHandler
-} from "../handler";
+import { StartBonusActivationHandler } from "../handler";
 
 // implement temporary mockGetStatus
 const simulateOrchestratorIsRunning = (forOrchestratorId: string) => {
