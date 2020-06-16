@@ -1,6 +1,5 @@
 import { Context } from "@azure/functions";
 import { isBefore } from "date-fns";
-import { QueryError } from "documentdb";
 import * as df from "durable-functions";
 import { DurableOrchestrationClient } from "durable-functions/lib/src/durableorchestrationclient";
 import * as express from "express";
@@ -64,6 +63,10 @@ import { BonusLeaseModel } from "../models/bonus_lease";
 import { OrchestratorInput } from "../StartBonusActivationOrchestrator/handler";
 import { toApiBonusActivation } from "../utils/conversions";
 import { generateFamilyUID } from "../utils/hash";
+import {
+  fromQueryEither,
+  QueryError
+} from "io-functions-commons/dist/src/utils/documentdb";
 
 export const BONUS_CREATION_MAX_ATTEMPTS = 5;
 
@@ -79,20 +82,6 @@ const makeBonusActivationResourceUri = (
   fiscalcode: FiscalCode,
   bonusId: string
 ) => `/bonus/vacanze/activations/${fiscalcode}/${bonusId}`;
-
-/**
- * Converts a Promise<Either> into a TaskEither
- * This is needed because our models return unconvenient type. Both left and rejection cases are handled as a TaskEither left
- * @param lazyPromise a lazy promise to convert
- *
- * @returns either the query result or a query failure
- */
-const fromQueryEither = <R>(
-  lazyPromise: () => Promise<Either<QueryError | Error, R>>
-): TaskEither<Error, R> =>
-  tryCatch(lazyPromise, toError).chain(errorOrResult =>
-    fromEither(errorOrResult).mapLeft(toError)
-  );
 
 /**
  * Converts a Promise<Either> into a RetriableTask
@@ -206,9 +195,7 @@ const getLatestValidDSU = (
     eligibilityCheckModel.find(fiscalCode, fiscalCode)
   ).foldTaskEither(
     err =>
-      fromEither(
-        left(ResponseErrorInternal(`Error reading DSU: ${err.message}`))
-      ),
+      fromEither(left(ResponseErrorInternal(`Error reading DSU: ${err.body}`))),
     maybeDoc => {
       return maybeDoc.fold<
         TaskEither<
@@ -252,10 +239,14 @@ const createBonusActivation = (
   const retriableBonusActivationTask = tryCatch(
     genRandomBonusCode,
     toError
-  ).foldTaskEither<Error | TransientError, RetrievedBonusActivation>(
-    _ => fromEither(left(_)),
+  ).foldTaskEither<QueryError | TransientError, RetrievedBonusActivation>(
+    _ =>
+      fromEither(left(_)).mapLeft(err => ({
+        code: "error",
+        body: err.message
+      })),
     (bonusCode: BonusCode) =>
-      fromQueryEitherToRetriableTask(() => {
+      fromQueryEither(() => {
         const bonusActivation: NewBonusActivation = {
           applicantFiscalCode: fiscalCode,
           createdAt: new Date(),
@@ -266,7 +257,7 @@ const createBonusActivation = (
           status: BonusActivationStatusEnum.PROCESSING
         };
         return bonusActivationModel.create(bonusActivation, fiscalCode);
-      }, shouldRetry)
+      }).mapLeft(err => (shouldRetry(err) ? TransientError : err))
   );
 
   return withRetries<Error, RetrievedBonusActivation>(
@@ -308,7 +299,7 @@ const acquireLockForUserFamily = (
     err =>
       // consider any error a failure for lease already prensent
       ResponseErrorConflict(
-        `Failed while acquiring lease for familyUID ${familyUID}: ${err.message}`
+        `Failed while acquiring lease for familyUID ${familyUID}: ${err.body}`
       ),
     _ => familyUID
   );
@@ -327,7 +318,7 @@ const relaseLockForUserFamily = (
   familyUID: FamilyUID
 ): TaskEither<IResponseErrorInternal, FamilyUID> => {
   return fromQueryEither(() => bonusLeaseModel.deleteOneById(familyUID)).bimap(
-    err => ResponseErrorInternal(`Error releasing lock: ${err.message}`),
+    err => ResponseErrorInternal(`Error releasing lock: ${err.body}`),
     _ => familyUID
   );
 };
