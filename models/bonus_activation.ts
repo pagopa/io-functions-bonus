@@ -1,5 +1,5 @@
 import * as DocumentDb from "documentdb";
-import { Either } from "fp-ts/lib/Either";
+import { Either, left, right } from "fp-ts/lib/Either";
 import { Option } from "fp-ts/lib/Option";
 import * as DocumentDbUtils from "io-functions-commons/dist/src/utils/documentdb";
 import { DocumentDbModel } from "io-functions-commons/dist/src/utils/documentdb_model";
@@ -96,6 +96,30 @@ export class BonusActivationModel extends DocumentDbModel<
         query: `SELECT b as bonusActivation FROM b JOIN familyMember IN b.dsuRequest.familyMembers WHERE b.${BONUS_ACTIVATION_MODEL_PK_FIELD} = @bonusId AND familyMember.fiscalCode = @fiscalCode`
       },
       bonusId
+    );
+  }
+
+  /**
+   * Updates a document by replacing it
+   * @param documentId
+   *
+   * @returns either a query error or the new document
+   */
+  public replace(
+    document: BonusActivationWithFamilyUID
+  ): Promise<Either<DocumentDb.QueryError, RetrievedBonusActivation>> {
+    const documentUri = DocumentDbUtils.getDocumentUri(
+      this.collectionUri,
+      document.id
+    );
+    return new Promise(resolve =>
+      this.dbClient.replaceDocument(
+        documentUri.uri,
+        document,
+        { partitionKey: document.id },
+        (err: DocumentDb.QueryError, newDoc: DocumentDb.RetrievedDocument) =>
+          resolve(err ? left(err) : right(toRetrieved(newDoc)))
+      )
     );
   }
 }

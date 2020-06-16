@@ -9,7 +9,8 @@ import {
 import * as DocumentDbUtils from "io-functions-commons/dist/src/utils/documentdb";
 import {
   aNewBonusActivation,
-  aRetrievedBonusActivation
+  aRetrievedBonusActivation,
+  aBonusActivationWithFamilyUID
 } from "../../__mocks__/mocks";
 
 const aDatabaseUri = DocumentDbUtils.getDatabaseUri("mockdb" as NonEmptyString);
@@ -121,6 +122,53 @@ describe("BonusActivationModel#find", () => {
       aRetrievedBonusActivation.id,
       aRetrievedBonusActivation.id
     );
+
+    expect(isLeft(result)).toBeTruthy();
+    if (isLeft(result)) {
+      expect(result.value).toEqual("error");
+    }
+  });
+});
+
+describe("BonusActivationModel#replace", () => {
+  it("should return the updated document", async () => {
+    const clientMock = {
+      replaceDocument: jest.fn((_, __, ___, cb) =>
+        cb(undefined, aRetrievedBonusActivation)
+      )
+    };
+
+    const model = new BonusActivationModel(
+      (clientMock as unknown) as DocumentDb.DocumentClient,
+      aCollectionUri
+    );
+
+    const result = await model.replace(aBonusActivationWithFamilyUID);
+
+    expect(clientMock.replaceDocument).toHaveBeenCalledTimes(1);
+    expect(clientMock.replaceDocument.mock.calls[0][0]).toEqual(
+      `dbs/mockdb/colls/${BONUS_ACTIVATION_COLLECTION_NAME}/docs/${aBonusActivationWithFamilyUID.id}`
+    );
+    expect(clientMock.replaceDocument.mock.calls[0][2]).toEqual({
+      partitionKey: aBonusActivationWithFamilyUID.id
+    });
+    expect(isRight(result)).toBeTruthy();
+    if (isRight(result)) {
+      expect(result.value).toEqual(aRetrievedBonusActivation);
+    }
+  });
+
+  it("should return the error", async () => {
+    const clientMock = {
+      replaceDocument: jest.fn((_, __, ___, cb) => cb("error"))
+    };
+
+    const model = new BonusActivationModel(
+      (clientMock as unknown) as DocumentDb.DocumentClient,
+      aCollectionUri
+    );
+
+    const result = await model.replace(aBonusActivationWithFamilyUID);
 
     expect(isLeft(result)).toBeTruthy();
     if (isLeft(result)) {
