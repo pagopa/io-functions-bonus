@@ -57,14 +57,11 @@ export const getEligibilityCheckActivityHandler = (
           })
           .map(_ => ({ dsu: _, fiscalCode }));
       })
-      .mapLeft(err => {
-        context.log.error(`EligibilityCheckActivity|ERROR|${err.message}`);
-        return err;
-      })
       .fold(
         // Reject / trow fail the Activity execution
         // If called with `callActivityWithRetry` the execution will be restarted
         err => {
+          context.log.error(`EligibilityCheckActivity|ERROR|${err.message}`);
           throw err;
         },
         async _ => ({
