@@ -1,6 +1,6 @@
 // tslint:disable: no-identical-functions
 
-import { right } from "fp-ts/lib/Either";
+import { right, left } from "fp-ts/lib/Either";
 import { context } from "../../__mocks__/durable-functions";
 import {
   aBonusActivationWithFamilyUID,
@@ -12,7 +12,8 @@ import { EligibilityCheckModel } from "../../models/eligibility_check";
 import {
   FailedBonusActivationHandler,
   FailedBonusActivationSuccess,
-  InvalidInputFailure
+  InvalidInputFailure,
+  UnhandledFailure
 } from "../handler";
 
 // mockEligibilityCheckModel
@@ -61,6 +62,44 @@ describe("FailedBonusActivationHandler", () => {
     ).toBeTruthy();
   });
 
+  it("should return a success if dsu fails to delete", async () => {
+    mockEligibilityCheckDeleteOneById.mockImplementationOnce(async () => {
+      throw new Error("any error");
+    });
+
+    const handler = FailedBonusActivationHandler(
+      mockBonusActivationModel,
+      mockBonusLeaseModel,
+      mockEligibilityCheckModel
+    );
+
+    const response = await handler(context, {
+      bonusActivation: aBonusActivationWithFamilyUID
+    });
+    expect(
+      FailedBonusActivationSuccess.decode(response).isRight()
+    ).toBeTruthy();
+  });
+
+  it("should return a success if bonus fails to update", async () => {
+    mockBonusActivationCreateOrUpdate.mockImplementationOnce(async () => {
+      throw new Error("any error");
+    });
+
+    const handler = FailedBonusActivationHandler(
+      mockBonusActivationModel,
+      mockBonusLeaseModel,
+      mockEligibilityCheckModel
+    );
+
+    const response = await handler(context, {
+      bonusActivation: aBonusActivationWithFamilyUID
+    });
+    expect(
+      FailedBonusActivationSuccess.decode(response).isRight()
+    ).toBeTruthy();
+  });
+
   it("should fail on invalid input", async () => {
     const handler = FailedBonusActivationHandler(
       mockBonusActivationModel,
@@ -72,5 +111,22 @@ describe("FailedBonusActivationHandler", () => {
       bonusActivation: { foo: "bar" }
     });
     expect(InvalidInputFailure.decode(response).isRight()).toBeTruthy();
+  });
+
+  it("should fail if lock fails to release", async () => {
+    mockBonusLeaseDeleteOneById.mockImplementationOnce(async () => {
+      throw new Error("any error");
+    });
+
+    const handler = FailedBonusActivationHandler(
+      mockBonusActivationModel,
+      mockBonusLeaseModel,
+      mockEligibilityCheckModel
+    );
+
+    const response = await handler(context, {
+      bonusActivation: aBonusActivationWithFamilyUID
+    });
+    expect(UnhandledFailure.decode(response).isRight()).toBeTruthy();
   });
 });

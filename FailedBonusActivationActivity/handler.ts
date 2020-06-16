@@ -90,21 +90,16 @@ const fromQueryEither = <R>(
 const relaseLockForUserFamily = (
   bonusLeaseModel: BonusLeaseModel,
   familyUID: FamilyUID
-): TaskEither<UnhandledFailure, FamilyUID> => {
-  return fromQueryEither(() => bonusLeaseModel.deleteOneById(familyUID)).bimap(
-    err =>
-      UnhandledFailure.encode({
-        kind: "UNHANDLED_FAILURE",
-        reason: `Error releasing lock: ${err.message}`
-      }),
-    _ => familyUID
+): TaskEither<Error, void> => {
+  return fromQueryEither(() => bonusLeaseModel.deleteOneById(familyUID)).map(
+    _ => void 0
   );
 };
 
 const updateBonusAsFailed = (
   bonusActivationModel: BonusActivationModel,
   bonusActivation: BonusActivationWithFamilyUID
-): TaskEither<UnhandledFailure, RetrievedBonusActivation> => {
+): TaskEither<Error, RetrievedBonusActivation> => {
   return fromQueryEither(() => {
     const bonusToUpdate: NewBonusActivation = {
       ...bonusActivation,
@@ -116,28 +111,18 @@ const updateBonusAsFailed = (
       bonusToUpdate,
       bonusActivation.id
     );
-  }).mapLeft(err =>
-    UnhandledFailure.encode({
-      kind: "UNHANDLED_FAILURE",
-      reason: err.message
-    })
-  );
+  });
 };
 
 const deleteEligibilityCheck = (
   eligibilityCheckModel: EligibilityCheckModel,
   bonusActivation: BonusActivationWithFamilyUID
-): TaskEither<TransientFailure, BonusActivationWithFamilyUID> => {
+): TaskEither<Error, string> => {
   return fromQueryEither(() =>
     eligibilityCheckModel.deleteOneById(
       bonusActivation.id as BonusCode & NonEmptyString
     )
-  )
-    .mapLeft(_ =>
-      // for now I consider this failures as transient, I'll ask a retry to the orchestrator
-      TransientFailure.encode({ kind: "TRANSIENT" })
-    )
-    .map(_ => bonusActivation);
+  );
 };
 
 /**
@@ -153,7 +138,7 @@ export function FailedBonusActivationHandler(
   eligibilityCheckModel: EligibilityCheckModel
 ): IFailedBonusActivationHandler {
   return async (
-    __: Context,
+    context: Context,
     input: unknown
   ): Promise<FailedBonusActivationResult> => {
     return taskEither
@@ -165,23 +150,48 @@ export function FailedBonusActivationHandler(
       )
       .chain(bonusActivation =>
         deleteEligibilityCheck(eligibilityCheckModel, bonusActivation)
+          // just ignore this error
+          .foldTaskEither(
+            err => {
+              context.log.warn(
+                `FailedBonusActivationHandler|WARN|Failed deleting dsu: ${err.message}`
+              );
+              return taskEither.of(bonusActivation);
+            },
+            _ => taskEither.of(bonusActivation)
+          )
       )
       .chain(bonusActivation =>
         updateBonusAsFailed(bonusActivationModel, bonusActivation)
+          // just ignore this error
+          .foldTaskEither(
+            err => {
+              context.log.warn(
+                `FailedBonusActivationHandler|WARN|Failed updating bonus: ${err.message}`
+              );
+              return taskEither.of(bonusActivation);
+            },
+            _ => taskEither.of(bonusActivation)
+          )
       )
       .chain(bonusActivation =>
-        relaseLockForUserFamily(bonusLeaseModel, bonusActivation.familyUID)
+        relaseLockForUserFamily(
+          bonusLeaseModel,
+          bonusActivation.familyUID
+        ).mapLeft(err => {
+          context.log.warn(
+            `FailedBonusActivationHandler|WARN|Failed releasing lock: ${err.message}`
+          );
+          return UnhandledFailure.encode({
+            kind: "UNHANDLED_FAILURE",
+            reason: err.message
+          });
+        })
       )
       .fold<FailedBonusActivationResult>(
         l => l,
         () => FailedBonusActivationSuccess.encode({ kind: "SUCCESS" })
       )
-      .map(result => {
-        if (TransientFailure.is(result)) {
-          throw new Error("transient failure");
-        }
-        return result;
-      })
       .run();
   };
 }
