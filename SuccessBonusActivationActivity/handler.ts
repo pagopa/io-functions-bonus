@@ -109,7 +109,7 @@ const saveBonusForEachFamilyMember = (
         isApplicant: applicantFiscalCode === fiscalCode,
         kind: "INewUserBonus"
       }))
-      .map(nub => () => userBonusModel.create(nub, bonusId))
+      .map(nub => () => userBonusModel.createOrUpdate(nub, bonusId))
       .map(fn => fromQueryEither(fn))
   );
 

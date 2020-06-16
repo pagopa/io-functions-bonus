@@ -25,11 +25,11 @@ const mockBonusActivationModel = ({
 } as unknown) as BonusActivationModel;
 
 // mockBonusLeaseModel
-const mockUserBonusCreate = jest.fn().mockImplementation(async _ => {
+const mockUserBonusCreateOrUpdate = jest.fn().mockImplementation(async _ => {
   return right(aRetrievedUserBonus);
 });
 const mockUserBonusModel = ({
-  create: mockUserBonusCreate
+  createOrUpdate: mockUserBonusCreateOrUpdate
 } as unknown) as UserBonusModel;
 
 describe("SuccessBonusActivationHandler", () => {
@@ -79,7 +79,9 @@ describe("SuccessBonusActivationHandler", () => {
     const response = await handler(context, {
       bonusActivation: aBonusActivationWithFamilyUID
     });
-    expect(mockUserBonusCreate).toHaveBeenCalledTimes(familyMembers.length);
+    expect(mockUserBonusCreateOrUpdate).toHaveBeenCalledTimes(
+      familyMembers.length
+    );
     expect(
       SuccessBonusActivationSuccess.decode(response).isRight()
     ).toBeTruthy();
@@ -95,7 +97,7 @@ describe("SuccessBonusActivationHandler", () => {
       bonusActivation: aBonusActivationWithFamilyUID
     });
 
-    const { calls } = mockUserBonusCreate.mock;
+    const { calls } = mockUserBonusCreateOrUpdate.mock;
 
     // only the correct applicant id
     calls.forEach(([{ isApplicant, fiscalCode }]) => {
