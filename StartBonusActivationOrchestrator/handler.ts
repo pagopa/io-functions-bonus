@@ -7,8 +7,11 @@ import { isLeft } from "fp-ts/lib/Either";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
+import { FailedBonusActivationInput } from "../FailedBonusActivationActivity/handler";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 import { SendBonusActivationFailure } from "../SendBonusActivationActivity/handler";
+import { SendBonusActivationInput } from "../SendBonusActivationActivity/handler";
+import { SuccessBonusActivationInput } from "../SuccessBonusActivationActivity/handler";
 import { toApiBonusVacanzaBase } from "../utils/conversions";
 
 export const OrchestratorInput = t.interface({
@@ -59,18 +62,22 @@ export const getStartBonusActivationOrchestratorHandler = (
         maxRetryIntervalInMilliseconds: 3600 * 100,
         retryTimeoutInMilliseconds: 3600 * 1000
       },
-      errorOrBonusVacanzaBase.value
+      SendBonusActivationInput.encode(errorOrBonusVacanzaBase.value)
     );
 
     if (SendBonusActivationFailure.is(undecodedSendBonusActivation)) {
       yield context.df.callActivity(
         "FailedBonusActivationActivity",
-        errorOrStartBonusActivationOrchestratorInput.value
+        FailedBonusActivationInput.encode(
+          errorOrStartBonusActivationOrchestratorInput.value
+        )
       );
     } else {
       yield context.df.callActivity(
         "SuccessBonusActivationActivity",
-        errorOrStartBonusActivationOrchestratorInput.value
+        SuccessBonusActivationInput.encode(
+          errorOrStartBonusActivationOrchestratorInput.value
+        )
       );
     }
     return true;

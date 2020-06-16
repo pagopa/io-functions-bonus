@@ -12,6 +12,11 @@ import {
   BonusVacanzaTransientError
 } from "../utils/adeClient";
 
+export const SendBonusActivationInput = BonusVacanzaBase;
+export type SendBonusActivationInput = t.TypeOf<
+  typeof SendBonusActivationInput
+>;
+
 export const SendBonusActivationSuccess = t.interface({
   kind: t.literal("SUCCESS")
 });
@@ -103,7 +108,7 @@ export function SendBonusActivationHandler(
   ): Promise<SendBonusActivationResult> => {
     context.log.info(`SendBonusActivationActivity|INFO|Input: ${input}`);
     return await fromEither(
-      BonusVacanzaBase.decode(input).mapLeft(
+      SendBonusActivationInput.decode(input).mapLeft(
         err => new Error(`Error: [${readableReport(err)}]`)
       )
     )

@@ -9,6 +9,11 @@ import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
 import { Timestamp } from "../generated/definitions/Timestamp";
 import { ISoapClientAsync } from "../utils/inpsSoapClient";
 
+export const EligibilityCheckActivityInput = FiscalCode;
+export type EligibilityCheckActivityInput = t.TypeOf<
+  typeof EligibilityCheckActivityInput
+>;
+
 // Activity result
 export const ActivityResultSuccess = t.interface({
   data: ConsultazioneSogliaIndicatoreResponse,
@@ -44,7 +49,7 @@ export const getEligibilityCheckActivityHandler = (
 ) => {
   return async (context: Context, input: unknown): Promise<ActivityResult> => {
     return await fromEither(
-      FiscalCode.decode(input).mapLeft(
+      EligibilityCheckActivityInput.decode(input).mapLeft(
         err => new Error(`Error: [${readableReport(err)}]`)
       )
     )

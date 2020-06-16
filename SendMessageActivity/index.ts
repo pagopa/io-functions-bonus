@@ -6,7 +6,7 @@ import {
   toFetch
 } from "italia-ts-commons/lib/fetch";
 import { Millisecond } from "italia-ts-commons/lib/units";
-import { getActivityFunction } from "./handler";
+import { SendMessageActivityHandler } from "./handler";
 
 // HTTP external requests timeout in milliseconds
 const DEFAULT_REQUEST_TIMEOUT_MS = 10000;
@@ -25,6 +25,10 @@ const timeoutFetch = toFetch(
   setFetchTimeout(DEFAULT_REQUEST_TIMEOUT_MS as Millisecond, abortableFetch)
 );
 
-const index = getActivityFunction(publicApiUrl, publicApiKey, timeoutFetch);
+const index = SendMessageActivityHandler(
+  publicApiUrl,
+  publicApiKey,
+  timeoutFetch
+);
 
 export default index;

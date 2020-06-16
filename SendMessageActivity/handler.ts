@@ -15,18 +15,20 @@ const makeNewMessage = (content: MessageContent) =>
     throw new Error("Invalid MessageContent: " + readableReport(errs));
   });
 
-export const ActivityInput = t.interface({
+export const SendMessageActivityInput = t.interface({
   content: MessageContent,
   fiscalCode: FiscalCode
 });
-export type ActivityInput = t.TypeOf<typeof ActivityInput>;
+export type ActivityInput = t.TypeOf<typeof SendMessageActivityInput>;
 
 // Activity result
-const ActivityResultSuccess = t.interface({
+const SendMessageActivityResultSuccess = t.interface({
   kind: t.literal("SUCCESS")
 });
 
-type ActivityResultSuccess = t.TypeOf<typeof ActivityResultSuccess>;
+type SendMessageActivityResultSuccess = t.TypeOf<
+  typeof SendMessageActivityResultSuccess
+>;
 
 const ActivityResultFailure = t.interface({
   kind: t.literal("FAILURE"),
@@ -36,12 +38,12 @@ const ActivityResultFailure = t.interface({
 type ActivityResultFailure = t.TypeOf<typeof ActivityResultFailure>;
 
 export const ActivityResult = t.taggedUnion("kind", [
-  ActivityResultSuccess,
+  SendMessageActivityResultSuccess,
   ActivityResultFailure
 ]);
 export type ActivityResult = t.TypeOf<typeof ActivityResult>;
 
-export const getActivityFunction = (
+export const SendMessageActivityHandler = (
   publicApiUrl: NonEmptyString,
   publicApiKey: NonEmptyString,
   timeoutFetch: typeof fetch,
@@ -56,11 +58,11 @@ export const getActivityFunction = (
   };
 
   const success = () =>
-    ActivityResultSuccess.encode({
+    SendMessageActivityResultSuccess.encode({
       kind: "SUCCESS"
     });
 
-  return ActivityInput.decode(input).fold<Promise<ActivityResult>>(
+  return SendMessageActivityInput.decode(input).fold<Promise<ActivityResult>>(
     async errs =>
       failure(
         `${logPrefix}|Cannot decode input|ERROR=${readableReport(
@@ -94,4 +96,4 @@ export const getActivityFunction = (
   );
 };
 
-export default getActivityFunction;
+export default SendMessageActivityHandler;
