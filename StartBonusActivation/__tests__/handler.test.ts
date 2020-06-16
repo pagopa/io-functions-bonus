@@ -24,10 +24,7 @@ import {
   makeStartBonusActivationOrchestratorId,
   makeStartEligibilityCheckOrchestratorId
 } from "../../utils/orchestrators";
-import {
-  BONUS_CREATION_MAX_ATTEMPTS,
-  StartBonusActivationHandler
-} from "../handler";
+import { StartBonusActivationHandler } from "../handler";
 
 // implement temporary mockGetStatus
 const simulateOrchestratorIsRunning = (forOrchestratorId: string) => {
@@ -208,12 +205,7 @@ describe("StartBonusActivationHandler", () => {
     expect(response.kind).toBe("IResponseSuccessRedirectToResource");
   });
 
-  // TODO: fix this test
-  // This test has value because asserts that the retry logic for the bonus generation works as expected.
-  // The code implement a well-tested withRetries helper, so the mechanism should be ok.
-  // However, this test doesn't work as mockBonusActivationCreate is called more than once.
-  // Given that this test is based on jest mocks, I'm keen to think that the error is in the test, not in the code. It must be tried on integration test, though.
-  it.skip("should not retry bonus code generation on a generic query error", async () => {
+  it("should not retry bonus code generation on a non-409 error", async () => {
     mockBonusActivationCreate.mockImplementationOnce(async _ => {
       return left({
         code: 123
@@ -231,12 +223,7 @@ describe("StartBonusActivationHandler", () => {
     expect(response.kind).toBe("IResponseErrorInternal");
   });
 
-  // TODO: fix this test
-  // This test has value because asserts that the retry logic for the bonus generation works as expected.
-  // The code implement a well-tested withRetries helper, so the mechanism should be ok.
-  // However, this test doesn't work as mockBonusActivationCreate is called more than once.
-  // Given that this test is based on jest mocks, I'm keen to think that the error is in the test, not in the code. It must be tried on integration test, though.
-  it.skip("should not retry bonus code generation on a generic query error", async () => {
+  it("should not retry bonus code generation on a generic query error", async () => {
     mockBonusActivationCreate.mockImplementationOnce(async _ => {
       throw new Error("any error");
     });
@@ -248,7 +235,7 @@ describe("StartBonusActivationHandler", () => {
 
     const response = await handler(context, aFiscalCode);
 
-    expect(mockBonusActivationCreate).toHaveBeenCalledTimes(2);
+    expect(mockBonusActivationCreate).toHaveBeenCalledTimes(1);
     expect(response.kind).toBe("IResponseErrorInternal");
   });
 
@@ -285,12 +272,6 @@ describe("StartBonusActivationHandler", () => {
   });
 
   it("should relase the lock if the bonus creation fails", async () => {
-    mockBonusActivationCreate.mockImplementationOnce(async _ => {
-      throw new Error("any error");
-    });
-    // There seems to be a bug in the retry mechanism such as it tries at least twice in case of error, no matter if it should or not.
-    // For the scope of this test, I simulate the failure by mocking the method twice.
-    // More investigation needed.
     mockBonusActivationCreate.mockImplementationOnce(async _ => {
       throw new Error("any error");
     });
