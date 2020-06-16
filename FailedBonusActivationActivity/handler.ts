@@ -83,7 +83,6 @@ const fromQueryEither = <R>(
  * @param bonusLeaseModel an instance of BonusLeaseModel
  * @param familyMembers the family of the requesting user
  *
- * @returns either a conflict error or the unique hash id of the family
  */
 const relaseLockForUserFamily = (
   bonusLeaseModel: BonusLeaseModel,
