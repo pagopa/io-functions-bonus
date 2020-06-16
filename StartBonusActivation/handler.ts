@@ -241,10 +241,12 @@ const createBonusActivation = (
     toError
   ).foldTaskEither<QueryError | TransientError, RetrievedBonusActivation>(
     _ =>
-      fromEither(left(_)).mapLeft(err => ({
-        code: "error",
-        body: err.message
-      })),
+      fromEither<QueryError, RetrievedBonusActivation>(left(_)).mapLeft(
+        err => ({
+          code: "error",
+          body: err.message
+        })
+      ),
     (bonusCode: BonusCode) =>
       fromQueryEither(() => {
         const bonusActivation: NewBonusActivation = {
