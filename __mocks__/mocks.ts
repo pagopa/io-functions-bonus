@@ -29,8 +29,10 @@ import {
   NewBonusLease,
   RetrievedBonusLease
 } from "../models/bonus_lease";
+import { RetrievedUserBonus, UserBonus } from "../models/user_bonus";
 
 export const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
+export const anotherFiscalCode = "CCCDDD80A01C123D" as FiscalCode;
 export const aFamilyUID = "aFamilyUid" as FamilyUID;
 
 export const aDsu: Dsu = {
@@ -43,7 +45,7 @@ export const aDsu: Dsu = {
       surname: "Rossi" as NonEmptyString
     },
     {
-      fiscalCode: "CCCDDD80A01C123D" as FiscalCode,
+      fiscalCode: anotherFiscalCode,
       name: "Chiara" as NonEmptyString,
       surname: "Bianchi" as NonEmptyString
     }
@@ -98,29 +100,7 @@ export const aBonusActivation: BonusActivation = {
 
   createdAt: new Date(),
 
-  dsuRequest: {
-    familyMembers: [
-      {
-        fiscalCode: aFiscalCode,
-        name: "MARIO" as NonEmptyString,
-        surname: "ROSSI" as NonEmptyString
-      }
-    ],
-
-    maxAmount: (200 as unknown) as IWithinRangeIntegerTag<150, 501> & number,
-
-    maxTaxBenefit: (100 as unknown) as IWithinRangeIntegerTag<30, 101> & number,
-
-    requestId: 123,
-
-    iseeType: "aISEEtype",
-
-    dsuProtocolId: "aProtocolId" as NonEmptyString,
-
-    dsuCreatedAt: new Date(),
-
-    hasDiscrepancies: false
-  }
+  dsuRequest: aDsu
 };
 
 export const aBonusActivationWithFamilyUID: BonusActivationWithFamilyUID = {
@@ -156,4 +136,18 @@ export const aRetrievedBonusLease: RetrievedBonusLease = {
   _self: "xyz",
   _ts: 123,
   kind: "IRetrievedBonusLease"
+};
+
+export const aUserBonus: UserBonus = {
+  bonusId: aBonusId,
+  fiscalCode: aFiscalCode,
+  isApplicant: true
+};
+
+export const aRetrievedUserBonus: RetrievedUserBonus = {
+  ...aUserBonus,
+  _self: "xyz",
+  _ts: 123,
+  id: (aUserBonus.bonusId as unknown) as NonEmptyString,
+  kind: "IRetrievedUserBonus"
 };

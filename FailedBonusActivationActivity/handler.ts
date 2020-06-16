@@ -5,6 +5,7 @@ import { TaskEither, taskEither } from "fp-ts/lib/TaskEither";
 import { fromEither, tryCatch } from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
+import { BonusActivationStatusEnum } from "../generated/models/BonusActivationStatus";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 import { BonusCode } from "../generated/models/BonusCode";
 import { FamilyUID } from "../generated/models/FamilyUID";
@@ -97,7 +98,13 @@ const updateBonusAsFailed = (
   bonusActivationModel: BonusActivationModel,
   bonusActivation: BonusActivationWithFamilyUID
 ): TaskEither<Error, RetrievedBonusActivation> => {
-  return fromQueryEither(() => bonusActivationModel.replace(bonusActivation));
+  return fromQueryEither(() => {
+    const bonusToUpdate: BonusActivationWithFamilyUID = {
+      ...bonusActivation,
+      status: BonusActivationStatusEnum.FAILED
+    };
+    return bonusActivationModel.replace(bonusToUpdate);
+  });
 };
 
 const deleteEligibilityCheck = (
