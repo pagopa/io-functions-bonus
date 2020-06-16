@@ -10,6 +10,7 @@ import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 import { SendBonusActivationFailure } from "../SendBonusActivationActivity/handler";
 import { toApiBonusVacanzaBase } from "../utils/conversions";
+import { retryOptions } from "../utils/retryPolicy";
 
 export const OrchestratorInput = t.interface({
   bonusActivation: BonusActivationWithFamilyUID
@@ -49,16 +50,12 @@ export const getStartBonusActivationOrchestratorHandler = (
       return false;
     }
 
+    yield context.df.waitForExternalEvent("ContinueBonusActivation");
+
     // Send bonus details to ADE rest service
     const undecodedSendBonusActivation = yield context.df.callActivityWithRetry(
       "SendBonusActivationActivity",
-      {
-        backoffCoefficient: 1.5,
-        firstRetryIntervalInMilliseconds: 1000,
-        maxNumberOfAttempts: 10,
-        maxRetryIntervalInMilliseconds: 3600 * 100,
-        retryTimeoutInMilliseconds: 3600 * 1000
-      },
+      retryOptions,
       errorOrBonusVacanzaBase.value
     );
 
