@@ -73,10 +73,5 @@ export const getStartBonusActivationOrchestratorHandler = (
         errorOrStartBonusActivationOrchestratorInput.value
       );
     }
-    yield context.df.callActivity(
-      "UnlockBonusActivationActivity",
-      errorOrStartBonusActivationOrchestratorInput.value.bonusActivation
-        .familyUID
-    );
     return true;
   };
