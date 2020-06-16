@@ -11,14 +11,18 @@ export const mockStatusCompleted = {
 
 export const OrchestrationRuntimeStatus = df.OrchestrationRuntimeStatus;
 
-export const mockStartNew = jest.fn(() => Promise.resolve());
+export const mockStartNew = jest.fn((_, __, ___) => Promise.resolve());
 export const mockGetStatus = jest
   .fn()
   .mockImplementation(async () => mockStatusCompleted);
+export const mockTerminate = jest.fn(async (_, __) => {
+  return;
+});
 
 export const getClient = jest.fn(() => ({
   getStatus: mockGetStatus,
-  startNew: mockStartNew
+  startNew: mockStartNew,
+  terminate: mockTerminate
 }));
 
 export const orchestrator = jest.fn();
