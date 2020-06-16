@@ -1,6 +1,6 @@
 // tslint:disable: no-identical-functions
 
-import { right, left } from "fp-ts/lib/Either";
+import { left, right } from "fp-ts/lib/Either";
 import { context } from "../../__mocks__/durable-functions";
 import {
   aBonusActivationWithFamilyUID,
@@ -25,13 +25,11 @@ const mockEligibilityCheckModel = ({
 } as unknown) as EligibilityCheckModel;
 
 // mockBonusActivationModel
-const mockBonusActivationCreateOrUpdate = jest
-  .fn()
-  .mockImplementation(async _ => {
-    return right(aRetrievedBonusActivation);
-  });
+const mockBonusActivationReplace = jest.fn().mockImplementation(async _ => {
+  return right(aRetrievedBonusActivation);
+});
 const mockBonusActivationModel = ({
-  createOrUpdate: mockBonusActivationCreateOrUpdate
+  replace: mockBonusActivationReplace
 } as unknown) as BonusActivationModel;
 
 // mockBonusLeaseModel
@@ -82,7 +80,7 @@ describe("FailedBonusActivationHandler", () => {
   });
 
   it("should return a success if bonus fails to update", async () => {
-    mockBonusActivationCreateOrUpdate.mockImplementationOnce(async () => {
+    mockBonusActivationReplace.mockImplementationOnce(async () => {
       throw new Error("any error");
     });
 
