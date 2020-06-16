@@ -135,13 +135,13 @@ export function SuccessBonusActivationHandler(
     context: Context,
     input: unknown
   ): Promise<SuccessBonusActivationResult> => {
-    return taskEither
-      .of<SuccessBonusActivationFailure, void>(void 0)
-      .chain(_ =>
-        fromEither(SuccessBonusActivationInput.decode(input))
-          .mapLeft(() => InvalidInputFailure.encode({ kind: "INVALID_INPUT" }))
-          .map(({ bonusActivation }) => bonusActivation)
-      )
+    return fromEither(
+      SuccessBonusActivationInput.decode(input)
+        .mapLeft<SuccessBonusActivationFailure>(() =>
+          InvalidInputFailure.encode({ kind: "INVALID_INPUT" })
+        )
+        .map(({ bonusActivation }) => bonusActivation)
+    )
       .chain(bonusActivation =>
         updateBonusAsActive(bonusActivationModel, bonusActivation).mapLeft(
           err => {
