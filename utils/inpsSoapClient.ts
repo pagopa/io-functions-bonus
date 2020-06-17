@@ -25,6 +25,7 @@ import {
   setFetchTimeout,
   toFetch
 } from "italia-ts-commons/lib/fetch";
+import { IntegerFromString } from "italia-ts-commons/lib/numbers";
 import { Millisecond } from "italia-ts-commons/lib/units";
 import { UrlFromString } from "italia-ts-commons/lib/url";
 
@@ -58,7 +59,9 @@ const INPS_SOAP_ACTION =
   "http://inps.it/ConsultazioneISEE/ISvcConsultazione/ConsultazioneSogliaIndicatore";
 
 // 10 seconds timeout by default
-const DEFAULT_REQUEST_TIMEOUT_MS = 10000;
+const INPS_REQUEST_TIMEOUT_MS = IntegerFromString.decode(
+  process.env.INPS_REQUEST_TIMEOUT_MS
+).getOrElse(10000);
 
 // http when developing locally
 const INPS_SERVICE_PROTOCOL = UrlFromString.decode(
@@ -76,7 +79,7 @@ const fetchAgent =
       });
 
 const fetchWithTimeout = setFetchTimeout(
-  DEFAULT_REQUEST_TIMEOUT_MS as Millisecond,
+  INPS_REQUEST_TIMEOUT_MS as Millisecond,
   AbortableFetch(fetchAgent)
 );
 

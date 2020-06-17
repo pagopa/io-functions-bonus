@@ -5,13 +5,17 @@ import {
   setFetchTimeout,
   toFetch
 } from "italia-ts-commons/lib/fetch";
+import { IntegerFromString } from "italia-ts-commons/lib/numbers";
 import { Millisecond } from "italia-ts-commons/lib/units";
 import { UrlFromString } from "italia-ts-commons/lib/url";
 import { ADEClient } from "../utils/adeClient";
 import SendBonusActivationHandler from "./handler";
 
 // 10 seconds timeout by default
-const DEFAULT_REQUEST_TIMEOUT_MS = 10000;
+// 10 seconds timeout by default
+const ADE_REQUEST_TIMEOUT_MS = IntegerFromString.decode(
+  process.env.ADE_REQUEST_TIMEOUT_MS
+).getOrElse(10000);
 
 const adeServiceEndpoint = getRequiredStringEnv("ADE_SERVICE_ENDPOINT");
 
@@ -29,7 +33,7 @@ const fetchAgent =
       });
 
 const fetchWithTimeout = setFetchTimeout(
-  DEFAULT_REQUEST_TIMEOUT_MS as Millisecond,
+  ADE_REQUEST_TIMEOUT_MS as Millisecond,
   AbortableFetch(fetchAgent)
 );
 
