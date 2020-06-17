@@ -26,6 +26,13 @@ import {
 } from "../../utils/orchestrators";
 import { StartBonusActivationHandler } from "../handler";
 
+jest.mock("applicationinsights", () => ({
+  defaultClient: {
+    trackEvent: jest.fn(),
+    trackException: jest.fn()
+  }
+}));
+
 // implement temporary mockGetStatus
 const simulateOrchestratorIsRunning = (forOrchestratorId: string) => {
   mockGetStatus.mockImplementation(async (orchestratorId: string) =>

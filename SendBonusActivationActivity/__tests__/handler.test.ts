@@ -9,11 +9,18 @@ import {
 import { ADEClientInstance } from "../../utils/adeClient";
 import {
   ADEServiceFailure,
+  InvalidInputFailure,
   SendBonusActivationFailure,
   SendBonusActivationHandler,
-  SendBonusActivationSuccess,
-  InvalidInputFailure
+  SendBonusActivationSuccess
 } from "../handler";
+
+jest.mock("applicationinsights", () => ({
+  defaultClient: {
+    trackEvent: jest.fn(),
+    trackException: jest.fn()
+  }
+}));
 
 describe("SendBonusActivationHandler", () => {
   it("should handle an invalid input", async () => {

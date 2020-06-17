@@ -10,6 +10,13 @@ import { SiNoTypeEnum } from "../../generated/definitions/SiNoType";
 import { toApiEligibilityCheckFromDSU } from "../../utils/conversions";
 import { handler } from "../index";
 
+jest.mock("applicationinsights", () => ({
+  defaultClient: {
+    trackEvent: jest.fn(),
+    trackException: jest.fn()
+  }
+}));
+
 const deleteEligibilityCheckActivityResult: DeleteEligibilityCheckActivityResult = {
   kind: "SUCCESS"
 };
