@@ -54,6 +54,7 @@ import {
   makeStartEligibilityCheckOrchestratorId
 } from "../utils/orchestrators";
 
+import { defaultClient } from "applicationinsights";
 import {
   fromQueryEither,
   QueryError
@@ -398,14 +399,21 @@ export function StartBonusActivationHandler(
             // on right, just pass it
             // on left, perform unlock but then pass the original left value
             .foldTaskEither(
-              l =>
-                relaseLockForUserFamily(
+              l => {
+                defaultClient.trackException({
+                  exception: new Error(l.detail),
+                  properties: {
+                    name: "bonus.activation.start"
+                  }
+                });
+                return relaseLockForUserFamily(
                   bonusLeaseModel,
                   familyUID
                 ).foldTaskEither(
                   _ => fromEither(left(l)),
                   _ => fromEither(left(l))
-                ),
+                );
+              },
               r => fromEither(right(r))
             )
         );

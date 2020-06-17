@@ -1,4 +1,5 @@
 import { Context } from "@azure/functions";
+import { defaultClient } from "applicationinsights";
 import * as df from "durable-functions";
 import * as express from "express";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
@@ -76,6 +77,14 @@ export function EligibilityCheckHandler(): IEligibilityCheckHandler {
         "EligibilityCheck|ERROR|Orchestrator cannot start (status=%s)",
         status
       );
+
+      defaultClient.trackException({
+        exception: err,
+        properties: {
+          name: "bonus.eligibilitycheck.orchestrator"
+        }
+      });
+
       return ResponseErrorInternal(
         `Orchestrator error=${err} status=${status}`
       );

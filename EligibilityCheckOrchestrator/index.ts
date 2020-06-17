@@ -3,7 +3,6 @@
 import { addSeconds } from "date-fns";
 import * as df from "durable-functions";
 import { isSome, none, Option, some } from "fp-ts/lib/Option";
-import { MessageContent } from "io-functions-commons/dist/generated/definitions/MessageContent";
 import * as t from "io-ts";
 import {
   ActivityResult as DeleteEligibilityCheckActivityResult,
@@ -25,6 +24,8 @@ import { MESSAGES } from "../utils/messages";
 import { retryOptions } from "../utils/retryPolicy";
 import { ValidateEligibilityCheckActivityInput } from "../ValidateEligibilityCheckActivity/handler";
 
+import { defaultClient } from "applicationinsights";
+
 import { isLeft } from "fp-ts/lib/Either";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
@@ -36,17 +37,19 @@ export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
 const NOTIFICATION_DELAY_SECONDS = 10;
 const logPrefix = "EligibilityCheckOrchestrator";
 
-export const getMessage = (_: ApiEligibilityCheck): Option<MessageContent> => {
+export const getMessageType = (
+  _: ApiEligibilityCheck
+): Option<keyof typeof MESSAGES> => {
   return EligibilityCheckFailure.is(_)
-    ? some(MESSAGES.EligibilityCheckFailure())
+    ? some("EligibilityCheckFailure")
     : EligibilityCheckSuccessEligible.is(_) && _.dsu_request.has_discrepancies
-    ? some(MESSAGES.EligibilityCheckSuccessEligibleWithDiscrepancies())
+    ? some("EligibilityCheckSuccessEligibleWithDiscrepancies")
     : EligibilityCheckSuccessEligible.is(_)
-    ? some(MESSAGES.EligibilityCheckSuccessEligible())
+    ? some("EligibilityCheckSuccessEligible")
     : EligibilityCheckSuccessIneligible.is(_)
-    ? some(MESSAGES.EligibilityCheckSuccessIneligible())
+    ? some("EligibilityCheckSuccessIneligible")
     : EligibilityCheckSuccessConflict.is(_)
-    ? some(MESSAGES.EligibilityCheckConflict())
+    ? some("EligibilityCheckConflict")
     : none;
 };
 
@@ -134,10 +137,23 @@ export const handler = function*(
     );
   } catch (err) {
     context.log.error("EligibilityCheckOrchestrator|ERROR|%s", err);
+    defaultClient.trackException({
+      exception: err,
+      properties: {
+        name: "bonus.eligibilitycheck.error"
+      }
+    });
     return err;
   } finally {
     context.df.setCustomStatus("COMPLETED");
   }
+
+  defaultClient.trackEvent({
+    name: "bonus.eligibilitycheck.success",
+    properties: {
+      status: `${validatedEligibilityCheck.status}`
+    }
+  });
 
   // sleep before sending push notification
   // so we can let the get operation stop the flow here
@@ -146,24 +162,29 @@ export const handler = function*(
   );
 
   // send push notification with eligibility details
-  const maybeMessage = getMessage(validatedEligibilityCheck);
+  const maybeMessageType = getMessageType(validatedEligibilityCheck);
 
-  if (isSome(maybeMessage)) {
+  if (isSome(maybeMessageType)) {
     yield context.df.callActivityWithRetry(
       "SendMessageActivity",
       retryOptions,
       SendMessageActivityInput.encode({
-        content: maybeMessage.value,
+        content: MESSAGES[maybeMessageType.value](),
         fiscalCode: eligibilityCheckResponse.fiscalCode
       })
     );
+    defaultClient.trackEvent({
+      name: "bonus.eligibilitycheck.message",
+      properties: {
+        type: maybeMessageType.value
+      }
+    });
   } else {
-    context.log.error(
-      `EligibilityCheckOrchestrator|ERROR|Cannot decode eligibility check`
-    );
-    context.log.verbose(
-      `EligibilityCheckOrchestrator|ERROR|Cannot decode eligibility check|CF=${eligibilityCheckResponse.fiscalCode}`
-    );
+    defaultClient.trackException({
+      exception: new Error(
+        `Cannot get message type for eligibility check: ${eligibilityCheckResponse.fiscalCode}`
+      )
+    });
   }
 
   return validatedEligibilityCheck;
