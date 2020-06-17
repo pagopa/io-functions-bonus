@@ -5,7 +5,7 @@
       "name": "req",
       "type": "httpTrigger",
       "direction": "in",
-      "route": "api/v1/bonus/vacanze/activations/{fiscalcode}",
+      "route": "api/v1/bonus/vacanze/activations/{fiscalcode}/{bonus_id}",
       "methods": ["put"]
     },
     {
