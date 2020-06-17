@@ -9,6 +9,7 @@ import { readableReport } from "italia-ts-commons/lib/reporters";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { FailedBonusActivationInput } from "../FailedBonusActivationActivity/handler";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
+import { SendBonusActivationInput } from "../SendBonusActivationActivity/handler";
 import { SendBonusActivationFailure } from "../SendBonusActivationActivity/handler";
 import { SuccessBonusActivationInput } from "../SuccessBonusActivationActivity/handler";
 import { toApiBonusVacanzaBase } from "../utils/conversions";
