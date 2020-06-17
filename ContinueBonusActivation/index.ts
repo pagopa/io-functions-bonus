@@ -34,7 +34,7 @@ const isBonusActivationEnabled =
 
 // Add express route
 app.put(
-  "/api/v1/bonus/vacanze/activations/{fiscalcode}/{bonus_id}",
+  "/api/v1/bonus/vacanze/activations/:fiscalcode/:bonus_id",
   ContinueBonusActivation(bonusActivationModel, isBonusActivationEnabled)
 );
 
