@@ -1,7 +1,7 @@
 import { Context } from "@azure/functions";
 import * as df from "durable-functions";
 import * as express from "express";
-import { toString } from "fp-ts/lib/function";
+import { identity, toString } from "fp-ts/lib/function";
 import {
   fromEither,
   fromLeft,
@@ -102,9 +102,8 @@ export function ContinueBonusActivationHandler(
           err => ResponseErrorInternal(toString(err))
         )
       )
-      .fold<IContinueBonusActivationHandlerOutput>(
-        err => err,
-        _ => ResponseSuccessAccepted()
+      .fold<IContinueBonusActivationHandlerOutput>(identity, _ =>
+        ResponseSuccessAccepted()
       )
       .run();
   };
