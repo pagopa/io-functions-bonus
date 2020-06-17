@@ -1,13 +1,10 @@
 import { Context } from "@azure/functions";
-import { QueryError } from "documentdb";
 import { array } from "fp-ts/lib/Array";
-import { Either, toError } from "fp-ts/lib/Either";
+import { fromEither, taskEither, TaskEither } from "fp-ts/lib/TaskEither";
 import {
-  fromEither,
-  taskEither,
-  TaskEither,
-  tryCatch
-} from "fp-ts/lib/TaskEither";
+  fromQueryEither,
+  QueryError
+} from "io-functions-commons/dist/src/utils/documentdb";
 import * as t from "io-ts";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { BonusActivationStatusEnum } from "../generated/definitions/BonusActivationStatus";
@@ -65,24 +62,10 @@ export type SuccessBonusActivationResult = t.TypeOf<
   typeof SuccessBonusActivationResult
 >;
 
-/**
- * Converts a Promise<Either> into a TaskEither
- * This is needed because our models return unconvenient type. Both left and rejection cases are handled as a TaskEither left
- * @param lazyPromise a lazy promise to convert
- *
- * @returns either the query result or a query failure
- */
-const fromQueryEither = <R>(
-  lazyPromise: () => Promise<Either<QueryError | Error, R>>
-): TaskEither<Error, R> =>
-  tryCatch(lazyPromise, toError).chain(errorOrResult =>
-    fromEither(errorOrResult).mapLeft(toError)
-  );
-
 const updateBonusAsActive = (
   bonusActivationModel: BonusActivationModel,
   bonusActivation: BonusActivationWithFamilyUID
-): TaskEither<Error, RetrievedBonusActivation> => {
+): TaskEither<QueryError, RetrievedBonusActivation> => {
   return fromQueryEither(() => {
     const bonusToUpdate: BonusActivationWithFamilyUID = {
       ...bonusActivation,
@@ -99,7 +82,7 @@ const saveBonusForEachFamilyMember = (
     id: bonusId,
     dsuRequest: { familyMembers }
   }: BonusActivationWithFamilyUID
-): TaskEither<Error, readonly RetrievedUserBonus[]> =>
+): TaskEither<QueryError, readonly RetrievedUserBonus[]> =>
   array.sequence(taskEither)(
     familyMembers
       .map<NewUserBonus>(({ fiscalCode }) => ({
@@ -146,11 +129,11 @@ export function SuccessBonusActivationHandler(
         updateBonusAsActive(bonusActivationModel, bonusActivation).mapLeft(
           err => {
             context.log.warn(
-              `FailedBonusActivationHandler|WARN|Failed updating bonus: ${err.message}`
+              `FailedBonusActivationHandler|WARN|Failed updating bonus: ${err.body}`
             );
             return UnhandledFailure.encode({
               kind: "UNHANDLED_FAILURE",
-              reason: err.message
+              reason: err.body
             });
           }
         )
@@ -159,11 +142,11 @@ export function SuccessBonusActivationHandler(
         saveBonusForEachFamilyMember(userBonusModel, bonusActivation).mapLeft(
           err => {
             context.log.warn(
-              `FailedBonusActivationHandler|WARN|Failed saving user bonus: ${err.message}`
+              `FailedBonusActivationHandler|WARN|Failed saving user bonus: ${err.body}`
             );
             return UnhandledFailure.encode({
               kind: "UNHANDLED_FAILURE",
-              reason: err.message
+              reason: err.body
             });
           }
         )

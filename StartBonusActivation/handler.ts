@@ -3,7 +3,7 @@ import { isBefore } from "date-fns";
 import * as df from "durable-functions";
 import { DurableOrchestrationClient } from "durable-functions/lib/src/durableorchestrationclient";
 import * as express from "express";
-import { Either, left, right, toError } from "fp-ts/lib/Either";
+import { left, right, toError } from "fp-ts/lib/Either";
 import {
   fromEither,
   TaskEither,
@@ -54,6 +54,10 @@ import {
   makeStartEligibilityCheckOrchestratorId
 } from "../utils/orchestrators";
 
+import {
+  fromQueryEither,
+  QueryError
+} from "io-functions-commons/dist/src/utils/documentdb";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { Millisecond } from "italia-ts-commons/lib/units";
 import { BonusActivation as ApiBonusActivation } from "../generated/definitions/BonusActivation";
@@ -63,10 +67,6 @@ import { BonusLeaseModel } from "../models/bonus_lease";
 import { OrchestratorInput } from "../StartBonusActivationOrchestrator/handler";
 import { toApiBonusActivation } from "../utils/conversions";
 import { generateFamilyUID } from "../utils/hash";
-import {
-  fromQueryEither,
-  QueryError
-} from "io-functions-commons/dist/src/utils/documentdb";
 
 export const BONUS_CREATION_MAX_ATTEMPTS = 5;
 
@@ -82,32 +82,6 @@ const makeBonusActivationResourceUri = (
   fiscalcode: FiscalCode,
   bonusId: string
 ) => `/bonus/vacanze/activations/${fiscalcode}/${bonusId}`;
-
-/**
- * Converts a Promise<Either> into a RetriableTask
- * This is needed because our models return unconvenient type. Both left and rejection cases are handled as a TaskEither left
- * @param lazyPromise a lazy promise to convert
- * @param shouldRetry a function that define which kind of query error must be treated as retrieable
- *
- * @returns either the query result or a query failure
- */
-const fromQueryEitherToRetriableTask = <R>(
-  lazyPromise: () => Promise<Either<QueryError | Error, R>>,
-  shouldRetry: (q: QueryError) => boolean
-): RetriableTask<Error, R> => {
-  return tryCatch(lazyPromise, _ => _ as QueryError | Error)
-    .foldTaskEither<Error | QueryError, R>(
-      _ => fromEither(left(_)),
-      _ => fromEither(_)
-    )
-    .mapLeft(errorOrQueryError => {
-      return errorOrQueryError instanceof Error
-        ? errorOrQueryError
-        : shouldRetry(errorOrQueryError)
-        ? TransientError
-        : toError(errorOrQueryError);
-    });
-};
 
 /**
  * Check if the current user has a pending activation request.
@@ -236,33 +210,33 @@ const createBonusActivation = (
     return err.code === 409;
   };
 
-  const retriableBonusActivationTask = tryCatch(
-    genRandomBonusCode,
-    toError
-  ).foldTaskEither<QueryError | TransientError, RetrievedBonusActivation>(
-    _ =>
-      fromEither<QueryError, RetrievedBonusActivation>(left(_)).mapLeft(
-        err => ({
-          code: "error",
-          body: err.message
+  const retriableBonusActivationTask = tryCatch(genRandomBonusCode, toError)
+    .mapLeft(
+      (err: Error): QueryError => ({
+        body: err.message,
+        code: "error"
+      })
+    )
+    .foldTaskEither<QueryError | TransientError, RetrievedBonusActivation>(
+      _ => fromEither(left(_)),
+      (bonusCode: BonusCode) =>
+        fromQueryEither(() => {
+          const bonusActivation: NewBonusActivation = {
+            applicantFiscalCode: fiscalCode,
+            createdAt: new Date(),
+            dsuRequest: dsu,
+            familyUID,
+            id: bonusCode as BonusCode & NonEmptyString,
+            kind: "INewBonusActivation",
+            status: BonusActivationStatusEnum.PROCESSING
+          };
+          return bonusActivationModel.create(bonusActivation, fiscalCode);
+        }).mapLeft(err => {
+          return shouldRetry(err) ? TransientError : err;
         })
-      ),
-    (bonusCode: BonusCode) =>
-      fromQueryEither(() => {
-        const bonusActivation: NewBonusActivation = {
-          applicantFiscalCode: fiscalCode,
-          createdAt: new Date(),
-          dsuRequest: dsu,
-          familyUID,
-          id: bonusCode as BonusCode & NonEmptyString,
-          kind: "INewBonusActivation",
-          status: BonusActivationStatusEnum.PROCESSING
-        };
-        return bonusActivationModel.create(bonusActivation, fiscalCode);
-      }).mapLeft(err => (shouldRetry(err) ? TransientError : err))
-  );
+    ) as RetriableTask<QueryError, RetrievedBonusActivation>; // TaskEither<QueryError | TransientError, RetrievedBonusActivation> should equal RetriableTask<QueryError, RetrievedBonusActivation>. However, the type equality fails as it cannot associate QueryError.
 
-  return withRetries<Error, RetrievedBonusActivation>(
+  return withRetries<QueryError, RetrievedBonusActivation>(
     BONUS_CREATION_MAX_ATTEMPTS,
     () => 50 as Millisecond
   )(retriableBonusActivationTask).mapLeft(errorOrMaxRetry =>
@@ -271,7 +245,7 @@ const createBonusActivation = (
           `Error creating BonusActivation: cannot create a db record after ${BONUS_CREATION_MAX_ATTEMPTS} attempts`
         )
       : ResponseErrorInternal(
-          `Error creating BonusActivation: ${errorOrMaxRetry.message}`
+          `Error creating BonusActivation: ${errorOrMaxRetry.body}`
         )
   );
 };

@@ -1,7 +1,6 @@
 import { Context } from "@azure/functions";
-import { Either, toError } from "fp-ts/lib/Either";
 import { TaskEither, taskEither } from "fp-ts/lib/TaskEither";
-import { fromEither, tryCatch } from "fp-ts/lib/TaskEither";
+import { fromEither } from "fp-ts/lib/TaskEither";
 import {
   fromQueryEither,
   QueryError
