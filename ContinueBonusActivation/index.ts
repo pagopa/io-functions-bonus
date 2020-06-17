@@ -33,8 +33,8 @@ const isBonusActivationEnabled =
   getRequiredStringEnv("FF_BONUS_ACTIVATION_ENABLED") === "1";
 
 // Add express route
-app.get(
-  "/api/v1/bonus/vacanze/activations/:fiscalcode",
+app.put(
+  "/api/v1/bonus/vacanze/activations/{fiscalcode}/{bonus_id}",
   ContinueBonusActivation(bonusActivationModel, isBonusActivationEnabled)
 );
 
