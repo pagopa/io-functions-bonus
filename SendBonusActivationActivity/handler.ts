@@ -155,13 +155,14 @@ type ISendBonusActivationHandler = (
  * @throws when the response is considered a transient failure and thus is not considered a domain message
  */
 export function SendBonusActivationHandler(
-  adeClient: ADEClientInstance
+  adeClient: ADEClientInstance,
+  logPrefix = `SendBonusActivationActivity`
 ): ISendBonusActivationHandler {
   return async (
     context: Context,
     input: unknown
   ): Promise<SendBonusActivationResult> => {
-    context.log.info(`SendBonusActivationActivity|INFO|Input: ${input}`);
+    context.log.verbose(`${logPrefix}|ACTIVITY_INPUT=${input}`);
     return taskEither
       .of<ActivityRuntimeFailure, void>(void 0)
       .chain(_ =>
@@ -177,48 +178,45 @@ export function SendBonusActivationHandler(
       )
       .fold<SendBonusActivationResult>(
         activityFailure => {
-          // The failure considered to be temporary. We trow to allow the orcherstrator to retry the activity
           if (SendBonusActivationTransientFailure.is(activityFailure)) {
             context.log.error(
-              `SendBonusActivationActivity|TRANSIENT_ERROR=${activityFailure.kind}:${activityFailure.reason}`
+              `${logPrefix}|TRANSIENT_ERROR=${activityFailure.kind}:${activityFailure.reason}`
             );
+            // Trigger a retry in case of temporary failures
             throw activityFailure;
           }
-
-          // else, we just log the failure
           context.log.error(
-            `SendBonusActivationActivity|${activityFailure.kind}=${activityFailure.reason}`
+            `${logPrefix}|${activityFailure.kind}=${activityFailure.reason}`
           );
           return activityFailure;
         },
         adeResponse => {
-          // The response from ADE is considered to be a temporary failure. We trow to allow the orcherstrator to retry the activity
           if (SendBonusActivationTransientFailure.is(adeResponse.value)) {
             context.log.error(
-              `SendBonusActivationActivity|TRANSIENT_ERROR=${adeResponse.status}:${adeResponse.value}`
+              `${logPrefix}|TRANSIENT_ERROR=${adeResponse.status}:${adeResponse.value}`
             );
+            // Trigger a retry in case of temporary failures
             throw adeResponse;
-          }
-          // ADE responded with a rejection to the user bonus
-          else if (BonusVacanzaInvalidRequestError.is(adeResponse.value)) {
+          } else if (BonusVacanzaInvalidRequestError.is(adeResponse.value)) {
+            // ADE rejected the user's bonus activation
             context.log.error(
-              `SendBonusActivationActivity|PERMANENT_ERROR=${adeResponse.status}:${adeResponse.value}`
+              `${logPrefix}|PERMANENT_ERROR=${adeResponse.status}:${adeResponse.value}`
             );
             return InvalidRequestFailure.encode({
               kind: "INVALID_REQUEST_FAILURE",
               reason: adeResponse.value
             });
-          }
-          // Everything is ok, why did you worried so much?
-          else if (adeResponse.status === 200) {
+          } else if (adeResponse.status === 200) {
+            // Everything is ok, why did you worried so much?
             return SendBonusActivationSuccess.encode({
               kind: "SUCCESS"
             });
           }
 
-          // This should not happen, as BonusVacanzaInvalidRequestError and BonusVacanzaTransientError should map the entire set of rejection
+          // This should not happen, as BonusVacanzaInvalidRequestError
+          // and BonusVacanzaTransientError should map the entire set of rejection
           context.log.error(
-            `SendBonusActivationActivity|UNEXPECTED_ERROR=${adeResponse.status}:${adeResponse.value}`
+            `${logPrefix}|UNEXPECTED_ERROR=${adeResponse.status}:${adeResponse.value.errorCode}=${adeResponse.value.errorMessage}`
           );
           return UnhandledFailure.encode({
             kind: "UNHANDLED_FAILURE",

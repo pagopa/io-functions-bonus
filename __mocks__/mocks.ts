@@ -18,6 +18,7 @@ import {
   StatusEnum as EligibilityCheckSuccessIneligibleStatus
 } from "../generated/models/EligibilityCheckSuccessIneligible";
 
+import { BonusVacanzaBase } from "../generated/ade/BonusVacanzaBase";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 import { FamilyUID } from "../generated/models/FamilyUID";
 import {
@@ -30,7 +31,6 @@ import {
   RetrievedBonusLease
 } from "../models/bonus_lease";
 import { RetrievedUserBonus, UserBonus } from "../models/user_bonus";
-import { BonusVacanzaBase } from "../generated/ade/BonusVacanzaBase";
 import {
   BonusVacanzaInvalidRequestError,
   BonusVacanzaTransientError
