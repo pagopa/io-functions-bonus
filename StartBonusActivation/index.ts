@@ -22,6 +22,9 @@ import { StartBonusActivation } from "./handler";
 
 const cosmosDbName = getRequiredStringEnv("COSMOSDB_BONUS_DATABASE_NAME");
 
+const isBonusActivationEnabled =
+  getRequiredStringEnv("FF_BONUS_ACTIVATION_ENABLED") === "1";
+
 const documentDbDatabaseUrl = documentDbUtils.getDatabaseUri(cosmosDbName);
 
 const eligibilityCheckModel = new EligibilityCheckModel(
@@ -58,7 +61,8 @@ app.post(
   StartBonusActivation(
     bonusActivationModel,
     bonusLeaseModel,
-    eligibilityCheckModel
+    eligibilityCheckModel,
+    isBonusActivationEnabled
   )
 );
 

@@ -341,7 +341,7 @@ const relaseLockForUserFamily = (
  *
  * @returns either an internal error or the id of the created orchestrator
  */
-const runStartBonusActivationOrchestrator = (
+export const runStartBonusActivationOrchestrator = (
   client: DurableOrchestrationClient,
   bonusActivation: BonusActivationWithFamilyUID,
   fiscalCode: FiscalCode
@@ -384,7 +384,8 @@ type IStartBonusActivationHandler = (
 export function StartBonusActivationHandler(
   bonusActivationModel: BonusActivationModel,
   bonusLeaseModel: BonusLeaseModel,
-  eligibilityCheckModel: EligibilityCheckModel
+  eligibilityCheckModel: EligibilityCheckModel,
+  isBonusActivationEnabled: boolean
 ): IStartBonusActivationHandler {
   return async (context, fiscalCode) => {
     const client = df.getClient(context);
@@ -412,11 +413,13 @@ export function StartBonusActivationHandler(
               )
             )
             .chain(bonusActivation =>
-              runStartBonusActivationOrchestrator(
-                client,
-                bonusActivation,
-                fiscalCode
-              ).map(_ => bonusActivation)
+              isBonusActivationEnabled
+                ? runStartBonusActivationOrchestrator(
+                    client,
+                    bonusActivation,
+                    fiscalCode
+                  ).map(_ => bonusActivation)
+                : taskEither.of(bonusActivation)
             )
             // the following is basically:
             // on right, just pass it
@@ -460,12 +463,14 @@ export function StartBonusActivationHandler(
 export function StartBonusActivation(
   bonusActivationModel: BonusActivationModel,
   bonusLeaseModel: BonusLeaseModel,
-  eligibilityCheckModel: EligibilityCheckModel
+  eligibilityCheckModel: EligibilityCheckModel,
+  isBonusActivationEnabled: boolean
 ): express.RequestHandler {
   const handler = StartBonusActivationHandler(
     bonusActivationModel,
     bonusLeaseModel,
-    eligibilityCheckModel
+    eligibilityCheckModel,
+    isBonusActivationEnabled
   );
   const middlewaresWrap = withRequestMiddlewares(
     // Extract Azure Functions bindings
