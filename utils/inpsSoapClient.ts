@@ -64,7 +64,7 @@ const DEFAULT_REQUEST_TIMEOUT_MS = 10000;
 const INPS_SERVICE_PROTOCOL = UrlFromString.decode(
   process.env.INPS_SERVICE_ENDPOINT
 )
-  .map(url => url.protocol)
+  .map(url => url.protocol?.slice(0, -1))
   .getOrElse("https");
 
 const fetchAgent =
