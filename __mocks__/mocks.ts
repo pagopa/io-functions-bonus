@@ -52,8 +52,8 @@ export const aDsu: Dsu = {
   ],
   hasDiscrepancies: false,
   iseeType: "iseeType",
-  maxAmount: 250,
-  maxTaxBenefit: 50,
+  maxAmount: 300,
+  maxTaxBenefit: 60,
   requestId: 123
 };
 
