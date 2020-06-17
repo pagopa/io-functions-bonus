@@ -20,11 +20,11 @@ export const ActivityResultSuccess = t.interface({
 });
 export type ActivityResultSuccess = t.TypeOf<typeof ActivityResultSuccess>;
 
-const ActivityResultFailure = t.interface({
+export const ActivityResultFailure = t.interface({
   kind: t.literal("FAILURE"),
   reason: t.string
 });
-type ActivityResultFailure = t.TypeOf<typeof ActivityResultFailure>;
+export type ActivityResultFailure = t.TypeOf<typeof ActivityResultFailure>;
 
 const ActivityResult = t.taggedUnion("kind", [
   ActivityResultFailure,

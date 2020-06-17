@@ -1,3 +1,9 @@
+/**
+ * Rules for calculating the amount from the number of family members
+ *
+ * @see https://www.agenziaentrate.gov.it/portale/web/guest/bonus-vacanze1
+ */
+
 export interface IMaxBonusAmount {
   kind: "IMaxBonusAmount";
 }
@@ -18,8 +24,8 @@ export const OneFamilyMemberBonus = {
 
 export const TwoFamilyMembersBonus = {
   kind: "TWO_FAMILY_MEMBERS",
-  max_amount: 250 as MaxBonusAmount, // 250 EUR
-  max_tax_benefit: 50 as MaxTaxBenefitAmount // 20% of 250 EUR = 50 EUR
+  max_amount: 300 as MaxBonusAmount, // 300 EUR
+  max_tax_benefit: 60 as MaxTaxBenefitAmount // 20% of 300 EUR = 60 EUR
 } as const;
 
 export const ThreeOrMoreFamilyMembersBonus = {
