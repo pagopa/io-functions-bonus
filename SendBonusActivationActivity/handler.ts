@@ -96,6 +96,15 @@ export type SendBonusActivationResult = t.TypeOf<
   typeof SendBonusActivationResult
 >;
 
+// any case we consider to be temporary error
+export type SendBonusActivationTransientFailure = t.TypeOf<
+  typeof SendBonusActivationTransientFailure
+>;
+export const SendBonusActivationTransientFailure = t.union(
+  [BonusVacanzaTransientError, ADEServiceFailure],
+  "SendBonusActivationTransientFailure"
+);
+
 /**
  * Lift adeClient.richiestaBonus to TaskEither type
  * @param adeClient a client instance
@@ -146,13 +155,14 @@ type ISendBonusActivationHandler = (
  * @throws when the response is considered a transient failure and thus is not considered a domain message
  */
 export function SendBonusActivationHandler(
-  adeClient: ADEClientInstance
+  adeClient: ADEClientInstance,
+  logPrefix = `SendBonusActivationActivity`
 ): ISendBonusActivationHandler {
   return async (
     context: Context,
     input: unknown
   ): Promise<SendBonusActivationResult> => {
-    context.log.info(`SendBonusActivationActivity|INFO|Input: ${input}`);
+    context.log.verbose(`${logPrefix}|ACTIVITY_INPUT=${input}`);
     return taskEither
       .of<ActivityRuntimeFailure, void>(void 0)
       .chain(_ =>
@@ -168,43 +178,49 @@ export function SendBonusActivationHandler(
       )
       .fold<SendBonusActivationResult>(
         activityFailure => {
+          if (SendBonusActivationTransientFailure.is(activityFailure)) {
+            context.log.error(
+              `${logPrefix}|TRANSIENT_ERROR=${activityFailure.kind}:${activityFailure.reason}`
+            );
+            // Trigger a retry in case of temporary failures
+            throw activityFailure;
+          }
           context.log.error(
-            `SendBonusActivationActivity|${activityFailure.kind}=${activityFailure.reason}`
+            `${logPrefix}|${activityFailure.kind}=${activityFailure.reason}`
           );
           return activityFailure;
         },
-        response => {
-          // The response from ADE is considered to be a temporary failure. We trow to allow the orcherstrator to retry the activity
-          if (BonusVacanzaTransientError.is(response.value)) {
+        adeResponse => {
+          if (SendBonusActivationTransientFailure.is(adeResponse.value)) {
             context.log.error(
-              `SendBonusActivationActivity|TRANSIENT_ERROR=${response.status}:${response.value}`
+              `${logPrefix}|TRANSIENT_ERROR=${adeResponse.status}:${adeResponse.value}`
             );
-            throw response;
-          }
-          // ADE responded with a rejection to the user bonus
-          else if (BonusVacanzaInvalidRequestError.is(response.value)) {
+            // Trigger a retry in case of temporary failures
+            throw adeResponse;
+          } else if (BonusVacanzaInvalidRequestError.is(adeResponse.value)) {
+            // ADE rejected the user's bonus activation
             context.log.error(
-              `SendBonusActivationActivity|PERMANENT_ERROR=${response.status}:${response.value}`
+              `${logPrefix}|PERMANENT_ERROR=${adeResponse.status}:${adeResponse.value}`
             );
             return InvalidRequestFailure.encode({
               kind: "INVALID_REQUEST_FAILURE",
-              reason: response.value
+              reason: adeResponse.value
             });
-          }
-          // Everything is ok, why did you worried so much?
-          else if (response.status === 200) {
+          } else if (adeResponse.status === 200) {
+            // Everything is ok, why did you worried so much?
             return SendBonusActivationSuccess.encode({
               kind: "SUCCESS"
             });
           }
 
-          // This should not happen, as BonusVacanzaInvalidRequestError and BonusVacanzaTransientError should map the entire set of rejection
+          // This should not happen, as BonusVacanzaInvalidRequestError
+          // and BonusVacanzaTransientError should map the entire set of rejection
           context.log.error(
-            `SendBonusActivationActivity|UNEXPECTED_ERROR=${response.status}:${response.value}`
+            `${logPrefix}|UNEXPECTED_ERROR=${adeResponse.status}:${adeResponse.value.errorCode}=${adeResponse.value.errorMessage}`
           );
           return UnhandledFailure.encode({
             kind: "UNHANDLED_FAILURE",
-            reason: JSON.stringify(response)
+            reason: JSON.stringify(adeResponse)
           });
         }
       )
