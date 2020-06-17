@@ -56,7 +56,7 @@ export const getStartBonusActivationOrchestratorHandler = (
     const undecodedSendBonusActivation = yield context.df.callActivityWithRetry(
       "SendBonusActivationActivity",
       retryOptions,
-      errorOrBonusVacanzaBase.value
+      SendBonusActivationInput.encode(errorOrBonusVacanzaBase.value)
     );
 
     if (SendBonusActivationFailure.is(undecodedSendBonusActivation)) {
