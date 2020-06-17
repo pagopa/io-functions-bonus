@@ -4,22 +4,37 @@ import { addSeconds } from "date-fns";
 import * as df from "durable-functions";
 import { isSome, none, Option, some } from "fp-ts/lib/Option";
 import { MessageContent } from "io-functions-commons/dist/generated/definitions/MessageContent";
-import { ActivityResult as DeleteEligibilityCheckActivityResult } from "../DeleteEligibilityCheckActivity/handler";
-import { ActivityResult } from "../EligibilityCheckActivity/handler";
+import * as t from "io-ts";
+import {
+  ActivityResult as DeleteEligibilityCheckActivityResult,
+  DeleteEligibilityCheckActivityInput
+} from "../DeleteEligibilityCheckActivity/handler";
+import {
+  ActivityResult,
+  EligibilityCheckActivityInput
+} from "../EligibilityCheckActivity/handler";
 import { EligibilityCheck as ApiEligibilityCheck } from "../generated/definitions/EligibilityCheck";
 import { EligibilityCheck } from "../generated/definitions/EligibilityCheck";
 import { EligibilityCheckFailure } from "../generated/definitions/EligibilityCheckFailure";
 import { EligibilityCheckSuccessConflict } from "../generated/definitions/EligibilityCheckSuccessConflict";
 import { EligibilityCheckSuccessEligible } from "../generated/definitions/EligibilityCheckSuccessEligible";
 import { EligibilityCheckSuccessIneligible } from "../generated/definitions/EligibilityCheckSuccessIneligible";
+import { UpsertEligibilityCheckActivityInput } from "../UpsertEligibilityCheckActivity/handler";
 import { toApiEligibilityCheckFromDSU } from "../utils/conversions";
 import { MESSAGES } from "../utils/messages";
 import { retryOptions } from "../utils/retryPolicy";
+import { ValidateEligibilityCheckActivityInput } from "../ValidateEligibilityCheckActivity/handler";
 
+import { isLeft } from "fp-ts/lib/Either";
 import { readableReport } from "italia-ts-commons/lib/reporters";
-import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
+import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { SendMessageActivityInput } from "../SendMessageActivity/handler";
+
+export const OrchestratorInput = FiscalCode;
+export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
 
 const NOTIFICATION_DELAY_SECONDS = 10;
+const logPrefix = "EligibilityCheckOrchestrator";
 
 export const getMessage = (_: ApiEligibilityCheck): Option<MessageContent> => {
   return EligibilityCheckFailure.is(_)
@@ -39,15 +54,31 @@ export const handler = function*(
   context: IOrchestrationFunctionContext
 ): Generator {
   context.df.setCustomStatus("RUNNING");
-  const orchestratorInput = context.df.getInput();
+  const input = context.df.getInput();
   // tslint:disable-next-line: no-let
   let validatedEligibilityCheck: EligibilityCheck;
   // tslint:disable-next-line: no-let
   let eligibilityCheckResponse: ActivityResult;
   try {
+    const errorOrStartBonusActivationOrchestratorInput = OrchestratorInput.decode(
+      input
+    );
+    if (isLeft(errorOrStartBonusActivationOrchestratorInput)) {
+      context.log.error(`${logPrefix}|Error decoding input`);
+      context.log.verbose(
+        `${logPrefix}|Error decoding input|ERROR=${readableReport(
+          errorOrStartBonusActivationOrchestratorInput.value
+        )}`
+      );
+      return false;
+    }
+
+    const orchestratorInput =
+      errorOrStartBonusActivationOrchestratorInput.value;
+
     const deleteEligibilityCheckResponse = yield context.df.callActivity(
       "DeleteEligibilityCheckActivity",
-      orchestratorInput
+      DeleteEligibilityCheckActivityInput.encode(orchestratorInput)
     );
 
     DeleteEligibilityCheckActivityResult.decode(
@@ -61,7 +92,7 @@ export const handler = function*(
     const undecodedEligibilityCheckResponse = yield context.df.callActivityWithRetry(
       "EligibilityCheckActivity",
       retryOptions,
-      orchestratorInput
+      EligibilityCheckActivityInput.encode(orchestratorInput)
     );
     eligibilityCheckResponse = ActivityResult.decode(
       undecodedEligibilityCheckResponse
@@ -88,7 +119,7 @@ export const handler = function*(
     });
     const undecodedValidatedEligibilityCheck = yield context.df.callActivity(
       "ValidateEligibilityCheckActivity",
-      eligibilityCheck
+      ValidateEligibilityCheckActivityInput.encode(eligibilityCheck)
     );
     validatedEligibilityCheck = EligibilityCheck.decode(
       undecodedValidatedEligibilityCheck
@@ -99,7 +130,7 @@ export const handler = function*(
     yield context.df.callActivityWithRetry(
       "UpsertEligibilityCheckActivity",
       retryOptions,
-      validatedEligibilityCheck
+      UpsertEligibilityCheckActivityInput.encode(validatedEligibilityCheck)
     );
   } catch (err) {
     context.log.error("EligibilityCheckOrchestrator|ERROR|%s", err);
@@ -121,11 +152,10 @@ export const handler = function*(
     yield context.df.callActivityWithRetry(
       "SendMessageActivity",
       retryOptions,
-      {
+      SendMessageActivityInput.encode({
         content: maybeMessage.value,
         fiscalCode: eligibilityCheckResponse.fiscalCode
-        // Cast needed to add type checking
-      } as SendMessageActivityInput
+      })
     );
   } else {
     context.log.error(
