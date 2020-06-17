@@ -1,7 +1,6 @@
 import { Context } from "@azure/functions";
 import * as df from "durable-functions";
 import * as express from "express";
-import { toError } from "fp-ts/lib/Either";
 import { toString } from "fp-ts/lib/function";
 import {
   fromEither,
@@ -19,12 +18,15 @@ import {
 } from "io-functions-commons/dist/src/utils/request_middleware";
 import {
   IResponseErrorForbiddenNotAuthorized,
+  IResponseErrorGone,
   IResponseErrorInternal,
   IResponseErrorNotFound,
-  IResponseSuccessJson,
+  IResponseSuccessAccepted,
   ResponseErrorForbiddenNotAuthorized,
+  ResponseErrorGone,
   ResponseErrorInternal,
-  ResponseSuccessJson
+  ResponseErrorNotFound,
+  ResponseSuccessAccepted
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { BonusCode } from "../generated/definitions/BonusCode";
@@ -33,8 +35,9 @@ import { BonusActivationModel } from "../models/bonus_activation";
 import { runStartBonusActivationOrchestrator } from "../StartBonusActivation/handler";
 
 type IContinueBonusActivationHandlerOutput =
-  | IResponseSuccessJson<{ id: BonusCode }>
+  | IResponseSuccessAccepted
   | IResponseErrorNotFound
+  | IResponseErrorGone
   | IResponseErrorForbiddenNotAuthorized
   | IResponseErrorInternal;
 
@@ -60,38 +63,48 @@ export function ContinueBonusActivationHandler(
     return tryCatch(
       () =>
         bonusActivationModel.findBonusActivationForUser(bonusId, fiscalCode),
-      err => new Error(`Query error: [${err}]`)
+      err =>
+        // Promise rejected or thrown
+        ResponseErrorInternal(
+          `Query error: [${err}]`
+        ) as IContinueBonusActivationHandlerOutput
     )
       .chain(_ =>
-        fromEither(_).mapLeft(
-          queryError => new Error(`Query Error code=${queryError.code}`)
+        // CosmosDB query error
+        fromEither(_).mapLeft(queryError =>
+          ResponseErrorInternal(`Query Error code=${queryError.code}`)
         )
       )
       .chain<BonusActivationWithFamilyUID>(maybeBonusActivation =>
         maybeBonusActivation.fold(
-          fromLeft(new Error("Bonus activation not found")),
+          fromLeft(
+            ResponseErrorNotFound("Not found", "Bonus activation not found")
+          ),
           _ => taskEither.of(_.bonusActivation)
         )
       )
       .chain(
         fromPredicate(
           _ => _.status === "PROCESSING",
-          _ => new Error("Bonus activation status is not PROCESSING")
+          _ => ResponseErrorGone("Bonus activation status is not PROCESSING")
         )
       )
       .chain(bonusActivation =>
-        tryCatch(async () => {
-          runStartBonusActivationOrchestrator(
-            df.getClient(context),
-            bonusActivation,
-            fiscalCode
-          );
-          return bonusActivation;
-        }, toError)
+        tryCatch(
+          async () => {
+            runStartBonusActivationOrchestrator(
+              df.getClient(context),
+              bonusActivation,
+              fiscalCode
+            );
+            return bonusActivation;
+          },
+          err => ResponseErrorInternal(toString(err))
+        )
       )
       .fold<IContinueBonusActivationHandlerOutput>(
-        err => ResponseErrorInternal(toString(err)),
-        _ => ResponseSuccessJson({ id: _.id })
+        err => err,
+        _ => ResponseSuccessAccepted()
       )
       .run();
   };

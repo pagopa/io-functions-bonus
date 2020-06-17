@@ -164,6 +164,37 @@ paths:
           description: Service unavailable.
           schema:
             $ref: "#/definitions/ProblemJson"
+
+    put:
+      operationId: continueBonusActivationById
+      summary: |
+        Continue (restart) a bonus activation process
+        for the bonus entity identified by the provided id and fiscal code:
+        a bonus activation with status = PROCESSING is waiting for the call
+        to the ADE API; a successful response will mark the bonus as active.
+      parameters:
+        - $ref: "#/parameters/FiscalCode"
+        - name: bonus_id
+          in: path
+          required: true
+          description: Bonus activation ID.
+          type: string
+      responses:
+        "202":
+          description: Request accepted.
+        "401":
+          description: Wrong or missing function key.
+        "403":
+          description: Bonus activation procedure is disabled.
+        "404":
+          description: No bonus activation found for provided id and fiscal code.
+        "410":
+          description: Bonus activation was found but status is not PROCESSING.
+        "500":
+          description: Service unavailable.
+          schema:
+            $ref: "#/definitions/ProblemJson"
+
 parameters:
   FiscalCode:
     name: fiscalcode
