@@ -55,7 +55,6 @@ export function ContinueBonusActivationHandler(
     if (!isBonusActivationEnabled) {
       return ResponseErrorForbiddenNotAuthorized;
     }
-    const client = df.getClient(context);
     return tryCatch(
       () =>
         bonusActivationModel.findBonusActivationForUser(bonusId, fiscalCode),
@@ -72,7 +71,7 @@ export function ContinueBonusActivationHandler(
           _ =>
             tryCatch(async () => {
               runStartBonusActivationOrchestrator(
-                client,
+                df.getClient(context),
                 _.bonusActivation,
                 fiscalCode
               );
