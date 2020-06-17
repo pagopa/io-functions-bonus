@@ -2,6 +2,7 @@
 
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { context as contextMock } from "../../__mocks__/durable-functions";
+import { aFiscalCode } from "../../__mocks__/mocks";
 import { ActivityResult as DeleteEligibilityCheckActivityResult } from "../../DeleteEligibilityCheckActivity/handler";
 import { ActivityResult } from "../../EligibilityCheckActivity/handler";
 import { EsitoEnum } from "../../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
@@ -43,7 +44,7 @@ const eligibilityCheck = toApiEligibilityCheckFromDSU(
   eligibilityCheckResponse.validBefore
 );
 
-const anInput = "foobar";
+const anInput = aFiscalCode;
 
 const contextMockWithDf = {
   ...contextMock,

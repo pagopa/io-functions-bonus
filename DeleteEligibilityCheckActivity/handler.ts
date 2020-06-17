@@ -3,8 +3,13 @@ import { left, right } from "fp-ts/lib/Either";
 import { fromEither, tryCatch } from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
-import { NonEmptyString } from "italia-ts-commons/lib/strings";
+import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { EligibilityCheckModel } from "../models/eligibility_check";
+
+export const DeleteEligibilityCheckActivityInput = FiscalCode;
+export type DeleteEligibilityCheckActivityInput = t.TypeOf<
+  typeof DeleteEligibilityCheckActivityInput
+>;
 
 // Activity result
 export const ActivityResultSuccess = t.interface({
@@ -34,9 +39,19 @@ export const getDeleteEligibilityCheckActivityHandler = (
 ) => {
   return async (context: Context, input: unknown): Promise<ActivityResult> => {
     return fromEither(
-      NonEmptyString.decode(input).mapLeft(
-        err => new Error(`Invalid Activity input: [${readableReport(err)}]`)
-      )
+      DeleteEligibilityCheckActivityInput.decode(input)
+        .chain(fiscalCode =>
+          // we need to cast as NonEmptyString because patternstring aren't empty by design
+          NonEmptyString.decode(fiscalCode)
+        )
+        .mapLeft(
+          err => new Error(`Invalid Activity input: [${readableReport(err)}]`)
+        )
+        .map(
+          fiscalCode =>
+            // pattern strings ain't nonempty strings
+            (fiscalCode as unknown) as NonEmptyString
+        )
     )
       .chain(fiscalCode =>
         tryCatch(
