@@ -1,4 +1,5 @@
 import { Context } from "@azure/functions";
+import { defaultClient } from "applicationinsights";
 import { toError } from "fp-ts/lib/Either";
 import {
   fromEither,
@@ -179,29 +180,59 @@ export function SendBonusActivationHandler(
       .fold<SendBonusActivationResult>(
         activityFailure => {
           if (SendBonusActivationTransientFailure.is(activityFailure)) {
-            context.log.error(
-              `${logPrefix}|TRANSIENT_ERROR=${activityFailure.kind}:${activityFailure.reason}`
-            );
+            const error = `${logPrefix}|TRANSIENT_ERROR=${activityFailure.kind}:${activityFailure.reason}`;
+            context.log.error(error);
+
+            defaultClient.trackException({
+              exception: new Error(error),
+              properties: {
+                name: "bonus.activation.failure.temporary"
+              }
+            });
+
             // Trigger a retry in case of temporary failures
             throw activityFailure;
+          } else {
+            const error = `${logPrefix}|PERMANENT_ERROR=${activityFailure.kind}=${activityFailure.reason}`;
+            context.log.error(error);
+
+            defaultClient.trackException({
+              exception: new Error(error),
+              properties: {
+                name: "bonus.activation.failure.permanent"
+              }
+            });
+
+            return activityFailure;
           }
-          context.log.error(
-            `${logPrefix}|${activityFailure.kind}=${activityFailure.reason}`
-          );
-          return activityFailure;
         },
         adeResponse => {
           if (SendBonusActivationTransientFailure.is(adeResponse.value)) {
-            context.log.error(
-              `${logPrefix}|TRANSIENT_ERROR=${adeResponse.status}:${adeResponse.value}`
-            );
+            const error = `${logPrefix}|TRANSIENT_ERROR=${adeResponse.status}:${adeResponse.value}`;
+            context.log.error(error);
+
+            defaultClient.trackException({
+              exception: new Error(error),
+              properties: {
+                name: "bonus.activation.failure.temporary"
+              }
+            });
+
             // Trigger a retry in case of temporary failures
             throw adeResponse;
           } else if (BonusVacanzaInvalidRequestError.is(adeResponse.value)) {
             // ADE rejected the user's bonus activation
-            context.log.error(
-              `${logPrefix}|PERMANENT_ERROR=${adeResponse.status}:${adeResponse.value}`
-            );
+
+            const error = `${logPrefix}|PERMANENT_ERROR=${adeResponse.status}:${adeResponse.value}`;
+            context.log.error(error);
+
+            defaultClient.trackException({
+              exception: new Error(error),
+              properties: {
+                name: "bonus.activation.failure.permanent"
+              }
+            });
+
             return InvalidRequestFailure.encode({
               kind: "INVALID_REQUEST_FAILURE",
               reason: adeResponse.value
@@ -211,17 +242,24 @@ export function SendBonusActivationHandler(
             return SendBonusActivationSuccess.encode({
               kind: "SUCCESS"
             });
-          }
+          } else {
+            // This should not happen, as BonusVacanzaInvalidRequestError
+            // and BonusVacanzaTransientError should map the entire set of rejection
+            const error = `${logPrefix}|UNEXPECTED_ERROR=${adeResponse.status}:${adeResponse.value.errorCode}=${adeResponse.value.errorMessage}`;
+            context.log.error(error);
 
-          // This should not happen, as BonusVacanzaInvalidRequestError
-          // and BonusVacanzaTransientError should map the entire set of rejection
-          context.log.error(
-            `${logPrefix}|UNEXPECTED_ERROR=${adeResponse.status}:${adeResponse.value.errorCode}=${adeResponse.value.errorMessage}`
-          );
-          return UnhandledFailure.encode({
-            kind: "UNHANDLED_FAILURE",
-            reason: JSON.stringify(adeResponse)
-          });
+            defaultClient.trackException({
+              exception: new Error(error),
+              properties: {
+                name: "bonus.activation.failure.unexpected"
+              }
+            });
+
+            return UnhandledFailure.encode({
+              kind: "UNHANDLED_FAILURE",
+              reason: JSON.stringify(adeResponse)
+            });
+          }
         }
       )
       .run();

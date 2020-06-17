@@ -64,11 +64,14 @@ export const getStartBonusActivationOrchestratorHandler = (
       name: "bonus.activation.sent"
     });
 
+    const startBonusActivationOrchestratorInput =
+      errorOrStartBonusActivationOrchestratorInput.value;
+
     if (SendBonusActivationSuccess.is(undecodedSendBonusActivation)) {
       yield context.df.callActivity(
         "SuccessBonusActivationActivity",
         SuccessBonusActivationInput.encode(
-          errorOrStartBonusActivationOrchestratorInput.value
+          startBonusActivationOrchestratorInput
         )
       );
       defaultClient.trackEvent({
@@ -77,9 +80,7 @@ export const getStartBonusActivationOrchestratorHandler = (
     } else {
       yield context.df.callActivity(
         "FailedBonusActivationActivity",
-        FailedBonusActivationInput.encode(
-          errorOrStartBonusActivationOrchestratorInput.value
-        )
+        FailedBonusActivationInput.encode(startBonusActivationOrchestratorInput)
       );
       defaultClient.trackEvent({
         name: "bonus.activation.failure"
