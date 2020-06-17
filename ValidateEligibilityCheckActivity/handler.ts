@@ -2,12 +2,18 @@ import { Context } from "@azure/functions";
 import { left, right } from "fp-ts/lib/Either";
 import { isNone } from "fp-ts/lib/Option";
 import { fromEither, tryCatch } from "fp-ts/lib/TaskEither";
+import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { EligibilityCheck } from "../generated/definitions/EligibilityCheck";
 import { StatusEnum as ConflictStatusEnum } from "../generated/definitions/EligibilityCheckSuccessConflict";
 import { StatusEnum as EligibleStatusEnum } from "../generated/definitions/EligibilityCheckSuccessEligible";
 import { BonusLeaseModel } from "../models/bonus_lease";
 import { generateFamilyUID } from "../utils/hash";
+
+export const ValidateEligibilityCheckActivityInput = EligibilityCheck;
+export type ValidateEligibilityCheckActivityInput = t.TypeOf<
+  typeof ValidateEligibilityCheckActivityInput
+>;
 
 type IValidateEligibilityCheckHandler = (
   context: Context,
@@ -19,7 +25,7 @@ export function getValidateEligibilityCheckActivityHandler(
 ): IValidateEligibilityCheckHandler {
   return (context, input) => {
     return fromEither(
-      EligibilityCheck.decode(input).mapLeft(
+      ValidateEligibilityCheckActivityInput.decode(input).mapLeft(
         err => new Error(`Decoding Error: [${readableReport(err)}]`)
       )
     )

@@ -10,6 +10,11 @@ import {
 } from "../models/eligibility_check";
 import { toModelEligibilityCheck } from "../utils/conversions";
 
+export const UpsertEligibilityCheckActivityInput = EligibilityCheck;
+export type UpsertEligibilityCheckActivityInput = t.TypeOf<
+  typeof UpsertEligibilityCheckActivityInput
+>;
+
 export const ActivityResultSuccess = t.interface({
   kind: t.literal("SUCCESS")
 });
@@ -38,7 +43,7 @@ export function getUpsertEligibilityCheckActivityHandler(
 ): ISaveEligibilityCheckHandler {
   return (context: Context, input: unknown) => {
     return fromEither(
-      EligibilityCheck.decode(input).mapLeft(
+      UpsertEligibilityCheckActivityInput.decode(input).mapLeft(
         _ => new Error(`Error decoding ActivityInput: [${readableReport(_)}]`)
       )
     )

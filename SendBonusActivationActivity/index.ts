@@ -17,7 +17,7 @@ const adeServiceEndpoint = getRequiredStringEnv("ADE_SERVICE_ENDPOINT");
 
 // http when developing locally
 const ADE_SERVICE_PROTOCOL = UrlFromString.decode(adeServiceEndpoint)
-  .map(url => url.protocol)
+  .map(url => url.protocol?.slice(0, -1))
   .getOrElse("https");
 
 const fetchAgent =
