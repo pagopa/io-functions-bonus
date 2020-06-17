@@ -1,3 +1,4 @@
+import { defaultClient } from "applicationinsights";
 import {
   IOrchestrationFunctionContext,
   Task,
@@ -13,6 +14,7 @@ import { SendBonusActivationSuccess } from "../SendBonusActivationActivity/handl
 import { SendBonusActivationInput } from "../SendBonusActivationActivity/handler";
 import { SuccessBonusActivationInput } from "../SuccessBonusActivationActivity/handler";
 import { toApiBonusVacanzaBase } from "../utils/conversions";
+import { retryOptions } from "../utils/retryPolicy";
 
 export const OrchestratorInput = t.interface({
   bonusActivation: BonusActivationWithFamilyUID
@@ -55,15 +57,12 @@ export const getStartBonusActivationOrchestratorHandler = (
     // Send bonus details to ADE rest service
     const undecodedSendBonusActivation = yield context.df.callActivityWithRetry(
       "SendBonusActivationActivity",
-      {
-        backoffCoefficient: 1.5,
-        firstRetryIntervalInMilliseconds: 1000,
-        maxNumberOfAttempts: 10,
-        maxRetryIntervalInMilliseconds: 3600 * 100,
-        retryTimeoutInMilliseconds: 3600 * 1000
-      },
+      retryOptions,
       SendBonusActivationInput.encode(errorOrBonusVacanzaBase.value)
     );
+    defaultClient.trackEvent({
+      name: "bonus.activation.sent"
+    });
 
     if (SendBonusActivationSuccess.is(undecodedSendBonusActivation)) {
       yield context.df.callActivity(
@@ -72,6 +71,9 @@ export const getStartBonusActivationOrchestratorHandler = (
           errorOrStartBonusActivationOrchestratorInput.value
         )
       );
+      defaultClient.trackEvent({
+        name: "bonus.activation.success"
+      });
     } else {
       yield context.df.callActivity(
         "FailedBonusActivationActivity",
@@ -79,6 +81,9 @@ export const getStartBonusActivationOrchestratorHandler = (
           errorOrStartBonusActivationOrchestratorInput.value
         )
       );
+      defaultClient.trackEvent({
+        name: "bonus.activation.failure"
+      });
     }
     return true;
   };

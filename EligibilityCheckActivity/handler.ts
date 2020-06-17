@@ -1,4 +1,5 @@
 import { Context } from "@azure/functions";
+import { defaultClient } from "applicationinsights";
 import { addHours } from "date-fns";
 import { fromEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "io-functions-commons/dist/generated/definitions/FiscalCode";
@@ -63,10 +64,17 @@ export const getEligibilityCheckActivityHandler = (
           .map(_ => ({ dsu: _, fiscalCode }));
       })
       .fold(
-        // Reject / trow fail the Activity execution
-        // If called with `callActivityWithRetry` the execution will be restarted
         err => {
           context.log.error(`EligibilityCheckActivity|ERROR|${err.message}`);
+          defaultClient.trackException({
+            exception: err,
+            properties: {
+              name: "bonus.eligibilitycheck.inps"
+            }
+          });
+          // Trigger a retry: every left result
+          // is mapped to any transient error that may occur
+          // during the call to the INPS service
           throw err;
         },
         async _ => ({
