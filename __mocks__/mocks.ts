@@ -1,4 +1,3 @@
-import { IWithinRangeIntegerTag } from "italia-ts-commons/lib/numbers";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { BonusActivation } from "../generated/models/BonusActivation";
 import { BonusActivationStatusEnum } from "../generated/models/BonusActivationStatus";
