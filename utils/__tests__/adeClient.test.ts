@@ -16,7 +16,7 @@ const aBonusVacanzaBase: BonusVacanzaBase = {
   codiceBuono: "aCodiceBuono",
   codiceFiscaleDichiarante: "aCodiceFiscaleDichiarante",
   dataGenerazione: new Date(),
-  flagDifformitaIsee: 0,
+  flagDifformita: 0,
   importoMassimo: 500,
   mac: "xxx",
   nucleoFamiliare: [{ codiceFiscale: "aCodiceFiscale" }]
@@ -215,7 +215,7 @@ describe("BonusVacanza#HMAC", () => {
       codiceBuono: "ACEFGHLMNPRU",
       codiceFiscaleDichiarante: "AAAAAA55A55A555A",
       dataGenerazione: new Date("2020-06-11T08:54:31.143Z"),
-      flagDifformitaIsee: 1,
+      flagDifformita: 1,
       importoMassimo: 500,
       nucleoFamiliare: [
         {

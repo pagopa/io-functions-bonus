@@ -114,7 +114,7 @@ export const toApiBonusVacanzaBase = (
     codiceBuono: domainObject.id,
     codiceFiscaleDichiarante: domainObject.applicantFiscalCode,
     dataGenerazione: domainObject.createdAt.toISOString(),
-    flagDifformitaIsee: domainObject.dsuRequest.hasDiscrepancies ? 1 : 0,
+    flagDifformita: domainObject.dsuRequest.hasDiscrepancies ? 1 : 0,
     importoMassimo: domainObject.dsuRequest.maxAmount,
     nucleoFamiliare: domainObject.dsuRequest.familyMembers.map(_ => ({
       codiceFiscale: _.fiscalCode

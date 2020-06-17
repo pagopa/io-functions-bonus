@@ -88,7 +88,7 @@ definitions:
       importoMassimo:
         type: number
         description: importo del bonus richiesto
-      flagDifformitaIsee:
+      flagDifformita:
         type: integer
         description: valori 0 non difforme, 1 difforme
       dataGenerazione:
@@ -103,6 +103,6 @@ definitions:
       - codiceBuono
       - codiceFiscaleDichiarante
       - importoMassimo
-      - flagDifformitaIsee
+      - flagDifformita
       - dataGenerazione
       - nucleoFamiliare
