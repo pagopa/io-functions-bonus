@@ -1,6 +1,12 @@
 import { Context } from "@azure/functions";
 import { toError } from "fp-ts/lib/Either";
-import { fromEither, TaskEither, tryCatch } from "fp-ts/lib/TaskEither";
+import {
+  fromEither,
+  fromLeft,
+  TaskEither,
+  taskEither,
+  tryCatch
+} from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { TypeofApiResponse } from "italia-ts-commons/lib/requests";
@@ -17,43 +23,74 @@ export type SendBonusActivationInput = t.TypeOf<
   typeof SendBonusActivationInput
 >;
 
-export const SendBonusActivationSuccess = t.interface({
-  kind: t.literal("SUCCESS")
+// fails validating activity input
+export type InvalidInputFailure = t.TypeOf<typeof UnhandledFailure>;
+export const InvalidInputFailure = t.interface({
+  kind: t.literal("INVALID_INPUT"),
+  reason: t.string
 });
-export type SendBonusActivationSuccess = t.TypeOf<
-  typeof SendBonusActivationSuccess
->;
 
-export const SendBonusActivationUnhandledFailure = t.interface({
+// fails parsing the response from ADE service
+export type ResponseParseFailure = t.TypeOf<typeof ResponseParseFailure>;
+export const ResponseParseFailure = t.interface({
+  kind: t.literal("RESPONSE_PARSE"),
+  reason: t.string
+});
+
+// fails to perfom a request to the ADE service
+export type ADEServiceFailure = t.TypeOf<typeof ADEServiceFailure>;
+export const ADEServiceFailure = t.interface({
+  kind: t.literal("ADE_SERVICE"),
+  reason: t.string
+});
+
+// unhandled code failure
+export type UnhandledFailure = t.TypeOf<typeof UnhandledFailure>;
+export const UnhandledFailure = t.interface({
   kind: t.literal("UNHANDLED_FAILURE"),
   reason: t.string
 });
-export type SendBonusActivationUnhandledFailure = t.TypeOf<
-  typeof SendBonusActivationUnhandledFailure
->;
 
-export const SendBonusActivationInvalidRequestFailure = t.interface({
+// the response from ADE service is ok, but the bonus wasn't accepted by ADE
+export type InvalidRequestFailure = t.TypeOf<typeof InvalidRequestFailure>;
+export const InvalidRequestFailure = t.interface({
   kind: t.literal("INVALID_REQUEST_FAILURE"),
   reason: BonusVacanzaInvalidRequestError
 });
-export type SendBonusActivationInvalidRequestFailure = t.TypeOf<
-  typeof SendBonusActivationInvalidRequestFailure
->;
 
-export const SendBonusActivationFailure = t.union(
+// failures related to the execution of the current activity
+export type ActivityRuntimeFailure = t.TypeOf<typeof ActivityRuntimeFailure>;
+export const ActivityRuntimeFailure = t.union(
   [
-    SendBonusActivationInvalidRequestFailure,
-    SendBonusActivationUnhandledFailure
+    UnhandledFailure,
+    InvalidInputFailure,
+    ResponseParseFailure,
+    ADEServiceFailure
   ],
-  "SendBonusActivationFailure"
+  "ActivityRuntimeFailure"
 );
+
+// any failure case for this activity
 export type SendBonusActivationFailure = t.TypeOf<
   typeof SendBonusActivationFailure
 >;
+export const SendBonusActivationFailure = t.union(
+  [ActivityRuntimeFailure, InvalidRequestFailure],
+  "SendBonusActivationFailure"
+);
 
+// no runtime errors and the response from ADE was positive
+export type SendBonusActivationSuccess = t.TypeOf<
+  typeof SendBonusActivationSuccess
+>;
+export const SendBonusActivationSuccess = t.interface({
+  kind: t.literal("SUCCESS")
+});
+
+// union all possibile outcomes of the current activity
 export const SendBonusActivationResult = t.taggedUnion("kind", [
-  SendBonusActivationSuccess,
-  SendBonusActivationFailure
+  SendBonusActivationFailure,
+  SendBonusActivationSuccess
 ]);
 export type SendBonusActivationResult = t.TypeOf<
   typeof SendBonusActivationResult
@@ -69,20 +106,29 @@ export type SendBonusActivationResult = t.TypeOf<
 const richiestaBonusTask = (
   adeClient: ADEClientInstance,
   bonusVacanzaBase: BonusVacanzaBase
-): TaskEither<Error, TypeofApiResponse<RichiestaBonusT>> => {
+): TaskEither<
+  ADEServiceFailure | ResponseParseFailure,
+  TypeofApiResponse<RichiestaBonusT>
+> => {
   return tryCatch(
-    () =>
-      adeClient
-        .richiestaBonus({ bonusVacanzaBase })
-        .then(validationErrorOrResponse =>
-          validationErrorOrResponse.fold(
-            err => {
-              throw new Error(`Error: [${readableReport(err)}]`);
-            },
-            resp => resp
-          )
-        ),
-    toError
+    () => adeClient.richiestaBonus({ bonusVacanzaBase }),
+    err =>
+      ADEServiceFailure.encode({
+        kind: "ADE_SERVICE",
+        reason: toError(err).message
+      })
+  ).foldTaskEither<
+    ADEServiceFailure | ResponseParseFailure,
+    TypeofApiResponse<RichiestaBonusT>
+  >(
+    err => fromLeft(err),
+    validationErrorOrResponse =>
+      fromEither(validationErrorOrResponse).mapLeft(validations =>
+        ResponseParseFailure.encode({
+          kind: "RESPONSE_PARSE",
+          reason: readableReport(validations)
+        })
+      )
   );
 };
 
@@ -107,48 +153,56 @@ export function SendBonusActivationHandler(
     input: unknown
   ): Promise<SendBonusActivationResult> => {
     context.log.info(`SendBonusActivationActivity|INFO|Input: ${input}`);
-    return await fromEither(
-      SendBonusActivationInput.decode(input).mapLeft(
-        err => new Error(`Error: [${readableReport(err)}]`)
+    return taskEither
+      .of<ActivityRuntimeFailure, void>(void 0)
+      .chain(_ =>
+        fromEither(SendBonusActivationInput.decode(input)).mapLeft(err =>
+          InvalidInputFailure.encode({
+            kind: "INVALID_INPUT",
+            reason: readableReport(err)
+          })
+        )
       )
-    )
       .chain(bonusVacanzaBase =>
         richiestaBonusTask(adeClient, bonusVacanzaBase)
       )
       .fold<SendBonusActivationResult>(
-        unhandledError => {
+        activityFailure => {
           context.log.error(
-            `SendBonusActivationActivity|UNHANDLED_ERROR=${unhandledError.message}`
+            `SendBonusActivationActivity|${activityFailure.kind}=${activityFailure.reason}`
           );
-          return SendBonusActivationUnhandledFailure.encode({
-            kind: "UNHANDLED_FAILURE",
-            reason: unhandledError.message
-          });
+          return activityFailure;
         },
         response => {
+          // The response from ADE is considered to be a temporary failure. We trow to allow the orcherstrator to retry the activity
           if (BonusVacanzaTransientError.is(response.value)) {
             context.log.error(
               `SendBonusActivationActivity|TRANSIENT_ERROR=${response.status}:${response.value}`
             );
-            // throw the exception so the activity can be retried by the orchestrator
             throw response;
-          } else if (BonusVacanzaInvalidRequestError.is(response.value)) {
+          }
+          // ADE responded with a rejection to the user bonus
+          else if (BonusVacanzaInvalidRequestError.is(response.value)) {
             context.log.error(
               `SendBonusActivationActivity|PERMANENT_ERROR=${response.status}:${response.value}`
             );
-            return SendBonusActivationInvalidRequestFailure.encode({
+            return InvalidRequestFailure.encode({
               kind: "INVALID_REQUEST_FAILURE",
               reason: response.value
             });
-          } else if (response.status === 200) {
+          }
+          // Everything is ok, why did you worried so much?
+          else if (response.status === 200) {
             return SendBonusActivationSuccess.encode({
               kind: "SUCCESS"
             });
           }
+
+          // This should not happen, as BonusVacanzaInvalidRequestError and BonusVacanzaTransientError should map the entire set of rejection
           context.log.error(
             `SendBonusActivationActivity|UNEXPECTED_ERROR=${response.status}:${response.value}`
           );
-          return SendBonusActivationUnhandledFailure.encode({
+          return UnhandledFailure.encode({
             kind: "UNHANDLED_FAILURE",
             reason: JSON.stringify(response)
           });
