@@ -182,11 +182,11 @@ describe("StartBonusActivationHandler", () => {
   });
 
   it("should retry bonus code generation if there's already the same code on the db", async () => {
-    mockBonusActivationCreate.mockImplementationOnce(async _ => {
-      throw {
+    mockBonusActivationCreate.mockImplementationOnce(async _ =>
+      left({
         code: 409
-      };
-    });
+      })
+    );
 
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,

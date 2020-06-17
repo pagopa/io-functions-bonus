@@ -1,8 +1,10 @@
 import { Context } from "@azure/functions";
-import { QueryError } from "documentdb";
-import { Either, toError } from "fp-ts/lib/Either";
 import { TaskEither, taskEither } from "fp-ts/lib/TaskEither";
-import { fromEither, tryCatch } from "fp-ts/lib/TaskEither";
+import { fromEither } from "fp-ts/lib/TaskEither";
+import {
+  fromQueryEither,
+  QueryError
+} from "io-functions-commons/dist/src/utils/documentdb";
 import * as t from "io-ts";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { BonusActivationStatusEnum } from "../generated/models/BonusActivationStatus";
@@ -65,20 +67,6 @@ type IFailedBonusActivationHandler = (
 ) => Promise<FailedBonusActivationResult>;
 
 /**
- * Converts a Promise<Either> into a TaskEither
- * This is needed because our models return unconvenient type. Both left and rejection cases are handled as a TaskEither left
- * @param lazyPromise a lazy promise to convert
- *
- * @returns either the query result or a query failure
- */
-const fromQueryEither = <R>(
-  lazyPromise: () => Promise<Either<QueryError | Error, R>>
-): TaskEither<Error, R> =>
-  tryCatch(lazyPromise, toError).chain(errorOrResult =>
-    fromEither(errorOrResult).mapLeft(toError)
-  );
-
-/**
  * Release the lock that was eventually acquired for this request. A release attempt on a lock that doesn't exist is considered successful.
  *
  * @param bonusLeaseModel an instance of BonusLeaseModel
@@ -88,7 +76,7 @@ const fromQueryEither = <R>(
 const relaseLockForUserFamily = (
   bonusLeaseModel: BonusLeaseModel,
   familyUID: FamilyUID
-): TaskEither<Error, void> => {
+): TaskEither<QueryError, void> => {
   return fromQueryEither(() => bonusLeaseModel.deleteOneById(familyUID)).map(
     _ => void 0
   );
@@ -97,7 +85,7 @@ const relaseLockForUserFamily = (
 const updateBonusAsFailed = (
   bonusActivationModel: BonusActivationModel,
   bonusActivation: BonusActivationWithFamilyUID
-): TaskEither<Error, RetrievedBonusActivation> => {
+): TaskEither<QueryError, RetrievedBonusActivation> => {
   return fromQueryEither(() => {
     const bonusToUpdate: BonusActivationWithFamilyUID = {
       ...bonusActivation,
@@ -110,7 +98,7 @@ const updateBonusAsFailed = (
 const deleteEligibilityCheck = (
   eligibilityCheckModel: EligibilityCheckModel,
   bonusActivation: BonusActivationWithFamilyUID
-): TaskEither<Error, string> => {
+): TaskEither<QueryError, string> => {
   return fromQueryEither(() =>
     eligibilityCheckModel.deleteOneById(
       bonusActivation.id as BonusCode & NonEmptyString
@@ -147,7 +135,7 @@ export function FailedBonusActivationHandler(
           .foldTaskEither(
             err => {
               context.log.warn(
-                `FailedBonusActivationHandler|WARN|Failed deleting dsu: ${err.message}`
+                `FailedBonusActivationHandler|WARN|Failed deleting dsu: ${err.body}`
               );
               return taskEither.of(bonusActivation);
             },
@@ -160,7 +148,7 @@ export function FailedBonusActivationHandler(
           .foldTaskEither(
             err => {
               context.log.warn(
-                `FailedBonusActivationHandler|WARN|Failed updating bonus: ${err.message}`
+                `FailedBonusActivationHandler|WARN|Failed updating bonus: ${err.body}`
               );
               return taskEither.of(bonusActivation);
             },
@@ -173,11 +161,11 @@ export function FailedBonusActivationHandler(
           bonusActivation.familyUID
         ).mapLeft(err => {
           context.log.warn(
-            `FailedBonusActivationHandler|WARN|Failed releasing lock: ${err.message}`
+            `FailedBonusActivationHandler|WARN|Failed releasing lock: ${err.body}`
           );
           return UnhandledFailure.encode({
             kind: "UNHANDLED_FAILURE",
-            reason: err.message
+            reason: err.body
           });
         })
       )
