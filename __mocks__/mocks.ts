@@ -30,6 +30,11 @@ import {
   RetrievedBonusLease
 } from "../models/bonus_lease";
 import { RetrievedUserBonus, UserBonus } from "../models/user_bonus";
+import { BonusVacanzaBase } from "../generated/ade/BonusVacanzaBase";
+import {
+  BonusVacanzaInvalidRequestError,
+  BonusVacanzaTransientError
+} from "../utils/adeClient";
 
 export const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
 export const anotherFiscalCode = "CCCDDD80A01C123D" as FiscalCode;
@@ -150,4 +155,33 @@ export const aRetrievedUserBonus: RetrievedUserBonus = {
   _ts: 123,
   id: (aUserBonus.bonusId as unknown) as NonEmptyString,
   kind: "IRetrievedUserBonus"
+};
+
+export const aBonusVacanzaBase: BonusVacanzaBase = {
+  codiceBuono: "ACEFGHLMNPRU",
+  codiceFiscaleDichiarante: "AAAAAA55A55A555A",
+  dataGenerazione: new Date("2020-06-11T08:54:31.143Z"),
+  flagDifformita: 1,
+  importoMassimo: 500,
+  mac: "123",
+  nucleoFamiliare: [
+    {
+      codiceFiscale: "AAAAAA55A55A555A"
+    },
+    {
+      codiceFiscale: "BBBBBB88B88B888B"
+    },
+    {
+      codiceFiscale: "CCCCCC99C99C999C"
+    }
+  ]
+};
+
+export const aBonusVacanzaInvalidRequestError: BonusVacanzaInvalidRequestError = {
+  errorCode: "1000",
+  errorMessage: "lorem ipsum"
+};
+export const aBonusVacanzaTransientError: BonusVacanzaTransientError = {
+  errorCode: "3000",
+  errorMessage: "Generic Error"
 };

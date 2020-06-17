@@ -96,6 +96,15 @@ export type SendBonusActivationResult = t.TypeOf<
   typeof SendBonusActivationResult
 >;
 
+// any case we consider to be temporary error
+export type SendBonusActivationTransientFailure = t.TypeOf<
+  typeof SendBonusActivationTransientFailure
+>;
+export const SendBonusActivationTransientFailure = t.union(
+  [BonusVacanzaTransientError, ADEServiceFailure],
+  "SendBonusActivationTransientFailure"
+);
+
 /**
  * Lift adeClient.richiestaBonus to TaskEither type
  * @param adeClient a client instance
@@ -168,31 +177,40 @@ export function SendBonusActivationHandler(
       )
       .fold<SendBonusActivationResult>(
         activityFailure => {
+          // The failure considered to be temporary. We trow to allow the orcherstrator to retry the activity
+          if (SendBonusActivationTransientFailure.is(activityFailure)) {
+            context.log.error(
+              `SendBonusActivationActivity|TRANSIENT_ERROR=${activityFailure.kind}:${activityFailure.reason}`
+            );
+            throw activityFailure;
+          }
+
+          // else, we just log the failure
           context.log.error(
             `SendBonusActivationActivity|${activityFailure.kind}=${activityFailure.reason}`
           );
           return activityFailure;
         },
-        response => {
+        adeResponse => {
           // The response from ADE is considered to be a temporary failure. We trow to allow the orcherstrator to retry the activity
-          if (BonusVacanzaTransientError.is(response.value)) {
+          if (SendBonusActivationTransientFailure.is(adeResponse.value)) {
             context.log.error(
-              `SendBonusActivationActivity|TRANSIENT_ERROR=${response.status}:${response.value}`
+              `SendBonusActivationActivity|TRANSIENT_ERROR=${adeResponse.status}:${adeResponse.value}`
             );
-            throw response;
+            throw adeResponse;
           }
           // ADE responded with a rejection to the user bonus
-          else if (BonusVacanzaInvalidRequestError.is(response.value)) {
+          else if (BonusVacanzaInvalidRequestError.is(adeResponse.value)) {
             context.log.error(
-              `SendBonusActivationActivity|PERMANENT_ERROR=${response.status}:${response.value}`
+              `SendBonusActivationActivity|PERMANENT_ERROR=${adeResponse.status}:${adeResponse.value}`
             );
             return InvalidRequestFailure.encode({
               kind: "INVALID_REQUEST_FAILURE",
-              reason: response.value
+              reason: adeResponse.value
             });
           }
           // Everything is ok, why did you worried so much?
-          else if (response.status === 200) {
+          else if (adeResponse.status === 200) {
             return SendBonusActivationSuccess.encode({
               kind: "SUCCESS"
             });
@@ -200,11 +218,11 @@ export function SendBonusActivationHandler(
 
           // This should not happen, as BonusVacanzaInvalidRequestError and BonusVacanzaTransientError should map the entire set of rejection
           context.log.error(
-            `SendBonusActivationActivity|UNEXPECTED_ERROR=${response.status}:${response.value}`
+            `SendBonusActivationActivity|UNEXPECTED_ERROR=${adeResponse.status}:${adeResponse.value}`
           );
           return UnhandledFailure.encode({
             kind: "UNHANDLED_FAILURE",
-            reason: JSON.stringify(response)
+            reason: JSON.stringify(adeResponse)
           });
         }
       )

@@ -1,47 +1,33 @@
 import { isRight, right } from "fp-ts/lib/Either";
 import * as t from "io-ts";
 import { context } from "../../__mocks__/durable-functions";
-import { BonusVacanzaBase } from "../../generated/ade/BonusVacanzaBase";
 import {
-  ADEClientInstance,
-  BonusVacanzaInvalidRequestError,
-  BonusVacanzaTransientError
-} from "../../utils/adeClient";
+  aBonusVacanzaBase,
+  aBonusVacanzaInvalidRequestError,
+  aBonusVacanzaTransientError
+} from "../../__mocks__/mocks";
+import { ADEClientInstance } from "../../utils/adeClient";
 import {
+  ADEServiceFailure,
   SendBonusActivationFailure,
   SendBonusActivationHandler,
-  SendBonusActivationSuccess
+  SendBonusActivationSuccess,
+  InvalidInputFailure
 } from "../handler";
 
-const aBonusVacanzaBase: BonusVacanzaBase = {
-  codiceBuono: "ACEFGHLMNPRU",
-  codiceFiscaleDichiarante: "AAAAAA55A55A555A",
-  dataGenerazione: new Date("2020-06-11T08:54:31.143Z"),
-  flagDifformita: 1,
-  importoMassimo: 500,
-  mac: "123",
-  nucleoFamiliare: [
-    {
-      codiceFiscale: "AAAAAA55A55A555A"
-    },
-    {
-      codiceFiscale: "BBBBBB88B88B888B"
-    },
-    {
-      codiceFiscale: "CCCCCC99C99C999C"
-    }
-  ]
-};
-const aBonusVacanzaInvalidRequestError: BonusVacanzaInvalidRequestError = {
-  errorCode: "1000",
-  errorMessage: "lorem ipsum"
-};
-const aBonusVacanzaTransientError: BonusVacanzaTransientError = {
-  errorCode: "3000",
-  errorMessage: "Generic Error"
-};
-
 describe("SendBonusActivationHandler", () => {
+  it("should handle an invalid input", async () => {
+    const mockADEClient = {
+      richiestaBonus: jest.fn()
+    } as ADEClientInstance;
+
+    const handler = SendBonusActivationHandler(mockADEClient);
+
+    const result = await handler(context, { foo: "bar" });
+
+    expect(isRight(InvalidInputFailure.decode(result))).toBeTruthy();
+  });
+
   it("should handle a success response", async () => {
     const mockADEClient = {
       richiestaBonus: jest.fn(() =>
@@ -132,19 +118,19 @@ describe("SendBonusActivationHandler", () => {
       });
   });
 
-  it("should handle an unhandled rejection", async () => {
+  it("should throw on unhandled rejection", async () => {
     const mockADEClient = ({
       richiestaBonus: jest.fn(() => Promise.reject("error message"))
     } as unknown) as ADEClientInstance;
 
     const handler = SendBonusActivationHandler(mockADEClient);
 
-    const result = await handler(context, aBonusVacanzaBase);
-    SendBonusActivationFailure.decode(result)
-      .orElse(_ => fail("Cannot decode result"))
-      .map(value => {
-        expect(value.reason).toEqual("error message");
-      });
+    try {
+      const _ = await handler(context, aBonusVacanzaBase);
+      fail("Should have been thrown");
+    } catch (err) {
+      expect(ADEServiceFailure.decode(err).isRight()).toBe(true);
+    }
   });
 
   it("should throw on transient error", async () => {
