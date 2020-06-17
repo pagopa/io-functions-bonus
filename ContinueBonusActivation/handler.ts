@@ -2,10 +2,12 @@ import { Context } from "@azure/functions";
 import * as df from "durable-functions";
 import * as express from "express";
 import { toError } from "fp-ts/lib/Either";
+import { toString } from "fp-ts/lib/function";
 import {
   fromEither,
   fromLeft,
-  TaskEither,
+  fromPredicate,
+  taskEither,
   tryCatch
 } from "fp-ts/lib/TaskEither";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
@@ -26,7 +28,7 @@ import {
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { BonusCode } from "../generated/definitions/BonusCode";
-import { BonusActivation } from "../generated/models/BonusActivation";
+import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 import { BonusActivationModel } from "../models/bonus_activation";
 import { runStartBonusActivationOrchestrator } from "../StartBonusActivation/handler";
 
@@ -65,22 +67,30 @@ export function ContinueBonusActivationHandler(
           queryError => new Error(`Query Error code=${queryError.code}`)
         )
       )
-      .chain(maybeBonusActivation =>
-        maybeBonusActivation.fold<TaskEither<Error, BonusActivation>>(
-          fromLeft(new Error("Not found")),
-          _ =>
-            tryCatch(async () => {
-              runStartBonusActivationOrchestrator(
-                df.getClient(context),
-                _.bonusActivation,
-                fiscalCode
-              );
-              return _.bonusActivation;
-            }, toError)
+      .chain<BonusActivationWithFamilyUID>(maybeBonusActivation =>
+        maybeBonusActivation.fold(
+          fromLeft(new Error("Bonus activation not found")),
+          _ => taskEither.of(_.bonusActivation)
         )
       )
+      .chain(
+        fromPredicate(
+          _ => _.status === "PROCESSING",
+          _ => new Error("Bonus activation status is not PROCESSING")
+        )
+      )
+      .chain(bonusActivation =>
+        tryCatch(async () => {
+          runStartBonusActivationOrchestrator(
+            df.getClient(context),
+            bonusActivation,
+            fiscalCode
+          );
+          return bonusActivation;
+        }, toError)
+      )
       .fold<IContinueBonusActivationHandlerOutput>(
-        err => ResponseErrorInternal(JSON.stringify(err)),
+        err => ResponseErrorInternal(toString(err)),
         _ => ResponseSuccessJson({ id: _.id })
       )
       .run();
