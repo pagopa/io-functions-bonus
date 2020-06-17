@@ -88,13 +88,13 @@ const saveBonusForEachFamilyMember = (
       .map<NewUserBonus>(({ fiscalCode }) => ({
         bonusId,
         fiscalCode,
-        id: (bonusId as unknown) as NonEmptyString,
+        id: `${bonusId}-${fiscalCode}` as NonEmptyString,
         isApplicant: applicantFiscalCode === fiscalCode,
         kind: "INewUserBonus"
       }))
       .map(newUserBonus =>
         fromQueryEither(() =>
-          userBonusModel.createOrUpdate(newUserBonus, bonusId)
+          userBonusModel.createOrUpdate(newUserBonus, newUserBonus.fiscalCode)
         )
       )
   );
