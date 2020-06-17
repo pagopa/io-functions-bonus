@@ -237,7 +237,13 @@ const createBonusActivation = (
         }).mapLeft(err => {
           return shouldRetry(err) ? TransientError : err;
         })
-    ) as RetriableTask<QueryError, RetrievedBonusActivation>; // TaskEither<QueryError | TransientError, RetrievedBonusActivation> should equal RetriableTask<QueryError, RetrievedBonusActivation>. However, the type equality fails as it cannot associate QueryError.
+
+      // The following cast is due to the fact that
+      // TaskEither<QueryError | TransientError, ...>
+      // cannot be passed as parameter to withRetries<QueryError, ...>
+      // since the union (QueryError) has different types (string vs number)
+      // for the same field (code)
+    ) as RetriableTask<QueryError, RetrievedBonusActivation>;
 
   return withRetries<QueryError, RetrievedBonusActivation>(
     BONUS_CREATION_MAX_ATTEMPTS,
