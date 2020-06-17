@@ -40,6 +40,10 @@ export const getDeleteEligibilityCheckActivityHandler = (
   return async (context: Context, input: unknown): Promise<ActivityResult> => {
     return fromEither(
       DeleteEligibilityCheckActivityInput.decode(input)
+        .chain(fiscalCode =>
+          // we need to cast as NonEmptyString because patternstring aren't empty by design
+          NonEmptyString.decode(fiscalCode)
+        )
         .mapLeft(
           err => new Error(`Invalid Activity input: [${readableReport(err)}]`)
         )
