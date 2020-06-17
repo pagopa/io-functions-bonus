@@ -1,4 +1,3 @@
-import { Context } from "@azure/functions";
 import { isRight, right } from "fp-ts/lib/Either";
 import * as t from "io-ts";
 import { context } from "../../__mocks__/durable-functions";
