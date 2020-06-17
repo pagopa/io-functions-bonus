@@ -12,7 +12,6 @@ import { ADEClient } from "../utils/adeClient";
 import SendBonusActivationHandler from "./handler";
 
 // 10 seconds timeout by default
-// 10 seconds timeout by default
 const ADE_REQUEST_TIMEOUT_MS = IntegerFromString.decode(
   process.env.ADE_REQUEST_TIMEOUT_MS
 ).getOrElse(10000);
