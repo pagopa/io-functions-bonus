@@ -185,7 +185,7 @@ export function serializeBonus(bv: ApiBonusVacanzaWithoutMac): NonEmptyString {
     bv.codiceBuono,
     bv.importoMassimo.toString(),
     bv.dataGenerazione.toISOString(),
-    bv.flagDifformitaIsee.toString(),
+    bv.flagDifformita.toString(),
     ...bv.nucleoFamiliare
       ?.map(_ => _.codiceFiscale)
       .sort((a, b) => a.localeCompare(b))
