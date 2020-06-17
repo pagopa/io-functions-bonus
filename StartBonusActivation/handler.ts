@@ -265,7 +265,7 @@ const createBonusActivation = (
           kind: "INewBonusActivation",
           status: BonusActivationStatusEnum.PROCESSING
         };
-        return bonusActivationModel.create(bonusActivation, fiscalCode);
+        return bonusActivationModel.create(bonusActivation, bonusActivation.id);
       }, shouldRetry)
   );
 
