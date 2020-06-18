@@ -1,10 +1,11 @@
 import { Context } from "@azure/functions";
 import { defaultClient } from "applicationinsights";
-import { addHours } from "date-fns";
+import { addHours, addSeconds, addMilliseconds } from "date-fns";
 import { fromEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "io-functions-commons/dist/generated/definitions/FiscalCode";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
+import { Hour, Millisecond } from "italia-ts-commons/lib/units";
 import { ConsultazioneSogliaIndicatoreResponse } from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
 import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
 import { Timestamp } from "../generated/definitions/Timestamp";
@@ -38,14 +39,23 @@ export const ActivityResult = t.taggedUnion("kind", [
 ]);
 export type ActivityResult = t.TypeOf<typeof ActivityResult>;
 
+const toMillisecond = (h: Hour): Millisecond =>
+  (h * 60 * 60 * 1000) as Millisecond;
+
 /**
  * Call INPS webservice to read the ISEE information
  * and parses returned XML
+ *
+ * @param soapClientAsync an instance of the INPS client
+ * @param dsuDuration time the received DSU is considered valid in our system, in hours
+ * @param thresholdCode (optional) the code used by INPS as a treshold to validate ISEE regading `Bonus Vacanze 2020`. @see https://docs.google.com/document/d/1k-oWVK7Qs-c42b5HW4ild6rzpbQFDJ-f
+ *
+ * @returns a success object with the received data
+ * @throws for any failure to allow retry
  */
 export const getEligibilityCheckActivityHandler = (
   soapClientAsync: ISoapClientAsync,
-  // Value for `Bonus Vacanze 2020`
-  // @see https://docs.google.com/document/d/1k-oWVK7Qs-c42b5HW4ild6rzpbQFDJ-f
+  dsuDuration: Hour,
   thresholdCode = "BVAC01"
 ) => {
   return async (context: Context, input: unknown): Promise<ActivityResult> => {
@@ -81,7 +91,8 @@ export const getEligibilityCheckActivityHandler = (
           data: _.dsu,
           fiscalCode: _.fiscalCode,
           kind: "SUCCESS" as "SUCCESS",
-          validBefore: addHours(new Date(), 24)
+          // using milliseconds allow for fractions of hours to be considered. Useful for testing
+          validBefore: addMilliseconds(new Date(), toMillisecond(dsuDuration))
         })
       )
       .run();
