@@ -8,7 +8,8 @@ import {
   fromEither,
   TaskEither,
   taskEither,
-  tryCatch
+  tryCatch,
+  bracket
 } from "fp-ts/lib/TaskEither";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import { FiscalCodeMiddleware } from "io-functions-commons/dist/src/utils/middlewares/fiscalcode";
@@ -68,6 +69,7 @@ import { BonusLeaseModel } from "../models/bonus_lease";
 import { OrchestratorInput } from "../StartBonusActivationOrchestrator/handler";
 import { toApiBonusActivation } from "../utils/conversions";
 import { generateFamilyUID } from "../utils/hash";
+import { identity } from "fp-ts/lib/function";
 
 export const BONUS_CREATION_MAX_ATTEMPTS = 5;
 
@@ -302,17 +304,15 @@ const acquireLockForUserFamily = (
  * @param bonusLeaseModel an instance of BonusLeaseModel
  * @param familyMembers the family of the requesting user
  *
- * @returns either a conflict error or the unique hash id of the family
+ * @returns either a conflict error or nothing in case of success
  */
 const relaseLockForUserFamily = (
   bonusLeaseModel: BonusLeaseModel,
   familyUID: FamilyUID
-): TaskEither<IResponseErrorInternal, FamilyUID> => {
-  return fromQueryEither(() => bonusLeaseModel.deleteOneById(familyUID)).bimap(
-    err => ResponseErrorInternal(`Error releasing lock: ${err.body}`),
-    _ => familyUID
-  );
-};
+): TaskEither<IResponseErrorInternal, void> =>
+  fromQueryEither(() => bonusLeaseModel.deleteOneById(familyUID))
+    .mapLeft(err => ResponseErrorInternal(`Error releasing lock: ${err.body}`))
+    .map<void>(identity);
 
 /**
  * Start a new instance of StartBonusActivationOrchestrator
@@ -369,68 +369,59 @@ export function StartBonusActivationHandler(
   eligibilityCheckModel: EligibilityCheckModel
 ): IStartBonusActivationHandler {
   return async (context, fiscalCode) => {
-    const client = df.getClient(context);
+    const dfClient = df.getClient(context);
 
     return taskEither
       .of<StartBonusActivationResponse, void>(void 0)
-      .chain(_ => checkEligibilityCheckIsRunning(client, fiscalCode))
-      .chain(_ => checkBonusActivationIsRunning(client, fiscalCode))
-      .chain(_ => getLatestValidDSU(eligibilityCheckModel, fiscalCode))
-      .map((dsu: Dsu) => ({
-        dsu,
-        familyUID: generateFamilyUID(dsu.familyMembers)
-      }))
-      .chain(({ dsu, familyUID }) =>
-        acquireLockForUserFamily(bonusLeaseModel, familyUID).map(_ => ({
-          dsu,
-          familyUID
-        }))
+      .chainSecond(checkEligibilityCheckIsRunning(dfClient, fiscalCode))
+      .chainSecond(checkBonusActivationIsRunning(dfClient, fiscalCode))
+      .chainSecond(
+        getLatestValidDSU(eligibilityCheckModel, fiscalCode).map(
+          (dsu: Dsu) => ({
+            dsu,
+            familyUID: generateFamilyUID(dsu.familyMembers)
+          })
+        )
       )
-      .chain<BonusActivationWithFamilyUID>(({ dsu, familyUID }) => {
-        // this part is on a sub-chain as it handles the lock/unlock protection mechanism
-        // familyUID serves as lock context and thus is needed in scope for every sub-task
-        return (
-          taskEither
-            .of<StartBonusActivationResponse, void>(void 0)
-
-            .chain(_ =>
-              createBonusActivation(
-                bonusActivationModel,
-                fiscalCode,
-                familyUID,
-                dsu
-              )
-            )
-            .chain(bonusActivation =>
+      .chain<BonusActivationWithFamilyUID>(({ dsu, familyUID }) =>
+        bracket(
+          acquireLockForUserFamily(bonusLeaseModel, familyUID).mapLeft(l => {
+            defaultClient.trackException({
+              exception: new Error(l.detail),
+              properties: {
+                name: "bonus.activation.lock.acquire"
+              }
+            });
+            return l;
+          }),
+          _ => {
+            // this part is on a sub-chain as it handles the lock/unlock protection mechanism
+            // familyUID serves as lock context and thus is needed in scope for every sub-task
+            return createBonusActivation(
+              bonusActivationModel,
+              fiscalCode,
+              familyUID,
+              dsu
+            ).chain(bonusActivation =>
               runStartBonusActivationOrchestrator(
-                client,
+                dfClient,
                 bonusActivation,
                 fiscalCode
-              ).map(_ => bonusActivation)
-            )
-            // the following is basically:
-            // on right, just pass it
-            // on left, perform unlock but then pass the original left value
-            .foldTaskEither(
-              l => {
-                defaultClient.trackException({
-                  exception: new Error(l.detail),
-                  properties: {
-                    name: "bonus.activation.start"
-                  }
-                });
-                return relaseLockForUserFamily(
-                  bonusLeaseModel,
-                  familyUID
-                ).foldTaskEither(
-                  _ => fromEither(left(l)),
-                  _ => fromEither(left(l))
-                );
-              },
-              r => fromEither(right(r))
-            )
-        );
-      })
+              ).map(__ => bonusActivation)
+            );
+          },
+          _ =>
+            relaseLockForUserFamily(bonusLeaseModel, familyUID).mapLeft(l => {
+              defaultClient.trackException({
+                exception: new Error(l.detail),
+                properties: {
+                  name: "bonus.activation.lock.release"
+                }
+              });
+              return l;
+            })
+        )
+      )
       .chain(bonusActivation =>
         fromEither(toApiBonusActivation(bonusActivation)).mapLeft(err =>
           // validate output
@@ -441,14 +432,12 @@ export function StartBonusActivationHandler(
           )
         )
       )
-      .fold(
-        l => l,
-        apiBonusActivation =>
-          ResponseSuccessRedirectToResource(
-            apiBonusActivation,
-            makeBonusActivationResourceUri(fiscalCode, apiBonusActivation.id),
-            apiBonusActivation
-          )
+      .fold(identity, apiBonusActivation =>
+        ResponseSuccessRedirectToResource(
+          apiBonusActivation,
+          makeBonusActivationResourceUri(fiscalCode, apiBonusActivation.id),
+          apiBonusActivation
+        )
       )
       .run();
   };
