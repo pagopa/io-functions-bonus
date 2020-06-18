@@ -279,23 +279,6 @@ describe("StartBonusActivationHandler", () => {
     expect(response.kind).toBe("IResponseErrorInternal");
   });
 
-  it("should relase the lock if the orchestrator fails to start", async () => {
-    mockStartNew.mockImplementationOnce(async () => {
-      throw new Error();
-    });
-
-    const handler = StartBonusActivationHandler(
-      mockBonusActivationModel,
-      mockBonusLeaseModel,
-      mockEligibilityCheckModel
-    );
-
-    const response = await handler(context, aFiscalCode);
-
-    expect(mockBonusLeaseDeleteOneById).toHaveBeenCalledTimes(1);
-    expect(response.kind).toBe("IResponseErrorInternal");
-  });
-
   it("should relase the lock if the bonus creation fails", async () => {
     mockBonusActivationCreate.mockImplementationOnce(async _ => {
       throw new Error("any error");
@@ -310,19 +293,6 @@ describe("StartBonusActivationHandler", () => {
     const response = await handler(context, aFiscalCode);
     expect(mockBonusLeaseDeleteOneById).toHaveBeenCalledTimes(1);
     expect(response.kind).toBe("IResponseErrorInternal");
-  });
-
-  it("should not relase the lock if the orchestrator starts", async () => {
-    const handler = StartBonusActivationHandler(
-      mockBonusActivationModel,
-      mockBonusLeaseModel,
-      mockEligibilityCheckModel
-    );
-
-    await handler(context, aFiscalCode);
-
-    expect(mockStartNew).toHaveBeenCalledTimes(1);
-    expect(mockBonusLeaseDeleteOneById).not.toHaveBeenCalled();
   });
 
   it("should not relase the lock when fails to acquire the lock", async () => {
