@@ -6,6 +6,7 @@ import * as express from "express";
 import { left, right, toError } from "fp-ts/lib/Either";
 import {
   fromEither,
+  fromIO,
   TaskEither,
   taskEither,
   tryCatch
@@ -55,17 +56,18 @@ import {
 } from "../utils/orchestrators";
 
 import { defaultClient } from "applicationinsights";
+import { io } from "fp-ts/lib/IO";
 import {
   fromQueryEither,
   QueryError
 } from "io-functions-commons/dist/src/utils/documentdb";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { Millisecond } from "italia-ts-commons/lib/units";
+import { ContinueBonusActivationInput } from "../ContinueBonusActivation";
 import { BonusActivation as ApiBonusActivation } from "../generated/definitions/BonusActivation";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 import { FamilyUID } from "../generated/models/FamilyUID";
 import { BonusLeaseModel } from "../models/bonus_lease";
-import { OrchestratorInput } from "../StartBonusActivationOrchestrator/handler";
 import { toApiBonusActivation } from "../utils/conversions";
 import { generateFamilyUID } from "../utils/hash";
 
@@ -309,42 +311,6 @@ const relaseLockForUserFamily = (
   );
 };
 
-/**
- * Start a new instance of StartBonusActivationOrchestrator
- *
- * @param client an instance of durable function client
- * @param bonusActivation a record of bonus activation
- * @param fiscalCode the fiscal code of the requesting user. Needed to make a unique id for the orchestrator instance
- *
- * @returns either an internal error or the id of the created orchestrator
- */
-const runStartBonusActivationOrchestrator = (
-  client: DurableOrchestrationClient,
-  bonusActivation: BonusActivationWithFamilyUID,
-  fiscalCode: FiscalCode
-): TaskEither<IResponseErrorInternal, string> =>
-  fromEither(OrchestratorInput.decode({ bonusActivation }))
-    .mapLeft(err =>
-      // validate input here, so we can make the http handler fail too. This shouldn't happen anyway
-      ResponseErrorInternal(
-        `Error validating orchestrator input: ${readableReport(err)}`
-      )
-    )
-    .chain(orchestratorInput =>
-      tryCatch(
-        () =>
-          client.startNew(
-            "StartBonusActivationOrchestrator",
-            makeStartBonusActivationOrchestratorId(fiscalCode),
-            orchestratorInput
-          ),
-        _ =>
-          ResponseErrorInternal(
-            `Error starting the orchestrator: ${toError(_).message}`
-          )
-      )
-    );
-
 type StartBonusActivationResponse =
   | IResponseErrorInternal
   | IResponseErrorForbiddenNotAuthorized
@@ -388,13 +354,18 @@ export function StartBonusActivationHandler(
                 dsu
               )
             )
-            .chain(bonusActivation =>
-              runStartBonusActivationOrchestrator(
-                client,
-                bonusActivation,
-                fiscalCode
-              ).map(_ => bonusActivation)
-            )
+            .map(bonusActivation => {
+              // Send the (bonusId, applicantFiscalCode) to the bonus activations queue
+              // in order to be processed later (asynchronously)
+              // tslint:disable-next-line: no-object-mutation
+              context.bindings.bonusActivation = ContinueBonusActivationInput.encode(
+                {
+                  applicantFiscalCode: bonusActivation.applicantFiscalCode,
+                  bonusId: bonusActivation.id
+                }
+              );
+              return bonusActivation;
+            })
             // the following is basically:
             // on right, just pass it
             // on left, perform unlock but then pass the original left value
