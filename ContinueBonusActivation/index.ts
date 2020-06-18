@@ -5,8 +5,6 @@ import * as documentDbUtils from "io-functions-commons/dist/src/utils/documentdb
 import { getRequiredStringEnv } from "io-functions-commons/dist/src/utils/env";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { BonusCode } from "../generated/definitions/BonusCode";
 import {
   BONUS_ACTIVATION_COLLECTION_NAME,
   BonusActivationModel

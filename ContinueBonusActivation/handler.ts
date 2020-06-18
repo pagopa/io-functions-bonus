@@ -19,6 +19,8 @@ import { BonusActivationModel } from "../models/bonus_activation";
 import { Failure } from "../utils/errors";
 import { makeStartBonusActivationOrchestratorId } from "../utils/orchestrators";
 
+import * as t from "io-ts";
+
 export const ContinueBonusActivationInput = t.type({
   applicantFiscalCode: FiscalCode,
   bonusId: BonusCode
