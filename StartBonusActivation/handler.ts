@@ -272,7 +272,7 @@ const createBonusActivation = (
 const acquireLockForUserFamily = (
   bonusLeaseModel: BonusLeaseModel,
   familyUID: FamilyUID
-): TaskEither<IResponseErrorConflict, FamilyUID> => {
+): TaskEither<IResponseErrorConflict | IResponseErrorInternal, unknown> => {
   return fromQueryEither(() =>
     bonusLeaseModel.create(
       {
@@ -283,11 +283,16 @@ const acquireLockForUserFamily = (
     )
   ).bimap(
     err =>
-      // consider any error a failure for lease already prensent
-      ResponseErrorConflict(
-        `Failed while acquiring lease for familyUID ${familyUID}: ${err.body}`
-      ),
-    _ => familyUID
+      err.code === 409
+        ? ResponseErrorConflict(
+            `There's already a lease for familyUID ${familyUID}: ${err.body}`
+          )
+        : ResponseErrorInternal(
+            `Error while acquiring lease for familyUID ${familyUID}: ${err.body}`
+          ),
+    _ => {
+      return _;
+    }
   );
 };
 
@@ -371,15 +376,23 @@ export function StartBonusActivationHandler(
       .chain(_ => checkEligibilityCheckIsRunning(client, fiscalCode))
       .chain(_ => checkBonusActivationIsRunning(client, fiscalCode))
       .chain(_ => getLatestValidDSU(eligibilityCheckModel, fiscalCode))
-
-      .chain<BonusActivationWithFamilyUID>((dsu: Dsu) => {
+      .map((dsu: Dsu) => ({
+        dsu,
+        familyUID: generateFamilyUID(dsu.familyMembers)
+      }))
+      .chain(({ dsu, familyUID }) =>
+        acquireLockForUserFamily(bonusLeaseModel, familyUID).map(_ => ({
+          dsu,
+          familyUID
+        }))
+      )
+      .chain<BonusActivationWithFamilyUID>(({ dsu, familyUID }) => {
         // this part is on a sub-chain as it handles the lock/unlock protection mechanism
         // familyUID serves as lock context and thus is needed in scope for every sub-task
-        const familyUID = generateFamilyUID(dsu.familyMembers);
         return (
           taskEither
             .of<StartBonusActivationResponse, void>(void 0)
-            .chain(_ => acquireLockForUserFamily(bonusLeaseModel, familyUID))
+
             .chain(_ =>
               createBonusActivation(
                 bonusActivationModel,
