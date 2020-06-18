@@ -6,11 +6,11 @@ import { getEligibilityCheckActivityHandler } from "./handler";
 
 const INPS_SERVICE_ENDPOINT = getRequiredStringEnv("INPS_SERVICE_ENDPOINT");
 
-const DEFAULT_DSU_DURATION = 24;
+const DEFAULT_DSU_DURATION_H = 24;
 
 const dsuDuration = NumberFromString.decode(
   process.env.INPS_DSU_DURATION
-).getOrElse(DEFAULT_DSU_DURATION) as Hour;
+).getOrElse(DEFAULT_DSU_DURATION_H) as Hour;
 
 const soapClientAsync = createClient(INPS_SERVICE_ENDPOINT);
 
