@@ -58,7 +58,7 @@ describe("EligibilityCheckHandler", () => {
   });
   it("should returns ResponseSuccessRedirectToResource if EligibilityCheckOrchestrator starts successfully", async () => {
     mockStartNew.mockImplementationOnce(async (_, __, ___) => {
-      return;
+      return "instanceId";
     });
 
     const handler = EligibilityCheckHandler();
