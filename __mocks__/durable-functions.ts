@@ -11,7 +11,9 @@ export const mockStatusCompleted = {
 
 export const OrchestrationRuntimeStatus = df.OrchestrationRuntimeStatus;
 
-export const mockStartNew = jest.fn((_, __, ___) => Promise.resolve());
+export const mockStartNew = jest.fn((_, __, ___) =>
+  Promise.resolve("instanceId")
+);
 export const mockGetStatus = jest
   .fn()
   .mockImplementation(async () => mockStatusCompleted);

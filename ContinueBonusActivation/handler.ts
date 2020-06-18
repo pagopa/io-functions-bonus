@@ -81,7 +81,7 @@ export function ContinueBonusActivationHandler(
       // Promise rejected or thrown
       Failure.encode({
         kind: "PERMANENT",
-        reason: `Query error: [${err}]`
+        reason: `Query error: ${err}`
       })
   )
     .chain(_ =>
@@ -89,7 +89,7 @@ export function ContinueBonusActivationHandler(
       fromEither(_).mapLeft(queryError =>
         Failure.encode({
           kind: "PERMANENT",
-          reason: `Query Error code=${queryError.code}`
+          reason: `Query Error ${queryError.code}=${queryError.body}`
         })
       )
     )
