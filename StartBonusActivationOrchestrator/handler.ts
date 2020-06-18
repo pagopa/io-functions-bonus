@@ -22,7 +22,7 @@ export const OrchestratorInput = t.interface({
 export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
 
 export const getStartBonusActivationOrchestratorHandler = (
-  hmacSecret: NonEmptyString
+  hmacSecret: NonEmptyString | Buffer
 ) =>
   function*(context: IOrchestrationFunctionContext): Generator<TaskSet | Task> {
     const logPrefix = `StartBonusActivationOrchestrator`;

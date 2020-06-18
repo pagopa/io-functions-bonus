@@ -107,7 +107,7 @@ export const toApiBonusActivation = (
  * Maps BonusActivation domain object into an ADE BonusVacanzaBase API object
  */
 export const toApiBonusVacanzaBase = (
-  secret: NonEmptyString,
+  secret: NonEmptyString | Buffer,
   domainObject: BonusActivation
 ): Either<t.Errors, ApiBonusVacanzaBase> => {
   return ApiBonusVacanzaWithoutMac.decode({
