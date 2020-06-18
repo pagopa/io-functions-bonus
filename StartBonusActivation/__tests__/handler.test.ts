@@ -91,7 +91,8 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      isBonusActivationEnabled
     );
 
     const response = await handler(context, aFiscalCode);
@@ -107,7 +108,8 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      isBonusActivationEnabled
     );
 
     const response = await handler(context, aFiscalCode);
@@ -122,7 +124,8 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      isBonusActivationEnabled
     );
 
     const response = await handler(context, aFiscalCode);
@@ -135,7 +138,8 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      isBonusActivationEnabled
     );
 
     const response = await handler(context, aFiscalCode);
@@ -150,7 +154,8 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      isBonusActivationEnabled
     );
 
     const response = await handler(context, aFiscalCode);
@@ -165,7 +170,8 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      isBonusActivationEnabled
     );
 
     const response = await handler(context, aFiscalCode);
@@ -180,7 +186,8 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      isBonusActivationEnabled
     );
 
     const response = await handler(context, aFiscalCode);
@@ -198,7 +205,8 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      isBonusActivationEnabled
     );
 
     const response = await handler(context, aFiscalCode);
@@ -221,7 +229,8 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      isBonusActivationEnabled
     );
 
     const response = await handler(context, aFiscalCode);
@@ -237,7 +246,8 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      isBonusActivationEnabled
     );
 
     const response = await handler(context, aFiscalCode);
@@ -253,7 +263,8 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      isBonusActivationEnabled
     );
 
     const response = await handler(context, aFiscalCode);
@@ -269,7 +280,8 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      isBonusActivationEnabled
     );
 
     const response = await handler(context, aFiscalCode);
@@ -286,7 +298,8 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      isBonusActivationEnabled
     );
 
     const response = await handler(context, aFiscalCode);
@@ -298,7 +311,8 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      isBonusActivationEnabled
     );
 
     await handler(context, aFiscalCode);
@@ -311,7 +325,8 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      isBonusActivationEnabled
     );
 
     const response = await handler(context, aFiscalCode);

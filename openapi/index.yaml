@@ -164,6 +164,7 @@ paths:
           description: Service unavailable.
           schema:
             $ref: "#/definitions/ProblemJson"
+
 parameters:
   FiscalCode:
     name: fiscalcode

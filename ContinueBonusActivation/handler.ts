@@ -1,6 +1,5 @@
 import { DurableOrchestrationClient } from "durable-functions/lib/src/classes";
 import { toError } from "fp-ts/lib/Either";
-import { toString } from "fp-ts/lib/function";
 import {
   fromEither,
   fromLeft,
