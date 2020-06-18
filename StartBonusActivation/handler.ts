@@ -56,14 +56,13 @@ import {
 } from "../utils/orchestrators";
 
 import { defaultClient } from "applicationinsights";
-import { io } from "fp-ts/lib/IO";
 import {
   fromQueryEither,
   QueryError
 } from "io-functions-commons/dist/src/utils/documentdb";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { Millisecond } from "italia-ts-commons/lib/units";
-import { ContinueBonusActivationInput } from "../ContinueBonusActivation";
+import { ContinueBonusActivationInput } from "../ContinueBonusActivation/handler";
 import { BonusActivation as ApiBonusActivation } from "../generated/definitions/BonusActivation";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 import { FamilyUID } from "../generated/models/FamilyUID";

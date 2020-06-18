@@ -13,7 +13,10 @@ import {
 } from "../models/bonus_activation";
 import { documentClient } from "../utils/cosmosdb";
 import { Failure } from "../utils/errors";
-import { ContinueBonusActivationHandler } from "./handler";
+import {
+  ContinueBonusActivationHandler,
+  ContinueBonusActivationInput
+} from "./handler";
 
 const cosmosDbName = getRequiredStringEnv("COSMOSDB_BONUS_DATABASE_NAME");
 
@@ -27,11 +30,6 @@ const bonusActivationModel = new BonusActivationModel(
   documentClient,
   bonusActivationCollectionUrl
 );
-
-export const ContinueBonusActivationInput = t.type({
-  applicantFiscalCode: FiscalCode,
-  bonusId: BonusCode
-});
 
 /**
  * Reads from a queue the tuple (bonusId, fiscalCode)
