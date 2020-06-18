@@ -99,7 +99,7 @@ export function ContinueBonusActivationHandler(
     )
     .chain(
       fromPredicate(
-        _ => _.status === "PROCESSING",
+        bonusActivation => bonusActivation.status === "PROCESSING",
         _ =>
           Failure.encode({
             kind: "PERMANENT",
