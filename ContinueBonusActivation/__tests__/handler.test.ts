@@ -1,7 +1,7 @@
 import * as df from "durable-functions";
 import { isLeft, isRight, left, right } from "fp-ts/lib/Either";
 import { none, some } from "fp-ts/lib/Option";
-import { context } from "../../__mocks__/durable-functions";
+import { context, mockStartNew } from "../../__mocks__/durable-functions";
 import {
   aBonusActivation,
   aBonusActivationWithFamilyUID,
@@ -103,6 +103,37 @@ describe("ContinueBonusActivation", () => {
     expect(isLeft(response)).toBeTruthy();
     if (isLeft(response)) {
       expect(response.value.kind).toEqual("PERMANENT");
+    }
+  });
+
+  it("should return a transient error if the orchestrator throw", async () => {
+    mockStartNew.mockImplementationOnce(async () => {
+      throw new Error("foobar");
+    });
+    const mockBonusActivationkModel = ({
+      findBonusActivationForUser: jest.fn().mockImplementationOnce(async () =>
+        right(
+          some({
+            bonusActivation: {
+              ...aBonusActivationWithFamilyUID,
+              status: BonusActivationStatusEnum.PROCESSING
+            }
+          })
+        )
+      )
+    } as unknown) as BonusActivationModel;
+
+    const response = await ContinueBonusActivationHandler(
+      df.getClient(context),
+      mockBonusActivationkModel,
+      aFiscalCode,
+      aBonusId
+    ).run();
+
+    expect(isLeft(response)).toBeTruthy();
+    if (isLeft(response)) {
+      expect(response.value.kind).toEqual("TRANSIENT");
+      expect(response.value.reason).toContain("foobar");
     }
   });
 
