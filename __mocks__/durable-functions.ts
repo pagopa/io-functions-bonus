@@ -30,6 +30,7 @@ export const orchestrator = jest.fn();
 export const RetryOptions = jest.fn(() => ({}));
 
 export const context = ({
+  bindings: {},
   log: {
     // tslint:disable-next-line: no-console
     error: jest.fn().mockImplementation(console.log),
