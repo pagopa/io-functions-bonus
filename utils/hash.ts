@@ -11,7 +11,7 @@ export const toHash = (s: string): NonEmptyString => {
 };
 
 export function toHmac(
-  secret: NonEmptyString,
+  secret: NonEmptyString | Buffer,
   data: NonEmptyString
 ): NonEmptyString {
   return crypto
