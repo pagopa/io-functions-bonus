@@ -10,7 +10,7 @@ import {
   BonusActivationModel
 } from "../models/bonus_activation";
 import { documentClient } from "../utils/cosmosdb";
-import { Failure } from "../utils/errors";
+import { Failure, TransientFailure } from "../utils/errors";
 import {
   ContinueBonusActivationHandler,
   ContinueBonusActivationInput
@@ -56,7 +56,7 @@ const index: AzureFunction = (
       context.log.error(
         `ContinueBonusActivation|${err.kind}_ERROR=${err.reason}`
       );
-      if (err.kind === "TRANSIENT") {
+      if (TransientFailure.is(err)) {
         // Trigger a retry in case of temporary failures
         throw new Error(err.reason);
       }

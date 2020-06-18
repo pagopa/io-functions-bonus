@@ -6,7 +6,6 @@ import * as express from "express";
 import { left, right, toError } from "fp-ts/lib/Either";
 import {
   fromEither,
-  fromIO,
   TaskEither,
   taskEither,
   tryCatch
