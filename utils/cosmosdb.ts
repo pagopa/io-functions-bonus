@@ -9,9 +9,14 @@ import { getRequiredStringEnv } from "io-functions-commons/dist/src/utils/env";
 const cosmosDbUri = getRequiredStringEnv("COSMOSDB_BONUS_URI");
 const masterKey = getRequiredStringEnv("COSMOSDB_BONUS_KEY");
 
-export const documentClient = new DocumentDBClient(cosmosDbUri, {
-  masterKey
-});
+export const documentClient = new DocumentDBClient(
+  cosmosDbUri,
+  {
+    masterKey
+  },
+  undefined,
+  "Strong"
+);
 
 export const CosmosDbDocument = t.readonly(t.UnknownRecord);
 export type CosmosDbDocument = t.TypeOf<typeof CosmosDbDocument>;
