@@ -1,6 +1,6 @@
 import { Context } from "@azure/functions";
 import { defaultClient } from "applicationinsights";
-import { addHours, addSeconds, addMilliseconds } from "date-fns";
+import { addMilliseconds } from "date-fns";
 import { fromEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "io-functions-commons/dist/generated/definitions/FiscalCode";
 import * as t from "io-ts";
