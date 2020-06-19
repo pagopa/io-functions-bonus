@@ -352,13 +352,8 @@ export function StartBonusActivationHandler(
           familyUID
         }))
       )
-      .chain<BonusActivationWithFamilyUID>(({ dsu, familyUID }) => {
-        return createBonusActivation(
-          bonusActivationModel,
-          fiscalCode,
-          familyUID,
-          dsu
-        )
+      .chain<BonusActivationWithFamilyUID>(({ dsu, familyUID }) =>
+        createBonusActivation(bonusActivationModel, fiscalCode, familyUID, dsu)
           .map(bonusActivation => {
             // Send the (bonusId, applicantFiscalCode) to the bonus activations queue
             // in order to be processed later (asynchronously)
@@ -389,8 +384,8 @@ export function StartBonusActivationHandler(
               );
             },
             bonusActivation => taskEither.of(bonusActivation)
-          );
-      })
+          )
+      )
       .chain(bonusActivation =>
         fromEither(toApiBonusActivation(bonusActivation)).mapLeft(err =>
           ResponseErrorInternal(
