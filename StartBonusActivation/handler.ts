@@ -352,7 +352,7 @@ export function StartBonusActivationHandler(
           familyUID
         }))
       )
-      .chain<BonusActivationWithFamilyUID>(({ dsu, familyUID }) =>
+      .chain<ApiBonusActivation>(({ dsu, familyUID }) =>
         createBonusActivation(bonusActivationModel, fiscalCode, familyUID, dsu)
           .map(bonusActivation => {
             // Send the (bonusId, applicantFiscalCode) to the bonus activations queue
@@ -366,6 +366,15 @@ export function StartBonusActivationHandler(
             );
             return bonusActivation;
           })
+          .chain(bonusActivation =>
+            fromEither(toApiBonusActivation(bonusActivation)).mapLeft(err =>
+              ResponseErrorInternal(
+                `Error converting BonusActivation to ApiBonusActivation: ${readableReport(
+                  err
+                )}`
+              )
+            )
+          )
           .foldTaskEither(
             response => {
               defaultClient.trackException({
@@ -374,7 +383,8 @@ export function StartBonusActivationHandler(
                   name: "bonus.activation.start"
                 }
               });
-              // perform unlock but then pass the original left value
+              // in case of errors during bonus creation we
+              // unlock familyUID and then pass the original left value
               return relaseLockForUserFamily(
                 bonusLeaseModel,
                 familyUID
@@ -385,15 +395,6 @@ export function StartBonusActivationHandler(
             },
             bonusActivation => taskEither.of(bonusActivation)
           )
-      )
-      .chain(bonusActivation =>
-        fromEither(toApiBonusActivation(bonusActivation)).mapLeft(err =>
-          ResponseErrorInternal(
-            `Error converting bonusActivation to apiBonusActivation: ${readableReport(
-              err
-            )}`
-          )
-        )
       )
       .fold(identity, apiBonusActivation =>
         ResponseSuccessRedirectToResource(
