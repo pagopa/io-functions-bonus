@@ -83,7 +83,6 @@ export const getStartBonusActivationOrchestratorHandler = (
         name: "bonus.activation.success"
       });
     } else {
-      // TODO: is FailedBonusActivationActivity idempotent?
       yield context.df.callActivityWithRetry(
         "FailedBonusActivationActivity",
         retryOptions,
