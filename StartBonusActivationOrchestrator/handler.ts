@@ -91,7 +91,7 @@ export const getStartBonusActivationOrchestratorHandler = (
       });
     }
 
-    // Send notification for all family members with bonus activation detail
+    // Send notifications for all family members with bonus activation detail
     for (const familyMember of startBonusActivationOrchestratorInput
       .bonusActivation.dsuRequest.familyMembers) {
       yield context.df.callActivityWithRetry(
