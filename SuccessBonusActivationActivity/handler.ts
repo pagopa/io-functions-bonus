@@ -41,13 +41,8 @@ export const UnhandledFailure = t.interface({
 });
 export type UnhandledFailure = t.TypeOf<typeof UnhandledFailure>;
 
-export const TransientFailure = t.interface({
-  kind: t.literal("TRANSIENT")
-});
-export type TransientFailure = t.TypeOf<typeof TransientFailure>;
-
 const SuccessBonusActivationFailure = t.union(
-  [InvalidInputFailure, UnhandledFailure, TransientFailure],
+  [InvalidInputFailure, UnhandledFailure],
   "SuccessBonusActivationFailure"
 );
 export type SuccessBonusActivationFailure = t.TypeOf<
@@ -157,7 +152,7 @@ export function SuccessBonusActivationHandler(
       )
       .map(result => {
         // this condition address the case we want the activity to throw, so the orchestrator can retry
-        if (TransientFailure.decode(result).isRight()) {
+        if (UnhandledFailure.decode(result).isRight()) {
           throw result;
         }
         return result;

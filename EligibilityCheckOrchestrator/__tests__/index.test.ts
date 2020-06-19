@@ -49,16 +49,15 @@ const anInput = aFiscalCode;
 const contextMockWithDf = {
   ...contextMock,
   df: {
-    callActivity: jest
+    callActivity: jest.fn(),
+    callActivityWithRetry: jest
       .fn()
       // 1 DeleteEligibilityCheckActivity
       .mockReturnValueOnce(deleteEligibilityCheckActivityResult)
-      // 3 ValidateEligibilityCheckActivity
-      .mockReturnValueOnce(eligibilityCheck.value),
-    callActivityWithRetry: jest
-      .fn()
       // 2 EligibilityCheckActivity
       .mockReturnValueOnce(eligibilityCheckResponse)
+      // 3 ValidateEligibilityCheckActivity
+      .mockReturnValueOnce(eligibilityCheck.value)
       // 4 UpsertEligibilityCheckActivity
       .mockReturnValueOnce("UpsertEligibilityCheckActivity")
       // 5 SendMessageActivity

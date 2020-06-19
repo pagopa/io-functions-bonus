@@ -79,8 +79,9 @@ export const handler = function*(
     const orchestratorInput =
       errorOrStartBonusActivationOrchestratorInput.value;
 
-    const deleteEligibilityCheckResponse = yield context.df.callActivity(
+    const deleteEligibilityCheckResponse = yield context.df.callActivityWithRetry(
       "DeleteEligibilityCheckActivity",
+      retryOptions,
       DeleteEligibilityCheckActivityInput.encode(orchestratorInput)
     );
 
@@ -120,8 +121,9 @@ export const handler = function*(
         )}]`
       );
     });
-    const undecodedValidatedEligibilityCheck = yield context.df.callActivity(
+    const undecodedValidatedEligibilityCheck = yield context.df.callActivityWithRetry(
       "ValidateEligibilityCheckActivity",
+      retryOptions,
       ValidateEligibilityCheckActivityInput.encode(eligibilityCheck)
     );
     validatedEligibilityCheck = EligibilityCheck.decode(

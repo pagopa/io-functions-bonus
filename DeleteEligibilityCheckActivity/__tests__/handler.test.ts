@@ -1,9 +1,9 @@
+import { QueryError } from "documentdb";
 import { left, right } from "fp-ts/lib/Either";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { context } from "../../__mocks__/durable-functions";
 import { EligibilityCheckModel } from "../../models/eligibility_check";
 import {
-  ActivityResultFailure,
   ActivityResultSuccess,
   getDeleteEligibilityCheckActivityHandler
 } from "../handler";
@@ -28,8 +28,14 @@ describe("DeleteEligibilityCheckActivityHandler", () => {
 
     expect(decodedReponse.isRight()).toBeTruthy();
   });
-  it("should returns success if delete EligibilityCheck returns code 404", async () => {
-    mockDeleteOneById.mockImplementationOnce(async _ => left({ code: 404 }));
+  it("should returns success if delete EligibilityCheck returns Query Error with code 404", async () => {
+    const expectedQueryError: QueryError = {
+      body: "Not Found",
+      code: 404
+    };
+    mockDeleteOneById.mockImplementationOnce(async _ =>
+      left(expectedQueryError)
+    );
     const handler = getDeleteEligibilityCheckActivityHandler(
       mockEligibilityCheckModel
     );
@@ -40,18 +46,23 @@ describe("DeleteEligibilityCheckActivityHandler", () => {
 
     expect(decodedReponse.isRight()).toBeTruthy();
   });
-  it("should returns failure if delete EligibilityCheck returns an error", async () => {
+  it("should throw if delete EligibilityCheck returns an error", async () => {
+    const expectedQueryError: QueryError = {
+      body: "CODE BODY",
+      code: 1000
+    };
     mockDeleteOneById.mockImplementationOnce(async _ =>
-      left(new Error("Query Error"))
+      left(expectedQueryError)
     );
     const handler = getDeleteEligibilityCheckActivityHandler(
       mockEligibilityCheckModel
     );
-
-    const response = await handler(context, aFiscalCode);
-
-    const decodedReponse = ActivityResultFailure.decode(response);
-
-    expect(decodedReponse.isRight()).toBeTruthy();
+    try {
+      await handler(context, aFiscalCode);
+      // expect that the activity fails
+      expect(false).toBeTruthy();
+    } catch (error) {
+      expect(error).toBeInstanceOf(Error);
+    }
   });
 });

@@ -63,7 +63,15 @@ export const getDeleteEligibilityCheckActivityHandler = (
               if (err.code === 404) {
                 return fromEither(right("NOT FOUND"));
               }
-              return fromEither(left(new Error(`QueryError: [${err}]`)));
+              // this condition address the case we want the activity to throw, so the orchestrator can retry
+              const queryError = new Error(
+                `Query Error: code=${err.code} body=${err.body}`
+              );
+              context.log.error(
+                `DeleteEligibilityCheckActivity|ERROR|%s`,
+                queryError.message
+              );
+              throw queryError;
             },
             id => fromEither(right(id))
           )

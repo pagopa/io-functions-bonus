@@ -173,6 +173,13 @@ export function FailedBonusActivationHandler(
         l => l,
         () => FailedBonusActivationSuccess.encode({ kind: "SUCCESS" })
       )
+      .map(result => {
+        // this condition address the case we want the activity to throw, so the orchestrator can retry
+        if (UnhandledFailure.decode(result).isRight()) {
+          throw result;
+        }
+        return result;
+      })
       .run();
   };
 }

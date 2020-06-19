@@ -122,9 +122,14 @@ describe("FailedBonusActivationHandler", () => {
       mockEligibilityCheckModel
     );
 
-    const response = await handler(context, {
-      bonusActivation: aBonusActivationWithFamilyUID
-    });
-    expect(UnhandledFailure.decode(response).isRight()).toBeTruthy();
+    try {
+      await handler(context, {
+        bonusActivation: aBonusActivationWithFamilyUID
+      });
+      // expect that the activity fails
+      expect(false).toBeTruthy();
+    } catch (error) {
+      expect(UnhandledFailure.decode(error).isRight()).toBeTruthy();
+    }
   });
 });
