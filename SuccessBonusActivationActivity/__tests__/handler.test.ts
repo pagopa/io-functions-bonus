@@ -9,11 +9,11 @@ import {
 } from "../../__mocks__/mocks";
 import { BonusActivationModel } from "../../models/bonus_activation";
 import { UserBonusModel } from "../../models/user_bonus";
+import { TransientFailure } from "../../utils/errors";
 import {
   InvalidInputFailure,
   SuccessBonusActivationHandler,
-  SuccessBonusActivationSuccess,
-  UnhandledFailure
+  SuccessBonusActivationSuccess
 } from "../handler";
 
 // mockBonusActivationModel
@@ -67,7 +67,7 @@ describe("SuccessBonusActivationHandler", () => {
       // expect that the activity fails for a retry
       fail();
     } catch (error) {
-      expect(UnhandledFailure.decode(error).isRight()).toBeTruthy();
+      expect(TransientFailure.decode(error).isRight()).toBeTruthy();
     }
   });
 

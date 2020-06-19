@@ -17,6 +17,7 @@ import {
 } from "../models/bonus_activation";
 import { BonusLeaseModel } from "../models/bonus_lease";
 import { EligibilityCheckModel } from "../models/eligibility_check";
+import { TransientFailure } from "../utils/errors";
 
 export const FailedBonusActivationInput = t.interface({
   bonusActivation: BonusActivationWithFamilyUID
@@ -34,19 +35,8 @@ export const InvalidInputFailure = t.interface({
 });
 export type InvalidInputFailure = t.TypeOf<typeof InvalidInputFailure>;
 
-export const UnhandledFailure = t.interface({
-  kind: t.literal("UNHANDLED_FAILURE"),
-  reason: t.string
-});
-export type UnhandledFailure = t.TypeOf<typeof UnhandledFailure>;
-
-export const TransientFailure = t.interface({
-  kind: t.literal("TRANSIENT")
-});
-export type TransientFailure = t.TypeOf<typeof TransientFailure>;
-
 const FailedBonusActivationFailure = t.union(
-  [InvalidInputFailure, UnhandledFailure, TransientFailure],
+  [InvalidInputFailure, TransientFailure],
   "FailedBonusActivationFailure"
 );
 export type FailedBonusActivationFailure = t.TypeOf<
@@ -163,9 +153,8 @@ export function FailedBonusActivationHandler(
           context.log.warn(
             `FailedBonusActivationHandler|WARN|Failed releasing lock: ${err.body}`
           );
-          return UnhandledFailure.encode({
-            kind: "UNHANDLED_FAILURE",
-            reason: err.body
+          return TransientFailure.encode({
+            kind: "TRANSIENT"
           });
         })
       )
@@ -175,7 +164,7 @@ export function FailedBonusActivationHandler(
       )
       .map(result => {
         // this condition address the case we want the activity to throw, so the orchestrator can retry
-        if (UnhandledFailure.decode(result).isRight()) {
+        if (TransientFailure.decode(result).isRight()) {
           throw result;
         }
         return result;

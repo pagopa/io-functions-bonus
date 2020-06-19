@@ -9,11 +9,11 @@ import {
 import { BonusActivationModel } from "../../models/bonus_activation";
 import { BonusLeaseModel } from "../../models/bonus_lease";
 import { EligibilityCheckModel } from "../../models/eligibility_check";
+import { TransientFailure } from "../../utils/errors";
 import {
   FailedBonusActivationHandler,
   FailedBonusActivationSuccess,
-  InvalidInputFailure,
-  UnhandledFailure
+  InvalidInputFailure
 } from "../handler";
 
 // mockEligibilityCheckModel
@@ -129,7 +129,7 @@ describe("FailedBonusActivationHandler", () => {
       // expect that the activity fails
       fail();
     } catch (error) {
-      expect(UnhandledFailure.decode(error).isRight()).toBeTruthy();
+      expect(TransientFailure.decode(error).isRight()).toBeTruthy();
     }
   });
 });

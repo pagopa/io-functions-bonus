@@ -18,6 +18,7 @@ import {
   RetrievedUserBonus,
   UserBonusModel
 } from "../models/user_bonus";
+import { TransientFailure } from "../utils/errors";
 
 export const SuccessBonusActivationInput = t.interface({
   bonusActivation: BonusActivationWithFamilyUID
@@ -35,14 +36,8 @@ export const InvalidInputFailure = t.interface({
 });
 export type InvalidInputFailure = t.TypeOf<typeof InvalidInputFailure>;
 
-export const UnhandledFailure = t.interface({
-  kind: t.literal("UNHANDLED_FAILURE"),
-  reason: t.string
-});
-export type UnhandledFailure = t.TypeOf<typeof UnhandledFailure>;
-
 const SuccessBonusActivationFailure = t.union(
-  [InvalidInputFailure, UnhandledFailure],
+  [InvalidInputFailure, TransientFailure],
   "SuccessBonusActivationFailure"
 );
 export type SuccessBonusActivationFailure = t.TypeOf<
@@ -126,9 +121,8 @@ export function SuccessBonusActivationHandler(
             context.log.warn(
               `FailedBonusActivationHandler|WARN|Failed updating bonus: ${err.body}`
             );
-            return UnhandledFailure.encode({
-              kind: "UNHANDLED_FAILURE",
-              reason: err.body
+            return TransientFailure.encode({
+              kind: "TRANSIENT"
             });
           }
         )
@@ -139,9 +133,8 @@ export function SuccessBonusActivationHandler(
             context.log.warn(
               `FailedBonusActivationHandler|WARN|Failed saving user bonus: ${err.body}`
             );
-            return UnhandledFailure.encode({
-              kind: "UNHANDLED_FAILURE",
-              reason: err.body
+            return TransientFailure.encode({
+              kind: "TRANSIENT"
             });
           }
         )
@@ -152,7 +145,7 @@ export function SuccessBonusActivationHandler(
       )
       .map(result => {
         // this condition address the case we want the activity to throw, so the orchestrator can retry
-        if (UnhandledFailure.decode(result).isRight()) {
+        if (TransientFailure.decode(result).isRight()) {
           throw result;
         }
         return result;
