@@ -12,13 +12,6 @@ import {
 } from "../../utils/orchestrators";
 import { EligibilityCheckHandler } from "../handler";
 
-jest.mock("applicationinsights", () => ({
-  defaultClient: {
-    trackEvent: jest.fn(),
-    trackException: jest.fn()
-  }
-}));
-
 // implement temporary mockGetStatus
 const simulateOrchestratorIsRunning = (forOrchestratorId: string) => {
   mockGetStatus.mockImplementation(async (orchestratorId: string) =>
@@ -65,7 +58,7 @@ describe("EligibilityCheckHandler", () => {
   });
   it("should returns ResponseSuccessRedirectToResource if EligibilityCheckOrchestrator starts successfully", async () => {
     mockStartNew.mockImplementationOnce(async (_, __, ___) => {
-      return;
+      return "instanceId";
     });
 
     const handler = EligibilityCheckHandler();

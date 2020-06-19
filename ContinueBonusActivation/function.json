@@ -1,0 +1,17 @@
+{
+  "bindings": [
+    {
+      "type": "queueTrigger",
+      "direction": "in",
+      "name": "bonusActivation",
+      "queueName": "bonusactivations",
+      "connection":"BONUS_STORAGE_CONNECTION_STRING"
+    },
+    {
+      "name": "starter",
+      "type": "durableClient",
+      "direction": "in"
+    }
+  ],
+  "scriptFile": "../dist/ContinueBonusActivation/index.js"
+}

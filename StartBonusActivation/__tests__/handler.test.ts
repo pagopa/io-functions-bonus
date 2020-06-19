@@ -11,6 +11,7 @@ import {
   mockStatusRunning
 } from "../../__mocks__/durable-functions";
 import {
+  aBonusId,
   aEligibilityCheckSuccessEligibleExpired,
   aEligibilityCheckSuccessEligibleValid,
   aEligibilityCheckSuccessIneligible,
@@ -25,13 +26,6 @@ import {
   makeStartEligibilityCheckOrchestratorId
 } from "../../utils/orchestrators";
 import { StartBonusActivationHandler } from "../handler";
-
-jest.mock("applicationinsights", () => ({
-  defaultClient: {
-    trackEvent: jest.fn(),
-    trackException: jest.fn()
-  }
-}));
 
 // implement temporary mockGetStatus
 const simulateOrchestratorIsRunning = (forOrchestratorId: string) => {
@@ -73,9 +67,12 @@ const mockBonusLeaseModel = ({
 
 const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
 
+// tslint:disable-next-line: no-big-function
 describe("StartBonusActivationHandler", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // tslint:disable-next-line: no-object-mutation
+    context.bindings = {};
   });
 
   afterEach(() => {
@@ -95,6 +92,7 @@ describe("StartBonusActivationHandler", () => {
     );
 
     const response = await handler(context, aFiscalCode);
+    expect(context.bindings.bonusActivation).toBeUndefined();
 
     expect(response.kind).toBe("IResponseErrorForbiddenNotAuthorized");
   });
@@ -111,6 +109,7 @@ describe("StartBonusActivationHandler", () => {
     );
 
     const response = await handler(context, aFiscalCode);
+    expect(context.bindings.bonusActivation).toBeUndefined();
 
     expect(response.kind).toBe("IResponseSuccessAccepted");
   });
@@ -126,6 +125,7 @@ describe("StartBonusActivationHandler", () => {
     );
 
     const response = await handler(context, aFiscalCode);
+    expect(context.bindings.bonusActivation).toBeUndefined();
 
     expect(response.kind).toBe("IResponseErrorGone");
   });
@@ -139,6 +139,7 @@ describe("StartBonusActivationHandler", () => {
     );
 
     const response = await handler(context, aFiscalCode);
+    expect(context.bindings.bonusActivation).toBeUndefined();
 
     expect(response.kind).toBe("IResponseErrorForbiddenNotAuthorized");
   });
@@ -154,6 +155,7 @@ describe("StartBonusActivationHandler", () => {
     );
 
     const response = await handler(context, aFiscalCode);
+    expect(context.bindings.bonusActivation).toBeUndefined();
 
     expect(response.kind).toBe("IResponseErrorForbiddenNotAuthorized");
   });
@@ -169,6 +171,7 @@ describe("StartBonusActivationHandler", () => {
     );
 
     const response = await handler(context, aFiscalCode);
+    expect(context.bindings.bonusActivation).toBeUndefined();
 
     expect(response.kind).toBe("IResponseErrorInternal");
   });
@@ -184,6 +187,7 @@ describe("StartBonusActivationHandler", () => {
     );
 
     const response = await handler(context, aFiscalCode);
+    expect(context.bindings.bonusActivation).toBeUndefined();
 
     expect(response.kind).toBe("IResponseErrorInternal");
   });
@@ -202,6 +206,10 @@ describe("StartBonusActivationHandler", () => {
     );
 
     const response = await handler(context, aFiscalCode);
+    expect(context.bindings.bonusActivation).toEqual({
+      applicantFiscalCode: aFiscalCode,
+      bonusId: aBonusId
+    });
 
     // the first attempt failed, so it's called twice
     expect(mockBonusActivationCreate).toHaveBeenCalledTimes(2);
@@ -225,6 +233,7 @@ describe("StartBonusActivationHandler", () => {
     );
 
     const response = await handler(context, aFiscalCode);
+    expect(context.bindings.bonusActivation).toBeUndefined();
 
     expect(mockBonusActivationCreate).toHaveBeenCalledTimes(1);
     expect(response.kind).toBe("IResponseErrorInternal");
@@ -241,6 +250,7 @@ describe("StartBonusActivationHandler", () => {
     );
 
     const response = await handler(context, aFiscalCode);
+    expect(context.bindings.bonusActivation).toBeUndefined();
 
     expect(mockBonusActivationCreate).toHaveBeenCalledTimes(1);
     expect(response.kind).toBe("IResponseErrorInternal");
@@ -259,6 +269,7 @@ describe("StartBonusActivationHandler", () => {
     );
 
     const response = await handler(context, aFiscalCode);
+    expect(context.bindings.bonusActivation).toBeUndefined();
 
     expect(response.kind).toBe("IResponseErrorConflict");
   });
@@ -274,24 +285,8 @@ describe("StartBonusActivationHandler", () => {
     );
 
     const response = await handler(context, aFiscalCode);
+    expect(context.bindings.bonusActivation).toBeUndefined();
 
-    expect(response.kind).toBe("IResponseErrorInternal");
-  });
-
-  it("should relase the lock if the orchestrator fails to start", async () => {
-    mockStartNew.mockImplementationOnce(async () => {
-      throw new Error();
-    });
-
-    const handler = StartBonusActivationHandler(
-      mockBonusActivationModel,
-      mockBonusLeaseModel,
-      mockEligibilityCheckModel
-    );
-
-    const response = await handler(context, aFiscalCode);
-
-    expect(mockBonusLeaseDeleteOneById).toHaveBeenCalledTimes(1);
     expect(response.kind).toBe("IResponseErrorInternal");
   });
 
@@ -307,21 +302,9 @@ describe("StartBonusActivationHandler", () => {
     );
 
     const response = await handler(context, aFiscalCode);
+    expect(context.bindings.bonusActivation).toBeUndefined();
     expect(mockBonusLeaseDeleteOneById).toHaveBeenCalledTimes(1);
     expect(response.kind).toBe("IResponseErrorInternal");
-  });
-
-  it("should not relase the lock if the orchestrator starts", async () => {
-    const handler = StartBonusActivationHandler(
-      mockBonusActivationModel,
-      mockBonusLeaseModel,
-      mockEligibilityCheckModel
-    );
-
-    await handler(context, aFiscalCode);
-
-    expect(mockStartNew).toHaveBeenCalledTimes(1);
-    expect(mockBonusLeaseDeleteOneById).not.toHaveBeenCalled();
   });
 
   it("should not relase the lock when fails to acquire the lock", async () => {
@@ -336,11 +319,12 @@ describe("StartBonusActivationHandler", () => {
     );
 
     await handler(context, aFiscalCode);
+    expect(context.bindings.bonusActivation).toBeUndefined();
 
     expect(mockBonusLeaseDeleteOneById).not.toHaveBeenCalled();
   });
 
-  it("should return the reference to the executed orchestrator", async () => {
+  it("should set queue bindings in case bonus creation succeed", async () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
@@ -348,6 +332,10 @@ describe("StartBonusActivationHandler", () => {
     );
 
     const response = await handler(context, aFiscalCode);
+    expect(context.bindings.bonusActivation).toEqual({
+      applicantFiscalCode: aFiscalCode,
+      bonusId: aBonusId
+    });
     expect(response.kind).toBe("IResponseSuccessRedirectToResource");
   });
 });

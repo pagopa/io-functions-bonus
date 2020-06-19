@@ -15,13 +15,6 @@ import {
   SendBonusActivationSuccess
 } from "../handler";
 
-jest.mock("applicationinsights", () => ({
-  defaultClient: {
-    trackEvent: jest.fn(),
-    trackException: jest.fn()
-  }
-}));
-
 describe("SendBonusActivationHandler", () => {
   it("should handle an invalid input", async () => {
     const mockADEClient = {

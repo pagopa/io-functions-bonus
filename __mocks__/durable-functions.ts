@@ -11,7 +11,9 @@ export const mockStatusCompleted = {
 
 export const OrchestrationRuntimeStatus = df.OrchestrationRuntimeStatus;
 
-export const mockStartNew = jest.fn((_, __, ___) => Promise.resolve());
+export const mockStartNew = jest.fn((_, __, ___) =>
+  Promise.resolve("instanceId")
+);
 export const mockGetStatus = jest
   .fn()
   .mockImplementation(async () => mockStatusCompleted);
@@ -30,6 +32,7 @@ export const orchestrator = jest.fn();
 export const RetryOptions = jest.fn(() => ({}));
 
 export const context = ({
+  bindings: {},
   log: {
     // tslint:disable-next-line: no-console
     error: jest.fn().mockImplementation(console.log),

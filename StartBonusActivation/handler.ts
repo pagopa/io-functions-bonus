@@ -6,6 +6,7 @@ import * as express from "express";
 import { left, right, toError } from "fp-ts/lib/Either";
 import {
   fromEither,
+  fromLeft,
   TaskEither,
   taskEither,
   tryCatch
@@ -55,17 +56,18 @@ import {
 } from "../utils/orchestrators";
 
 import { defaultClient } from "applicationinsights";
+import { identity } from "fp-ts/lib/function";
 import {
   fromQueryEither,
   QueryError
 } from "io-functions-commons/dist/src/utils/documentdb";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { Millisecond } from "italia-ts-commons/lib/units";
+import { ContinueBonusActivationInput } from "../ContinueBonusActivation/handler";
 import { BonusActivation as ApiBonusActivation } from "../generated/definitions/BonusActivation";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 import { FamilyUID } from "../generated/models/FamilyUID";
 import { BonusLeaseModel } from "../models/bonus_lease";
-import { OrchestratorInput } from "../StartBonusActivationOrchestrator/handler";
 import { toApiBonusActivation } from "../utils/conversions";
 import { generateFamilyUID } from "../utils/hash";
 
@@ -314,42 +316,6 @@ const relaseLockForUserFamily = (
   );
 };
 
-/**
- * Start a new instance of StartBonusActivationOrchestrator
- *
- * @param client an instance of durable function client
- * @param bonusActivation a record of bonus activation
- * @param fiscalCode the fiscal code of the requesting user. Needed to make a unique id for the orchestrator instance
- *
- * @returns either an internal error or the id of the created orchestrator
- */
-const runStartBonusActivationOrchestrator = (
-  client: DurableOrchestrationClient,
-  bonusActivation: BonusActivationWithFamilyUID,
-  fiscalCode: FiscalCode
-): TaskEither<IResponseErrorInternal, string> =>
-  fromEither(OrchestratorInput.decode({ bonusActivation }))
-    .mapLeft(err =>
-      // validate input here, so we can make the http handler fail too. This shouldn't happen anyway
-      ResponseErrorInternal(
-        `Error validating orchestrator input: ${readableReport(err)}`
-      )
-    )
-    .chain(orchestratorInput =>
-      tryCatch(
-        () =>
-          client.startNew(
-            "StartBonusActivationOrchestrator",
-            makeStartBonusActivationOrchestratorId(fiscalCode),
-            orchestratorInput
-          ),
-        _ =>
-          ResponseErrorInternal(
-            `Error starting the orchestrator: ${toError(_).message}`
-          )
-      )
-    );
-
 type StartBonusActivationResponse =
   | IResponseErrorInternal
   | IResponseErrorForbiddenNotAuthorized
@@ -369,13 +335,13 @@ export function StartBonusActivationHandler(
   eligibilityCheckModel: EligibilityCheckModel
 ): IStartBonusActivationHandler {
   return async (context, fiscalCode) => {
-    const client = df.getClient(context);
+    const dfClient = df.getClient(context);
 
     return taskEither
       .of<StartBonusActivationResponse, void>(void 0)
-      .chain(_ => checkEligibilityCheckIsRunning(client, fiscalCode))
-      .chain(_ => checkBonusActivationIsRunning(client, fiscalCode))
-      .chain(_ => getLatestValidDSU(eligibilityCheckModel, fiscalCode))
+      .chainSecond(checkEligibilityCheckIsRunning(dfClient, fiscalCode))
+      .chainSecond(checkBonusActivationIsRunning(dfClient, fiscalCode))
+      .chainSecond(getLatestValidDSU(eligibilityCheckModel, fiscalCode))
       .map((dsu: Dsu) => ({
         dsu,
         familyUID: generateFamilyUID(dsu.familyMembers)
@@ -386,70 +352,52 @@ export function StartBonusActivationHandler(
           familyUID
         }))
       )
-      .chain<BonusActivationWithFamilyUID>(({ dsu, familyUID }) => {
-        // this part is on a sub-chain as it handles the lock/unlock protection mechanism
-        // familyUID serves as lock context and thus is needed in scope for every sub-task
-        return (
-          taskEither
-            .of<StartBonusActivationResponse, void>(void 0)
-
-            .chain(_ =>
-              createBonusActivation(
-                bonusActivationModel,
-                fiscalCode,
-                familyUID,
-                dsu
+      .chain<ApiBonusActivation>(({ dsu, familyUID }) =>
+        createBonusActivation(bonusActivationModel, fiscalCode, familyUID, dsu)
+          .chain(bonusActivation =>
+            fromEither(toApiBonusActivation(bonusActivation)).mapLeft(err =>
+              ResponseErrorInternal(
+                `Error converting BonusActivation to ApiBonusActivation: ${readableReport(
+                  err
+                )}`
               )
             )
-            .chain(bonusActivation =>
-              runStartBonusActivationOrchestrator(
-                client,
-                bonusActivation,
-                fiscalCode
-              ).map(_ => bonusActivation)
-            )
-            // the following is basically:
-            // on right, just pass it
-            // on left, perform unlock but then pass the original left value
-            .foldTaskEither(
-              l => {
-                defaultClient.trackException({
-                  exception: new Error(l.detail),
-                  properties: {
-                    name: "bonus.activation.start"
-                  }
-                });
-                return relaseLockForUserFamily(
-                  bonusLeaseModel,
-                  familyUID
-                ).foldTaskEither(
-                  _ => fromEither(left(l)),
-                  _ => fromEither(left(l))
-                );
-              },
-              r => fromEither(right(r))
-            )
+          )
+          .foldTaskEither(
+            // bonus creation failed
+            response => {
+              defaultClient.trackException({
+                exception: new Error(response.detail),
+                properties: {
+                  name: "bonus.activation.start"
+                }
+              });
+              return relaseLockForUserFamily(
+                bonusLeaseModel,
+                familyUID
+              ).foldTaskEither(
+                _ => fromLeft(response),
+                _ => fromLeft(response)
+              );
+            },
+            // bonus creation succeeded
+            bonusActivation => taskEither.of(bonusActivation)
+          )
+      )
+      .fold(identity, apiBonusActivation => {
+        // Send the (bonusId, applicantFiscalCode) to the bonus activations queue
+        // in order to be processed later (asynchronously)
+        // tslint:disable-next-line: no-object-mutation
+        context.bindings.bonusActivation = ContinueBonusActivationInput.encode({
+          applicantFiscalCode: apiBonusActivation.applicant_fiscal_code,
+          bonusId: apiBonusActivation.id
+        });
+        return ResponseSuccessRedirectToResource(
+          apiBonusActivation,
+          makeBonusActivationResourceUri(fiscalCode, apiBonusActivation.id),
+          apiBonusActivation
         );
       })
-      .chain(bonusActivation =>
-        fromEither(toApiBonusActivation(bonusActivation)).mapLeft(err =>
-          // validate output
-          ResponseErrorInternal(
-            `Error converting bonusActivation to apiBonusActivation: ${readableReport(
-              err
-            )}`
-          )
-        )
-      )
-      .fold(
-        l => l,
-        apiBonusActivation =>
-          ResponseSuccessRedirectToResource(
-            apiBonusActivation,
-            makeBonusActivationResourceUri(fiscalCode, apiBonusActivation.id),
-            apiBonusActivation
-          )
-      )
       .run();
   };
 }
