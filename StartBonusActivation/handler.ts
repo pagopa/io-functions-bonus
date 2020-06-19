@@ -353,16 +353,12 @@ export function StartBonusActivationHandler(
         }))
       )
       .chain<BonusActivationWithFamilyUID>(({ dsu, familyUID }) => {
-        return taskEither
-          .of<StartBonusActivationResponse, void>(void 0)
-          .chain(_ =>
-            createBonusActivation(
-              bonusActivationModel,
-              fiscalCode,
-              familyUID,
-              dsu
-            )
-          )
+        return createBonusActivation(
+          bonusActivationModel,
+          fiscalCode,
+          familyUID,
+          dsu
+        )
           .map(bonusActivation => {
             // Send the (bonusId, applicantFiscalCode) to the bonus activations queue
             // in order to be processed later (asynchronously)
