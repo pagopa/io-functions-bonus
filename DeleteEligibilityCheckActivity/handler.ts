@@ -47,11 +47,6 @@ export const getDeleteEligibilityCheckActivityHandler = (
         .mapLeft(
           err => new Error(`Invalid Activity input: [${readableReport(err)}]`)
         )
-        .map(
-          fiscalCode =>
-            // pattern strings ain't nonempty strings
-            (fiscalCode as unknown) as NonEmptyString
-        )
     )
       .chain(fiscalCode =>
         tryCatch(
