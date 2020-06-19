@@ -354,18 +354,6 @@ export function StartBonusActivationHandler(
       )
       .chain<ApiBonusActivation>(({ dsu, familyUID }) =>
         createBonusActivation(bonusActivationModel, fiscalCode, familyUID, dsu)
-          .map(bonusActivation => {
-            // Send the (bonusId, applicantFiscalCode) to the bonus activations queue
-            // in order to be processed later (asynchronously)
-            // tslint:disable-next-line: no-object-mutation
-            context.bindings.bonusActivation = ContinueBonusActivationInput.encode(
-              {
-                applicantFiscalCode: bonusActivation.applicantFiscalCode,
-                bonusId: bonusActivation.id
-              }
-            );
-            return bonusActivation;
-          })
           .chain(bonusActivation =>
             fromEither(toApiBonusActivation(bonusActivation)).mapLeft(err =>
               ResponseErrorInternal(
@@ -376,6 +364,7 @@ export function StartBonusActivationHandler(
             )
           )
           .foldTaskEither(
+            // bonus creation failed
             response => {
               defaultClient.trackException({
                 exception: new Error(response.detail),
@@ -383,8 +372,6 @@ export function StartBonusActivationHandler(
                   name: "bonus.activation.start"
                 }
               });
-              // in case of errors during bonus creation we
-              // unlock familyUID and then pass the original left value
               return relaseLockForUserFamily(
                 bonusLeaseModel,
                 familyUID
@@ -393,16 +380,24 @@ export function StartBonusActivationHandler(
                 _ => fromLeft(response)
               );
             },
+            // bonus creation succeeded
             bonusActivation => taskEither.of(bonusActivation)
           )
       )
-      .fold(identity, apiBonusActivation =>
-        ResponseSuccessRedirectToResource(
+      .fold(identity, apiBonusActivation => {
+        // Send the (bonusId, applicantFiscalCode) to the bonus activations queue
+        // in order to be processed later (asynchronously)
+        // tslint:disable-next-line: no-object-mutation
+        context.bindings.bonusActivation = ContinueBonusActivationInput.encode({
+          applicantFiscalCode: apiBonusActivation.applicant_fiscal_code,
+          bonusId: apiBonusActivation.id
+        });
+        return ResponseSuccessRedirectToResource(
           apiBonusActivation,
           makeBonusActivationResourceUri(fiscalCode, apiBonusActivation.id),
           apiBonusActivation
-        )
-      )
+        );
+      })
       .run();
   };
 }
