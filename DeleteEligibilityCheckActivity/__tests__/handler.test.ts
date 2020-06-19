@@ -60,7 +60,7 @@ describe("DeleteEligibilityCheckActivityHandler", () => {
     try {
       await handler(context, aFiscalCode);
       // expect that the activity fails
-      expect(false).toBeTruthy();
+      fail();
     } catch (error) {
       expect(error).toBeInstanceOf(Error);
     }

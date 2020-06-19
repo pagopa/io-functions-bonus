@@ -127,7 +127,7 @@ describe("FailedBonusActivationHandler", () => {
         bonusActivation: aBonusActivationWithFamilyUID
       });
       // expect that the activity fails
-      expect(false).toBeTruthy();
+      fail();
     } catch (error) {
       expect(UnhandledFailure.decode(error).isRight()).toBeTruthy();
     }

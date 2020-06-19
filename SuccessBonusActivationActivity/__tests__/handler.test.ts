@@ -65,7 +65,7 @@ describe("SuccessBonusActivationHandler", () => {
         bonusActivation: aBonusActivationWithFamilyUID
       });
       // expect that the activity fails for a retry
-      expect(false).toBeTruthy();
+      fail();
     } catch (error) {
       expect(UnhandledFailure.decode(error).isRight()).toBeTruthy();
     }
