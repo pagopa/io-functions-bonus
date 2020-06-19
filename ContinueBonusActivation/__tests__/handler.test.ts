@@ -9,6 +9,11 @@ describe("ContinueBonusActivation", () => {
     jest.clearAllMocks();
   });
 
+  it("should return a permanent error if input cannot be decoded", async () => {
+    const result = ContinueBonusActivationHandler(context, {});
+    return expect(result).resolves.toMatchObject({ kind: "PERMANENT" });
+  });
+
   it("should return a transient error if the orchestrator throws", async () => {
     mockStartNew.mockImplementationOnce(async () => {
       throw new Error("foobar");
