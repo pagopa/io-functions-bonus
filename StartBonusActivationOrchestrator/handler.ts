@@ -12,8 +12,10 @@ import { FailedBonusActivationInput } from "../FailedBonusActivationActivity/han
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 import { SendBonusActivationSuccess } from "../SendBonusActivationActivity/handler";
 import { SendBonusActivationInput } from "../SendBonusActivationActivity/handler";
+import { SendMessageActivityInput } from "../SendMessageActivity/handler";
 import { SuccessBonusActivationInput } from "../SuccessBonusActivationActivity/handler";
 import { toApiBonusVacanzaBase } from "../utils/conversions";
+import { MESSAGES } from "../utils/messages";
 import { retryOptions } from "../utils/retryPolicy";
 
 export const OrchestratorInput = t.interface({
@@ -66,8 +68,10 @@ export const getStartBonusActivationOrchestratorHandler = (
 
     const startBonusActivationOrchestratorInput =
       errorOrStartBonusActivationOrchestratorInput.value;
-
-    if (SendBonusActivationSuccess.is(undecodedSendBonusActivation)) {
+    const isSendBonusActivationSuccess = SendBonusActivationSuccess.is(
+      undecodedSendBonusActivation
+    );
+    if (isSendBonusActivationSuccess) {
       yield context.df.callActivity(
         "SuccessBonusActivationActivity",
         SuccessBonusActivationInput.encode(
@@ -85,6 +89,23 @@ export const getStartBonusActivationOrchestratorHandler = (
       defaultClient.trackEvent({
         name: "bonus.activation.failure"
       });
+    }
+
+    // Send notification for all family members with bonus activation detail
+    for (const familyMember of startBonusActivationOrchestratorInput
+      .bonusActivation.dsuRequest.familyMembers) {
+      yield context.df.callActivityWithRetry(
+        "SendMessageActivity",
+        retryOptions,
+        SendMessageActivityInput.encode({
+          content: MESSAGES[
+            isSendBonusActivationSuccess
+              ? "BonusActivationSuccess"
+              : "BonusActivationFailure"
+          ](),
+          fiscalCode: familyMember.fiscalCode
+        })
+      );
     }
     return true;
   };
