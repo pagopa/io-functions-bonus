@@ -55,7 +55,8 @@ export function GetBonusActivationHandler(
     )
       .chain(_ =>
         fromEither(_).mapLeft(
-          queryError => new Error(`Query Error code=${queryError.code}`)
+          queryError =>
+            new Error(`Query Error code=${queryError.code}|${queryError.body}`)
         )
       )
       .fold<
@@ -66,8 +67,9 @@ export function GetBonusActivationHandler(
         | IResponseSuccessAccepted
       >(
         err => {
-          context.log.error(`GetBonusActivation|ERROR|Error: [${err.message}]`);
-          return ResponseErrorInternal("Internal server error");
+          const error = `GetBonusActivation|ERROR|Error: [${err.message}]`;
+          context.log.error(error);
+          return ResponseErrorInternal(error);
         },
         maybeBonusActivation => {
           if (isSome(maybeBonusActivation)) {
@@ -77,12 +79,11 @@ export function GetBonusActivationHandler(
               IResponseSuccessJson<BonusActivation> | IResponseErrorInternal
             >(
               err => {
-                context.log.error(
-                  `GetBonusActivation|ERROR|Conversion Error: [${readableReport(
-                    err
-                  )}]`
-                );
-                return ResponseErrorInternal("Error");
+                const error = `GetBonusActivation|ERROR|Conversion Error: [${readableReport(
+                  err
+                )}]`;
+                context.log.error(error);
+                return ResponseErrorInternal(error);
               },
               bonusActivation => ResponseSuccessJson(bonusActivation)
             );
