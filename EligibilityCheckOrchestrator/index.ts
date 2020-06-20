@@ -25,6 +25,7 @@ import { retryOptions } from "../utils/retryPolicy";
 import { ValidateEligibilityCheckActivityInput } from "../ValidateEligibilityCheckActivity/handler";
 
 import { isLeft } from "fp-ts/lib/Either";
+import { toString } from "fp-ts/lib/function";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
@@ -34,7 +35,6 @@ export const OrchestratorInput = FiscalCode;
 export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
 
 const NOTIFICATION_DELAY_SECONDS = 10;
-const logPrefix = "EligibilityCheckOrchestrator";
 
 export const getMessageType = (
   _: ApiEligibilityCheck
@@ -53,7 +53,8 @@ export const getMessageType = (
 };
 
 export const handler = function*(
-  context: IOrchestrationFunctionContext
+  context: IOrchestrationFunctionContext,
+  logPrefix: string = "EligibilityCheckOrchestrator"
 ): Generator {
   context.df.setCustomStatus("RUNNING");
   const input = context.df.getInput();
@@ -137,7 +138,7 @@ export const handler = function*(
       UpsertEligibilityCheckActivityInput.encode(validatedEligibilityCheck)
     );
   } catch (err) {
-    context.log.error("EligibilityCheckOrchestrator|ERROR|%s", err);
+    context.log.error(`${logPrefix}|ERROR|${toString(err)}`);
     trackException({
       exception: err,
       properties: {
