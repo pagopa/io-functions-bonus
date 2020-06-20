@@ -1,5 +1,5 @@
 import { Context } from "@azure/functions";
-import { left, right } from "fp-ts/lib/Either";
+import { right } from "fp-ts/lib/Either";
 import { fromEither, tryCatch } from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
@@ -47,11 +47,6 @@ export const getDeleteEligibilityCheckActivityHandler = (
         .mapLeft(
           err => new Error(`Invalid Activity input: [${readableReport(err)}]`)
         )
-        .map(
-          fiscalCode =>
-            // pattern strings ain't nonempty strings
-            (fiscalCode as unknown) as NonEmptyString
-        )
     )
       .chain(fiscalCode =>
         tryCatch(
@@ -63,7 +58,15 @@ export const getDeleteEligibilityCheckActivityHandler = (
               if (err.code === 404) {
                 return fromEither(right("NOT FOUND"));
               }
-              return fromEither(left(new Error(`QueryError: [${err}]`)));
+              // this condition address the case we want the activity to throw, so the orchestrator can retry
+              const queryError = new Error(
+                `Query Error: code=${err.code} body=${err.body}`
+              );
+              context.log.error(
+                `DeleteEligibilityCheckActivity|ERROR|%s`,
+                queryError.message
+              );
+              throw queryError;
             },
             id => fromEither(right(id))
           )

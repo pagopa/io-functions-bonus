@@ -9,11 +9,11 @@ import {
 import { BonusActivationModel } from "../../models/bonus_activation";
 import { BonusLeaseModel } from "../../models/bonus_lease";
 import { EligibilityCheckModel } from "../../models/eligibility_check";
+import { TransientFailure } from "../../utils/errors";
 import {
   FailedBonusActivationHandler,
   FailedBonusActivationSuccess,
-  InvalidInputFailure,
-  UnhandledFailure
+  InvalidInputFailure
 } from "../handler";
 
 // mockEligibilityCheckModel
@@ -122,9 +122,14 @@ describe("FailedBonusActivationHandler", () => {
       mockEligibilityCheckModel
     );
 
-    const response = await handler(context, {
-      bonusActivation: aBonusActivationWithFamilyUID
-    });
-    expect(UnhandledFailure.decode(response).isRight()).toBeTruthy();
+    try {
+      await handler(context, {
+        bonusActivation: aBonusActivationWithFamilyUID
+      });
+      // expect that the activity fails
+      fail();
+    } catch (error) {
+      expect(TransientFailure.decode(error).isRight()).toBeTruthy();
+    }
   });
 });

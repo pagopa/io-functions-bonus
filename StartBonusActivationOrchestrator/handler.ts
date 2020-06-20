@@ -78,8 +78,9 @@ export const getStartBonusActivationOrchestratorHandler = (
       undecodedSendBonusActivation
     );
     if (isSendBonusActivationSuccess) {
-      yield context.df.callActivity(
+      yield context.df.callActivityWithRetry(
         "SuccessBonusActivationActivity",
+        retryOptions,
         SuccessBonusActivationInput.encode(
           startBonusActivationOrchestratorInput
         )
@@ -99,8 +100,9 @@ export const getStartBonusActivationOrchestratorHandler = (
         name: "bonus.activation.success"
       });
     } else {
-      yield context.df.callActivity(
+      yield context.df.callActivityWithRetry(
         "FailedBonusActivationActivity",
+        retryOptions,
         FailedBonusActivationInput.encode(startBonusActivationOrchestratorInput)
       );
       yield context.df.callActivityWithRetry(
