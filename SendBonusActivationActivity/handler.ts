@@ -1,5 +1,4 @@
 import { Context } from "@azure/functions";
-import { defaultClient } from "applicationinsights";
 import { toError } from "fp-ts/lib/Either";
 import {
   fromEither,
@@ -18,6 +17,7 @@ import {
   BonusVacanzaInvalidRequestError,
   BonusVacanzaTransientError
 } from "../utils/adeClient";
+import { trackException } from "../utils/appinsights";
 
 export const SendBonusActivationInput = BonusVacanzaBase;
 export type SendBonusActivationInput = t.TypeOf<
@@ -183,7 +183,7 @@ export function SendBonusActivationHandler(
             const error = `${logPrefix}|TRANSIENT_ERROR=${activityFailure.kind}:${activityFailure.reason}`;
             context.log.error(error);
 
-            defaultClient.trackException({
+            trackException({
               exception: new Error(error),
               properties: {
                 name: "bonus.activation.failure.temporary"
@@ -196,7 +196,7 @@ export function SendBonusActivationHandler(
             const error = `${logPrefix}|PERMANENT_ERROR=${activityFailure.kind}=${activityFailure.reason}`;
             context.log.error(error);
 
-            defaultClient.trackException({
+            trackException({
               exception: new Error(error),
               properties: {
                 name: "bonus.activation.failure.permanent"
@@ -211,7 +211,7 @@ export function SendBonusActivationHandler(
             const error = `${logPrefix}|TRANSIENT_ERROR=${adeResponse.status}:${adeResponse.value}`;
             context.log.error(error);
 
-            defaultClient.trackException({
+            trackException({
               exception: new Error(error),
               properties: {
                 name: "bonus.activation.failure.temporary"
@@ -226,7 +226,7 @@ export function SendBonusActivationHandler(
             const error = `${logPrefix}|PERMANENT_ERROR=${adeResponse.status}:${adeResponse.value}`;
             context.log.error(error);
 
-            defaultClient.trackException({
+            trackException({
               exception: new Error(error),
               properties: {
                 name: "bonus.activation.failure.permanent"
@@ -248,7 +248,7 @@ export function SendBonusActivationHandler(
             const error = `${logPrefix}|UNEXPECTED_ERROR=${adeResponse.status}:${adeResponse.value.errorCode}=${adeResponse.value.errorMessage}`;
             context.log.error(error);
 
-            defaultClient.trackException({
+            trackException({
               exception: new Error(error),
               properties: {
                 name: "bonus.activation.failure.unexpected"

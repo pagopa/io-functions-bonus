@@ -1,4 +1,10 @@
 import * as ai from "applicationinsights";
+import {
+  EventTelemetry,
+  ExceptionTelemetry
+} from "applicationinsights/out/Declarations/Contracts";
+import { fromNullable } from "fp-ts/lib/Option";
+import { tryCatch } from "fp-ts/lib/Option";
 import { initAppInsights } from "italia-ts-commons/lib/appinsights";
 import { IntegerFromString } from "italia-ts-commons/lib/numbers";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
@@ -21,3 +27,15 @@ export const initTelemetryClient = (env = process.env) =>
             ).getOrElse(DEFAULT_SAMPLING_PERCENTAGE)
           })
       );
+
+export const trackEvent = (event: EventTelemetry) => {
+  fromNullable(initTelemetryClient()).map(_ =>
+    tryCatch(() => _.trackEvent(event))
+  );
+};
+
+export const trackException = (event: ExceptionTelemetry) => {
+  fromNullable(initTelemetryClient()).map(_ =>
+    tryCatch(() => _.trackException(event))
+  );
+};

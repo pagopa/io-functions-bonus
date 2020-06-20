@@ -1,5 +1,4 @@
 import { Context } from "@azure/functions";
-import { defaultClient } from "applicationinsights";
 import { addMilliseconds } from "date-fns";
 import { fromEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "io-functions-commons/dist/generated/definitions/FiscalCode";
@@ -9,6 +8,7 @@ import { Hour, Millisecond } from "italia-ts-commons/lib/units";
 import { ConsultazioneSogliaIndicatoreResponse } from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
 import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
 import { Timestamp } from "../generated/definitions/Timestamp";
+import { trackException } from "../utils/appinsights";
 import { ISoapClientAsync } from "../utils/inpsSoapClient";
 
 export const EligibilityCheckActivityInput = FiscalCode;
@@ -76,7 +76,7 @@ export const getEligibilityCheckActivityHandler = (
       .fold(
         err => {
           context.log.error(`EligibilityCheckActivity|ERROR|${err.message}`);
-          defaultClient.trackException({
+          trackException({
             exception: err,
             properties: {
               name: "bonus.eligibilitycheck.inps"
