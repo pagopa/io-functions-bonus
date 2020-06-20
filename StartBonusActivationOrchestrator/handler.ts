@@ -84,6 +84,17 @@ export const getStartBonusActivationOrchestratorHandler = (
           startBonusActivationOrchestratorInput
         )
       );
+      yield context.df.callActivityWithRetry(
+        "SendMessageActivity",
+        retryOptions,
+        SendMessageActivityInput.encode({
+          checkProfile: false,
+          content: MESSAGES.BonusActivationSuccess(),
+          fiscalCode:
+            startBonusActivationOrchestratorInput.bonusActivation
+              .applicantFiscalCode
+        })
+      );
       defaultClient.trackEvent({
         name: "bonus.activation.success"
       });
@@ -91,6 +102,17 @@ export const getStartBonusActivationOrchestratorHandler = (
       yield context.df.callActivity(
         "FailedBonusActivationActivity",
         FailedBonusActivationInput.encode(startBonusActivationOrchestratorInput)
+      );
+      yield context.df.callActivityWithRetry(
+        "SendMessageActivity",
+        retryOptions,
+        SendMessageActivityInput.encode({
+          checkProfile: false,
+          content: MESSAGES.BonusActivationFailure(),
+          fiscalCode:
+            startBonusActivationOrchestratorInput.bonusActivation
+              .applicantFiscalCode
+        })
       );
       defaultClient.trackEvent({
         name: "bonus.activation.failure"
