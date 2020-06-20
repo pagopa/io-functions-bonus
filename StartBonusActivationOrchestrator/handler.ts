@@ -1,4 +1,3 @@
-import { defaultClient } from "applicationinsights";
 import {
   IOrchestrationFunctionContext,
   Task,
@@ -14,6 +13,7 @@ import { SendBonusActivationSuccess } from "../SendBonusActivationActivity/handl
 import { SendBonusActivationInput } from "../SendBonusActivationActivity/handler";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
 import { SuccessBonusActivationInput } from "../SuccessBonusActivationActivity/handler";
+import { trackEvent } from "../utils/appinsights";
 import { toApiBonusVacanzaBase } from "../utils/conversions";
 import { MESSAGES } from "../utils/messages";
 import { retryOptions } from "../utils/retryPolicy";
@@ -68,7 +68,7 @@ export const getStartBonusActivationOrchestratorHandler = (
       retryOptions,
       SendBonusActivationInput.encode(errorOrBonusVacanzaBase.value)
     );
-    defaultClient.trackEvent({
+    trackEvent({
       name: "bonus.activation.sent"
     });
 
@@ -95,7 +95,7 @@ export const getStartBonusActivationOrchestratorHandler = (
               .applicantFiscalCode
         })
       );
-      defaultClient.trackEvent({
+      trackEvent({
         name: "bonus.activation.success"
       });
     } else {
@@ -114,7 +114,7 @@ export const getStartBonusActivationOrchestratorHandler = (
               .applicantFiscalCode
         })
       );
-      defaultClient.trackEvent({
+      trackEvent({
         name: "bonus.activation.failure"
       });
     }

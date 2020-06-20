@@ -55,7 +55,6 @@ import {
   makeStartEligibilityCheckOrchestratorId
 } from "../utils/orchestrators";
 
-import { defaultClient } from "applicationinsights";
 import { identity } from "fp-ts/lib/function";
 import { toString } from "fp-ts/lib/function";
 import {
@@ -70,6 +69,7 @@ import { InstanceId } from "../generated/definitions/InstanceId";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 import { FamilyUID } from "../generated/models/FamilyUID";
 import { BonusLeaseModel } from "../models/bonus_lease";
+import { trackException } from "../utils/appinsights";
 import { toApiBonusActivation } from "../utils/conversions";
 import { generateFamilyUID } from "../utils/hash";
 
@@ -412,7 +412,7 @@ export function StartBonusActivationHandler(
           .foldTaskEither(
             // bonus creation failed
             response => {
-              defaultClient.trackException({
+              trackException({
                 exception: new Error(response.detail),
                 properties: {
                   name: "bonus.activation.start"

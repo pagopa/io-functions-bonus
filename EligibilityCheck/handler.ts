@@ -1,5 +1,4 @@
 import { Context } from "@azure/functions";
-import { defaultClient } from "applicationinsights";
 import * as df from "durable-functions";
 import * as express from "express";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
@@ -20,7 +19,7 @@ import {
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { InstanceId } from "../generated/definitions/InstanceId";
-import { initTelemetryClient } from "../utils/appinsights";
+import { initTelemetryClient, trackException } from "../utils/appinsights";
 import {
   makeStartBonusActivationOrchestratorId,
   makeStartEligibilityCheckOrchestratorId
@@ -78,7 +77,7 @@ export function EligibilityCheckHandler(): IEligibilityCheckHandler {
         status
       );
 
-      defaultClient.trackException({
+      trackException({
         exception: err,
         properties: {
           name: "bonus.eligibilitycheck.orchestrator"

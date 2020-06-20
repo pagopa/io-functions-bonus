@@ -24,12 +24,11 @@ import { MESSAGES } from "../utils/messages";
 import { retryOptions } from "../utils/retryPolicy";
 import { ValidateEligibilityCheckActivityInput } from "../ValidateEligibilityCheckActivity/handler";
 
-import { defaultClient } from "applicationinsights";
-
 import { isLeft } from "fp-ts/lib/Either";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
+import { trackEvent, trackException } from "../utils/appinsights";
 
 export const OrchestratorInput = FiscalCode;
 export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
@@ -137,7 +136,7 @@ export const handler = function*(
     );
   } catch (err) {
     context.log.error("EligibilityCheckOrchestrator|ERROR|%s", err);
-    defaultClient.trackException({
+    trackException({
       exception: err,
       properties: {
         name: "bonus.eligibilitycheck.error"
@@ -148,7 +147,7 @@ export const handler = function*(
     context.df.setCustomStatus("COMPLETED");
   }
 
-  defaultClient.trackEvent({
+  trackEvent({
     name: "bonus.eligibilitycheck.success",
     properties: {
       status: `${validatedEligibilityCheck.status}`
@@ -174,14 +173,14 @@ export const handler = function*(
         fiscalCode: eligibilityCheckResponse.fiscalCode
       })
     );
-    defaultClient.trackEvent({
+    trackEvent({
       name: "bonus.eligibilitycheck.message",
       properties: {
         type: maybeMessageType.value
       }
     });
   } else {
-    defaultClient.trackException({
+    trackException({
       exception: new Error(
         `Cannot get message type for eligibility check: ${eligibilityCheckResponse.fiscalCode}`
       )
