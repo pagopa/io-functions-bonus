@@ -7,7 +7,9 @@ import {
 } from "italia-ts-commons/lib/fetch";
 import { IntegerFromString } from "italia-ts-commons/lib/numbers";
 import { Millisecond } from "italia-ts-commons/lib/units";
-import { SendMessageActivityHandler } from "./handler";
+
+import { getGetProfile, getSendMessage } from "../utils/notifications";
+import { getSendMessageActivityHandler } from "./handler";
 
 // HTTP external requests timeout in milliseconds
 const SERVICES_REQUEST_TIMEOUT_MS = IntegerFromString.decode(
@@ -15,8 +17,8 @@ const SERVICES_REQUEST_TIMEOUT_MS = IntegerFromString.decode(
 ).getOrElse(10000);
 
 // Needed to call notifications API
-const publicApiUrl = getRequiredStringEnv("SERVICES_API_URL");
-const publicApiKey = getRequiredStringEnv("SERVICES_API_KEY");
+const servicesApiUrl = getRequiredStringEnv("SERVICES_API_URL");
+const servicesApiKey = getRequiredStringEnv("SERVICES_API_KEY");
 
 // HTTP-only fetch with optional keepalive agent
 // @see https://github.com/pagopa/io-ts-commons/blob/master/src/agent.ts#L10
@@ -28,10 +30,9 @@ const timeoutFetch = toFetch(
   setFetchTimeout(SERVICES_REQUEST_TIMEOUT_MS as Millisecond, abortableFetch)
 );
 
-const index = SendMessageActivityHandler(
-  publicApiUrl,
-  publicApiKey,
-  timeoutFetch
+const sendMessageActivityHandler = getSendMessageActivityHandler(
+  getGetProfile(servicesApiUrl, servicesApiKey, timeoutFetch),
+  getSendMessage(servicesApiUrl, servicesApiKey, timeoutFetch)
 );
 
-export default index;
+export default sendMessageActivityHandler;

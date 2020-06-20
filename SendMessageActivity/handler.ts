@@ -1,34 +1,30 @@
-﻿import { Context } from "@azure/functions";
-import { NewMessage } from "io-functions-commons/dist/generated/definitions/NewMessage";
-import { readableReport } from "italia-ts-commons/lib/reporters";
+﻿import * as t from "io-ts";
+
+import { Context } from "@azure/functions";
 
 import { MessageContent } from "io-functions-commons/dist/generated/definitions/MessageContent";
-import * as t from "io-ts";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import { readableReport } from "italia-ts-commons/lib/reporters";
+import { FiscalCode } from "italia-ts-commons/lib/strings";
+
 import { toHash } from "../utils/hash";
-import { sendMessage } from "../utils/notifications";
+import {
+  GetProfileT,
+  makeNewMessage,
+  SendMessageT
+} from "../utils/notifications";
 
-const makeNewMessage = (content: MessageContent) =>
-  NewMessage.decode({
-    content
-  }).getOrElseL(errs => {
-    throw new Error("Invalid MessageContent: " + readableReport(errs));
-  });
-
-export const SendMessageActivityInput = t.interface({
+export const ActivityInput = t.interface({
+  checkProfile: t.boolean,
   content: MessageContent,
   fiscalCode: FiscalCode
 });
-export type ActivityInput = t.TypeOf<typeof SendMessageActivityInput>;
+export type ActivityInput = t.TypeOf<typeof ActivityInput>;
 
 // Activity result
-const SendMessageActivityResultSuccess = t.interface({
+const ActivityResultSuccess = t.interface({
   kind: t.literal("SUCCESS")
 });
-
-type SendMessageActivityResultSuccess = t.TypeOf<
-  typeof SendMessageActivityResultSuccess
->;
+type ActivityResultSuccess = t.TypeOf<typeof ActivityResultSuccess>;
 
 const ActivityResultFailure = t.interface({
   kind: t.literal("FAILURE"),
@@ -38,16 +34,15 @@ const ActivityResultFailure = t.interface({
 type ActivityResultFailure = t.TypeOf<typeof ActivityResultFailure>;
 
 export const ActivityResult = t.taggedUnion("kind", [
-  SendMessageActivityResultSuccess,
+  ActivityResultSuccess,
   ActivityResultFailure
 ]);
 export type ActivityResult = t.TypeOf<typeof ActivityResult>;
 
-export const SendMessageActivityHandler = (
-  publicApiUrl: NonEmptyString,
-  publicApiKey: NonEmptyString,
-  timeoutFetch: typeof fetch,
-  logPrefix = `SendMessageActivity`
+export const getSendMessageActivityHandler = (
+  getProfile: GetProfileT,
+  sendMessage: SendMessageT,
+  logPrefix: string = `SendMessageActivity`
 ) => (context: Context, input: unknown): Promise<ActivityResult> => {
   const failure = (reason: string) => {
     context.log.error(reason);
@@ -58,42 +53,59 @@ export const SendMessageActivityHandler = (
   };
 
   const success = () =>
-    SendMessageActivityResultSuccess.encode({
+    ActivityResultSuccess.encode({
       kind: "SUCCESS"
     });
 
-  return SendMessageActivityInput.decode(input).fold<Promise<ActivityResult>>(
+  return ActivityInput.decode(input).fold<Promise<ActivityResult>>(
     async errs =>
       failure(
         `${logPrefix}|Cannot decode input|ERROR=${readableReport(
           errs
         )}|INPUT=${JSON.stringify(input)}`
       ),
-    async ({ content, fiscalCode }) => {
+    async ({ content, fiscalCode, checkProfile }) => {
       const cfHash = toHash(fiscalCode);
       // throws in case of timeout so
       // the orchestrator can schedule a retry
-      const status = await sendMessage(
+      if (checkProfile) {
+        const getProfileStatus = await getProfile(fiscalCode);
+
+        if (getProfileStatus !== 200) {
+          if (getProfileStatus === 404) {
+            context.log.verbose(
+              `${logPrefix}|CFHASH=${cfHash}|PROFILE_NOT_FOUND`
+            );
+            // In case the profile is not found continue
+            return success();
+          }
+          const msg = `${logPrefix}|CFHASH=${cfHash}|ERROR=${getProfileStatus}`;
+          if (getProfileStatus >= 500) {
+            throw new Error(msg);
+          } else {
+            return failure(msg);
+          }
+        }
+      }
+
+      const sendMessageStatus = await sendMessage(
         fiscalCode,
-        publicApiUrl,
-        publicApiKey,
-        makeNewMessage(content),
-        timeoutFetch
+        makeNewMessage(content)
       );
 
-      if (status !== 201) {
-        const msg = `${logPrefix}|CFHASH=${cfHash}|ERROR=${status}`;
-        if (status >= 500) {
+      if (sendMessageStatus !== 201) {
+        const msg = `${logPrefix}|CFHASH=${cfHash}|ERROR=${sendMessageStatus}`;
+        if (sendMessageStatus >= 500) {
           throw new Error(msg);
         } else {
           return failure(msg);
         }
       }
 
-      context.log.verbose(`${logPrefix}|CFHASH=${cfHash}|RESPONSE=${status}`);
+      context.log.verbose(
+        `${logPrefix}|CFHASH=${cfHash}|RESPONSE=${sendMessageStatus}`
+      );
       return success();
     }
   );
 };
-
-export default SendMessageActivityHandler;
