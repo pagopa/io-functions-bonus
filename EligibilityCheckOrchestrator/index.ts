@@ -29,7 +29,7 @@ import { defaultClient } from "applicationinsights";
 import { isLeft } from "fp-ts/lib/Either";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { SendMessageActivityInput } from "../SendMessageActivity/handler";
+import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
 
 export const OrchestratorInput = FiscalCode;
 export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
@@ -169,6 +169,7 @@ export const handler = function*(
       "SendMessageActivity",
       retryOptions,
       SendMessageActivityInput.encode({
+        checkProfile: false,
         content: MESSAGES[maybeMessageType.value](),
         fiscalCode: eligibilityCheckResponse.fiscalCode
       })
