@@ -12,7 +12,7 @@ import { FailedBonusActivationInput } from "../FailedBonusActivationActivity/han
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 import { SendBonusActivationSuccess } from "../SendBonusActivationActivity/handler";
 import { SendBonusActivationInput } from "../SendBonusActivationActivity/handler";
-import { SendMessageActivityInput } from "../SendMessageActivity/handler";
+import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
 import { SuccessBonusActivationInput } from "../SuccessBonusActivationActivity/handler";
 import { toApiBonusVacanzaBase } from "../utils/conversions";
 import { MESSAGES } from "../utils/messages";
@@ -104,6 +104,7 @@ export const getStartBonusActivationOrchestratorHandler = (
         "SendMessageActivity",
         retryOptions,
         SendMessageActivityInput.encode({
+          checkProfile: true,
           content: MESSAGES[
             isSendBonusActivationSuccess
               ? "BonusActivationSuccess"
