@@ -57,6 +57,7 @@ import {
 
 import { defaultClient } from "applicationinsights";
 import { identity } from "fp-ts/lib/function";
+import { toString } from "fp-ts/lib/function";
 import {
   fromQueryEither,
   QueryError
@@ -65,6 +66,7 @@ import { readableReport } from "italia-ts-commons/lib/reporters";
 import { Millisecond } from "italia-ts-commons/lib/units";
 import { ContinueBonusActivationInput } from "../ContinueBonusActivation/handler";
 import { BonusActivation as ApiBonusActivation } from "../generated/definitions/BonusActivation";
+import { InstanceId } from "../generated/definitions/InstanceId";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 import { FamilyUID } from "../generated/models/FamilyUID";
 import { BonusLeaseModel } from "../models/bonus_lease";
@@ -97,24 +99,68 @@ const makeBonusActivationResourceUri = (
 const checkBonusActivationIsRunning = (
   client: DurableOrchestrationClient,
   fiscalCode: FiscalCode
-): TaskEither<IResponseErrorInternal | IResponseSuccessAccepted, false> =>
-  checkOrchestratorIsRunning(
-    client,
-    makeStartBonusActivationOrchestratorId(fiscalCode)
-  ).foldTaskEither<IResponseErrorInternal | IResponseSuccessAccepted, false>(
-    err =>
-      fromEither(
-        left(
-          ResponseErrorInternal(
-            `Error checking BonusActivationOrchestrator: ${err.message}`
+): TaskEither<
+  IResponseErrorInternal | IResponseSuccessAccepted<InstanceId>,
+  false
+> =>
+  tryCatch(
+    () => client.getStatus(makeStartBonusActivationOrchestratorId(fiscalCode)),
+    toError
+  )
+    .map(status => ({
+      customStatus: status.customStatus,
+      isRunning: status.runtimeStatus === df.OrchestrationRuntimeStatus.Running
+    }))
+    .foldTaskEither(
+      err =>
+        fromEither(
+          left(
+            ResponseErrorInternal(
+              `Cannot get BonusActivationOrchestrator status: ${err.message}`
+            )
           )
-        )
-      ),
-    isRunning =>
-      isRunning
-        ? fromEither(left(ResponseSuccessAccepted()))
-        : fromEither(right(false))
-  );
+        ),
+      ({ customStatus, isRunning }) =>
+        isRunning
+          ? tryCatch(
+              async () => {
+                // In case we have found a running bonus activation orchestrator
+                // we must return (202) the related bonus ID to the caller of the API:
+                // the client needs to know the endpoint to poll to get the bonus details.
+                // That's why here we try to get the bonus ID from the
+                // running orchestrator custom status.
+                return NonEmptyString.decode(customStatus).fold<
+                  IResponseErrorInternal | IResponseSuccessAccepted<InstanceId>
+                >(
+                  errs =>
+                    ResponseErrorInternal(
+                      `Cannot decode the ID of the bonus being processed: '${readableReport(
+                        errs
+                      )}'`
+                    ),
+                  bonusId =>
+                    ResponseSuccessAccepted(
+                      "Still running",
+                      InstanceId.encode({
+                        id: bonusId
+                      })
+                    )
+                );
+              },
+              err =>
+                ResponseErrorInternal(
+                  `Cannot get the ID of the bonus being processed: ${toString(
+                    err
+                  )}`
+                )
+              // collapse the right parts into lefts
+              // as the only right value here may be the boolean 'false'
+            ).foldTaskEither<
+              IResponseErrorInternal | IResponseSuccessAccepted<InstanceId>,
+              false
+            >(fromLeft, fromLeft)
+          : taskEither.of(false)
+    );
 
 /**
  * Check if the current user has a pending dsu validation request.
@@ -287,7 +333,7 @@ const acquireLockForUserFamily = (
     err =>
       err.code === 409
         ? ResponseErrorConflict(
-            `There's already a lease for familyUID ${familyUID}: ${err.body}`
+            `There's already a lease for familyUID ${familyUID}`
           )
         : ResponseErrorInternal(
             `Error while acquiring lease for familyUID ${familyUID}: ${err.body}`
@@ -321,8 +367,8 @@ type StartBonusActivationResponse =
   | IResponseErrorForbiddenNotAuthorized
   | IResponseErrorGone
   | IResponseErrorConflict
-  | IResponseSuccessAccepted
-  | IResponseSuccessRedirectToResource<ApiBonusActivation, ApiBonusActivation>;
+  | IResponseSuccessAccepted<InstanceId>
+  | IResponseSuccessRedirectToResource<ApiBonusActivation, InstanceId>;
 
 type IStartBonusActivationHandler = (
   context: Context,
@@ -395,7 +441,9 @@ export function StartBonusActivationHandler(
         return ResponseSuccessRedirectToResource(
           apiBonusActivation,
           makeBonusActivationResourceUri(fiscalCode, apiBonusActivation.id),
-          apiBonusActivation
+          InstanceId.encode({
+            id: (apiBonusActivation.id as unknown) as NonEmptyString
+          })
         );
       })
       .run();
