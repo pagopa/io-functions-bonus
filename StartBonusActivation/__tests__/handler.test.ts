@@ -6,7 +6,6 @@ import { FiscalCode } from "italia-ts-commons/lib/strings";
 import {
   context,
   mockGetStatus,
-  mockStartNew,
   mockStatusCompleted,
   mockStatusRunning
 } from "../../__mocks__/durable-functions";
@@ -98,9 +97,18 @@ describe("StartBonusActivationHandler", () => {
   });
 
   it("should notify the user if there's already a bonus activation running", async () => {
-    simulateOrchestratorIsRunning(
-      makeStartBonusActivationOrchestratorId(aFiscalCode)
-    );
+    mockGetStatus.mockImplementation(async orchestratorId => {
+      if (
+        orchestratorId === makeStartBonusActivationOrchestratorId(aFiscalCode)
+      ) {
+        return {
+          ...mockStatusRunning,
+          customStatus: aBonusId
+        };
+      } else {
+        return mockStatusCompleted;
+      }
+    });
 
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
@@ -112,6 +120,9 @@ describe("StartBonusActivationHandler", () => {
     expect(context.bindings.bonusActivation).toBeUndefined();
 
     expect(response.kind).toBe("IResponseSuccessAccepted");
+    if (response.kind === "IResponseSuccessAccepted") {
+      expect(response.payload).toEqual({ id: aBonusId });
+    }
   });
 
   it("should tell if the eligibility check is too old", async () => {

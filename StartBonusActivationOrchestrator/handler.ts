@@ -42,6 +42,12 @@ export const getStartBonusActivationOrchestratorHandler = (
       );
       return false;
     }
+
+    // Needed to return 202 with bonus ID
+    context.df.setCustomStatus(
+      errorOrStartBonusActivationOrchestratorInput.value.bonusActivation.id
+    );
+
     const errorOrBonusVacanzaBase = toApiBonusVacanzaBase(
       hmacSecret,
       errorOrStartBonusActivationOrchestratorInput.value.bonusActivation
