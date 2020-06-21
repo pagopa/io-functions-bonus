@@ -12,7 +12,7 @@ import {
   ELIGIBILITY_CHECK_COLLECTION_NAME,
   EligibilityCheckModel
 } from "../models/eligibility_check";
-import { documentClient } from "../utils/cosmosdb";
+import { documentClient } from "../services/cosmosdb";
 import { FailedBonusActivationHandler } from "./handler";
 
 const cosmosDbName = getRequiredStringEnv("COSMOSDB_BONUS_DATABASE_NAME");

@@ -9,7 +9,7 @@ import {
   USER_BONUS_COLLECTION_NAME,
   UserBonusModel
 } from "../models/user_bonus";
-import { documentClient } from "../utils/cosmosdb";
+import { documentClient } from "../services/cosmosdb";
 import { GetAllBonusActivations } from "./handler";
 
 const cosmosDbName = getRequiredStringEnv("COSMOSDB_BONUS_DATABASE_NAME");
