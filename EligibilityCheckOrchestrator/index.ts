@@ -25,16 +25,17 @@ import { retryOptions } from "../utils/retryPolicy";
 import { ValidateEligibilityCheckActivityInput } from "../ValidateEligibilityCheckActivity/handler";
 
 import { isLeft } from "fp-ts/lib/Either";
+import { toString } from "fp-ts/lib/function";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
 import { trackEvent, trackException } from "../utils/appinsights";
+import { toHash } from "../utils/hash";
 
 export const OrchestratorInput = FiscalCode;
 export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
 
 const NOTIFICATION_DELAY_SECONDS = 10;
-const logPrefix = "EligibilityCheckOrchestrator";
 
 export const getMessageType = (
   _: ApiEligibilityCheck
@@ -53,7 +54,8 @@ export const getMessageType = (
 };
 
 export const handler = function*(
-  context: IOrchestrationFunctionContext
+  context: IOrchestrationFunctionContext,
+  logPrefix: string = "EligibilityCheckOrchestrator"
 ): Generator {
   context.df.setCustomStatus("RUNNING");
   const input = context.df.getInput();
@@ -61,23 +63,23 @@ export const handler = function*(
   let validatedEligibilityCheck: EligibilityCheck;
   // tslint:disable-next-line: no-let
   let eligibilityCheckResponse: ActivityResult;
-  try {
-    const errorOrStartBonusActivationOrchestratorInput = OrchestratorInput.decode(
-      input
+  const errorOrEligibilityCheckOrchestratorInput = OrchestratorInput.decode(
+    input
+  );
+  if (isLeft(errorOrEligibilityCheckOrchestratorInput)) {
+    context.log.error(`${logPrefix}|Error decoding input`);
+    context.log.verbose(
+      `${logPrefix}|Error decoding input|ERROR=${readableReport(
+        errorOrEligibilityCheckOrchestratorInput.value
+      )}`
     );
-    if (isLeft(errorOrStartBonusActivationOrchestratorInput)) {
-      context.log.error(`${logPrefix}|Error decoding input`);
-      context.log.verbose(
-        `${logPrefix}|Error decoding input|ERROR=${readableReport(
-          errorOrStartBonusActivationOrchestratorInput.value
-        )}`
-      );
-      return false;
-    }
+    return false;
+  }
 
-    const orchestratorInput =
-      errorOrStartBonusActivationOrchestratorInput.value;
+  const orchestratorInput = errorOrEligibilityCheckOrchestratorInput.value;
+  const operationId = toHash(orchestratorInput);
 
+  try {
     const deleteEligibilityCheckResponse = yield context.df.callActivityWithRetry(
       "DeleteEligibilityCheckActivity",
       retryOptions,
@@ -99,9 +101,10 @@ export const handler = function*(
     );
     eligibilityCheckResponse = ActivityResult.decode(
       undecodedEligibilityCheckResponse
-    ).getOrElse({
-      kind: "FAILURE",
-      reason: "ActivityResult decoding error"
+    ).getOrElseL(error => {
+      throw new Error(
+        `Cannot decode response from INPS: [${readableReport(error)}]`
+      );
     });
 
     if (eligibilityCheckResponse.kind !== "SUCCESS") {
@@ -109,17 +112,17 @@ export const handler = function*(
         `Unexpected response from EligibilityCheckActivity: [${eligibilityCheckResponse.reason}]`
       );
     }
+
     const eligibilityCheck = toApiEligibilityCheckFromDSU(
       eligibilityCheckResponse.data,
       eligibilityCheckResponse.fiscalCode,
       eligibilityCheckResponse.validBefore
     ).getOrElseL(error => {
       throw new Error(
-        `Unexpected response from toApiEligibilityCheckFromDSU: [${readableReport(
-          error
-        )}]`
+        `Cannot decode ApiEligibilityCheckFromDSU: [${readableReport(error)}]`
       );
     });
+
     const undecodedValidatedEligibilityCheck = yield context.df.callActivityWithRetry(
       "ValidateEligibilityCheckActivity",
       retryOptions,
@@ -128,7 +131,9 @@ export const handler = function*(
     validatedEligibilityCheck = EligibilityCheck.decode(
       undecodedValidatedEligibilityCheck
     ).getOrElseL(error => {
-      throw new Error(`Decoding Error: [${readableReport(error)}]`);
+      throw new Error(
+        `Cannot decode validated EligibilityCheck: [${readableReport(error)}]`
+      );
     });
 
     yield context.df.callActivityWithRetry(
@@ -137,14 +142,15 @@ export const handler = function*(
       UpsertEligibilityCheckActivityInput.encode(validatedEligibilityCheck)
     );
   } catch (err) {
-    context.log.error("EligibilityCheckOrchestrator|ERROR|%s", err);
+    context.log.error(`${logPrefix}|ERROR|${toString(err)}`);
     trackException({
       exception: err,
       properties: {
+        id: operationId,
         name: "bonus.eligibilitycheck.error"
       }
     });
-    return err;
+    return false;
   } finally {
     context.df.setCustomStatus("COMPLETED");
   }
@@ -152,6 +158,7 @@ export const handler = function*(
   trackEvent({
     name: "bonus.eligibilitycheck.success",
     properties: {
+      id: operationId,
       status: `${validatedEligibilityCheck.status}`
     }
   });
@@ -161,6 +168,14 @@ export const handler = function*(
   yield context.df.createTimer(
     addSeconds(context.df.currentUtcDateTime, NOTIFICATION_DELAY_SECONDS)
   );
+
+  trackEvent({
+    name: "bonus.eligibilitycheck.timer",
+    properties: {
+      id: operationId,
+      status: `${validatedEligibilityCheck.status}`
+    }
+  });
 
   // send push notification with eligibility details
   const maybeMessageType = getMessageType(validatedEligibilityCheck);
@@ -178,6 +193,7 @@ export const handler = function*(
     trackEvent({
       name: "bonus.eligibilitycheck.message",
       properties: {
+        id: operationId,
         type: maybeMessageType.value
       }
     });
@@ -185,8 +201,13 @@ export const handler = function*(
     trackException({
       exception: new Error(
         `Cannot get message type for eligibility check: ${eligibilityCheckResponse.fiscalCode}`
-      )
+      ),
+      properties: {
+        id: operationId,
+        name: "bonus.eligibilitycheck.error"
+      }
     });
+    return false;
   }
 
   return validatedEligibilityCheck;
