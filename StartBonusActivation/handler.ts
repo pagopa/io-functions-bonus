@@ -3,7 +3,7 @@ import { isBefore } from "date-fns";
 import * as df from "durable-functions";
 import { DurableOrchestrationClient } from "durable-functions/lib/src/durableorchestrationclient";
 import * as express from "express";
-import { left, right, toError } from "fp-ts/lib/Either";
+import { isLeft, left, right, toError } from "fp-ts/lib/Either";
 import {
   fromEither,
   fromLeft,
@@ -69,6 +69,7 @@ import { InstanceId } from "../generated/definitions/InstanceId";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 import { FamilyUID } from "../generated/models/FamilyUID";
 import { BonusLeaseModel } from "../models/bonus_lease";
+import { OrchestratorInput } from "../StartBonusActivationOrchestrator/handler";
 import { trackException } from "../utils/appinsights";
 import { toApiBonusActivation } from "../utils/conversions";
 import { generateFamilyUID } from "../utils/hash";
@@ -362,6 +363,33 @@ const relaseLockForUserFamily = (
   );
 };
 
+/**
+ * Start a new instance of StartBonusActivationOrchestrator
+ *
+ * @param client an instance of durable function client
+ * @param bonusActivation a record of bonus activation
+ * @param fiscalCode the fiscal code of the requesting user. Needed to make a unique id for the orchestrator instance
+ *
+ * @returns either an internal error or the id of the created orchestrator
+ */
+const runStartBonusActivationOrchestrator = (
+  client: DurableOrchestrationClient,
+  input: OrchestratorInput,
+  fiscalCode: FiscalCode
+): TaskEither<IResponseErrorInternal, string> =>
+  tryCatch(
+    () =>
+      client.startNew(
+        "StartBonusActivationOrchestrator",
+        makeStartBonusActivationOrchestratorId(fiscalCode),
+        input
+      ),
+    _ =>
+      ResponseErrorInternal(
+        `Error starting the orchestrator: ${toError(_).message}`
+      )
+  );
+
 type StartBonusActivationResponse =
   | IResponseErrorInternal
   | IResponseErrorForbiddenNotAuthorized
@@ -400,14 +428,33 @@ export function StartBonusActivationHandler(
       )
       .chain<ApiBonusActivation>(({ dsu, familyUID }) =>
         createBonusActivation(bonusActivationModel, fiscalCode, familyUID, dsu)
-          .chain(bonusActivation =>
-            fromEither(toApiBonusActivation(bonusActivation)).mapLeft(err =>
-              ResponseErrorInternal(
-                `Error converting BonusActivation to ApiBonusActivation: ${readableReport(
-                  err
-                )}`
-              )
-            )
+          .chain<{
+            bonusActivation: BonusActivationWithFamilyUID;
+            apiBonusActivation: ApiBonusActivation;
+          }>(bonusActivation => {
+            const errorOrApiBonusActivation = toApiBonusActivation(
+              bonusActivation
+            );
+            if (isLeft(errorOrApiBonusActivation)) {
+              return fromLeft(
+                ResponseErrorInternal(
+                  `Error converting BonusActivation to ApiBonusActivation: ${readableReport(
+                    errorOrApiBonusActivation.value
+                  )}`
+                )
+              );
+            }
+            return taskEither.of({
+              apiBonusActivation: errorOrApiBonusActivation.value,
+              bonusActivation
+            });
+          })
+          .chain(({ bonusActivation, apiBonusActivation }) =>
+            runStartBonusActivationOrchestrator(
+              dfClient,
+              OrchestratorInput.encode({ bonusId: bonusActivation.id }),
+              fiscalCode
+            ).map(_ => apiBonusActivation)
           )
           .foldTaskEither(
             // bonus creation failed
@@ -427,7 +474,7 @@ export function StartBonusActivationHandler(
               );
             },
             // bonus creation succeeded
-            bonusActivation => taskEither.of(bonusActivation)
+            apiBonusActivation => taskEither.of(apiBonusActivation)
           )
       )
       .fold(identity, apiBonusActivation => {

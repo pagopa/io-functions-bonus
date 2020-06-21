@@ -1,7 +1,11 @@
 import * as df from "durable-functions";
 import { isLeft, isRight, left, right } from "fp-ts/lib/Either";
 import { none, some } from "fp-ts/lib/Option";
-import { context, mockStartNew } from "../../__mocks__/durable-functions";
+import {
+  context,
+  mockRaiseEvent,
+  mockStartNew
+} from "../../__mocks__/durable-functions";
 import {
   aBonusActivation,
   aBonusActivationWithFamilyUID,
@@ -106,8 +110,8 @@ describe("ContinueBonusActivation", () => {
     }
   });
 
-  it("should return a transient error if the orchestrator throw", async () => {
-    mockStartNew.mockImplementationOnce(async () => {
+  it("should return a transient error if raise event throws", async () => {
+    mockRaiseEvent.mockImplementationOnce(async () => {
       throw new Error("foobar");
     });
     const mockBonusActivationkModel = ({
@@ -160,7 +164,7 @@ describe("ContinueBonusActivation", () => {
 
     expect(isRight(response)).toBeTruthy();
     if (isRight(response)) {
-      expect(response.value).toEqual("instanceId");
+      expect(response.value).toEqual(true);
     }
   });
 });

@@ -21,8 +21,11 @@ export const mockTerminate = jest.fn(async (_, __) => {
   return;
 });
 
+export const mockRaiseEvent = jest.fn(async (_, __, ___) => void 0);
+
 export const getClient = jest.fn(() => ({
   getStatus: mockGetStatus,
+  raiseEvent: mockRaiseEvent,
   startNew: mockStartNew,
   terminate: mockTerminate
 }));

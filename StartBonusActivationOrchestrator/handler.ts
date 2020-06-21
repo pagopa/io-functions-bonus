@@ -10,6 +10,7 @@ import { readableReport } from "italia-ts-commons/lib/reporters";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { FailedBonusActivationInput } from "../FailedBonusActivationActivity/handler";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
+import { BonusCode } from "../generated/models/BonusCode";
 import { SendBonusActivationSuccess } from "../SendBonusActivationActivity/handler";
 import { SendBonusActivationInput } from "../SendBonusActivationActivity/handler";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
@@ -21,15 +22,22 @@ import { MESSAGES } from "../utils/messages";
 import { retryOptions } from "../utils/retryPolicy";
 
 export const OrchestratorInput = t.interface({
-  bonusActivation: BonusActivationWithFamilyUID
+  bonusId: BonusCode
 });
 export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
+
+export const ContinueEventInput = t.type({
+  bonusActivation: BonusActivationWithFamilyUID
+});
+export type ContinueEventInput = t.TypeOf<typeof ContinueEventInput>;
 
 export const getStartBonusActivationOrchestratorHandler = (
   hmacSecret: NonEmptyString | Buffer
 ) =>
   function*(context: IOrchestrationFunctionContext): Generator<TaskSet | Task> {
     const logPrefix = `StartBonusActivationOrchestrator`;
+
+    // Get bonus id from orchestrator input
     const errorOrStartBonusActivationOrchestratorInput = OrchestratorInput.decode(
       context.df.getInput()
     );
@@ -52,13 +60,36 @@ export const getStartBonusActivationOrchestratorHandler = (
       errorOrStartBonusActivationOrchestratorInput.value;
 
     // Needed to return 202 with bonus ID
-    context.df.setCustomStatus(
-      startBonusActivationOrchestratorInput.bonusActivation.id
+    context.df.setCustomStatus(startBonusActivationOrchestratorInput.bonusId);
+
+    // Get bonus activation model object from event input
+    const undecodedBonusActivation = yield context.df.waitForExternalEvent(
+      "Continue"
     );
+    const errorOrContinueEventInput = ContinueEventInput.decode(
+      undecodedBonusActivation
+    );
+    if (isLeft(errorOrContinueEventInput)) {
+      context.log.verbose(
+        `${logPrefix}|Error decoding bonus activation request|ERROR=${readableReport(
+          errorOrContinueEventInput.value
+        )}`
+      );
+      trackException({
+        exception: new Error(
+          `${logPrefix}|Error decoding bonus activation from event`
+        ),
+        properties: {
+          name: "bonus.activation.error"
+        }
+      });
+      return false;
+    }
+    const bonusActivation = errorOrContinueEventInput.value.bonusActivation;
 
     const errorOrBonusVacanzaBase = toApiBonusVacanzaBase(
       hmacSecret,
-      startBonusActivationOrchestratorInput.bonusActivation
+      bonusActivation
     );
     if (isLeft(errorOrBonusVacanzaBase)) {
       context.log.verbose(
@@ -99,9 +130,7 @@ export const getStartBonusActivationOrchestratorHandler = (
         yield context.df.callActivityWithRetry(
           "SuccessBonusActivationActivity",
           retryOptions,
-          SuccessBonusActivationInput.encode(
-            startBonusActivationOrchestratorInput
-          )
+          SuccessBonusActivationInput.encode({ bonusActivation })
         );
         trackEvent({
           name: "bonus.activation.success",
@@ -110,15 +139,13 @@ export const getStartBonusActivationOrchestratorHandler = (
           }
         });
         // Family members includes applicant fiscal code
-        for (const familyMember of startBonusActivationOrchestratorInput
-          .bonusActivation.dsuRequest.familyMembers) {
+        for (const familyMember of bonusActivation.dsuRequest.familyMembers) {
           yield context.df.callActivityWithRetry(
             "SendMessageActivity",
             retryOptions,
             SendMessageActivityInput.encode({
               checkProfile:
-                startBonusActivationOrchestratorInput.bonusActivation
-                  .applicantFiscalCode !== familyMember.fiscalCode,
+                bonusActivation.applicantFiscalCode !== familyMember.fiscalCode,
               content: MESSAGES.BonusActivationSuccess(),
               fiscalCode: familyMember.fiscalCode
             })
@@ -128,9 +155,7 @@ export const getStartBonusActivationOrchestratorHandler = (
         yield context.df.callActivityWithRetry(
           "FailedBonusActivationActivity",
           retryOptions,
-          FailedBonusActivationInput.encode(
-            startBonusActivationOrchestratorInput
-          )
+          FailedBonusActivationInput.encode({ bonusActivation })
         );
         trackEvent({
           name: "bonus.activation.failure",
@@ -145,9 +170,7 @@ export const getStartBonusActivationOrchestratorHandler = (
           SendMessageActivityInput.encode({
             checkProfile: false,
             content: MESSAGES.BonusActivationFailure(),
-            fiscalCode:
-              startBonusActivationOrchestratorInput.bonusActivation
-                .applicantFiscalCode
+            fiscalCode: bonusActivation.applicantFiscalCode
           })
         );
       }

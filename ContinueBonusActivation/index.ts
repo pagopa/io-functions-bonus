@@ -36,7 +36,7 @@ const bonusActivationModel = new BonusActivationModel(
 const index: AzureFunction = (
   context: Context,
   message: unknown
-): Promise<Failure | string> => {
+): Promise<Failure | void> => {
   return fromEither(ContinueBonusActivationInput.decode(message))
     .mapLeft(errs =>
       Failure.encode({
@@ -52,7 +52,7 @@ const index: AzureFunction = (
         bonusId
       )
     )
-    .fold<Failure | string>(err => {
+    .fold<Failure | void>(err => {
       context.log.error(
         `ContinueBonusActivation|${err.kind}_ERROR=${err.reason}`
       );
