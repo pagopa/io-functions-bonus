@@ -96,7 +96,7 @@ export const getStartBonusActivationOrchestratorHandler = (
             id: operationId
           }
         });
-        // Family members includes applicant
+        // Family members includes applicant fiscal code
         for (const familyMember of startBonusActivationOrchestratorInput
           .bonusActivation.dsuRequest.familyMembers) {
           yield context.df.callActivityWithRetry(
@@ -125,6 +125,7 @@ export const getStartBonusActivationOrchestratorHandler = (
             id: operationId
           }
         });
+        // In case of failures send the notification only to the applicant
         yield context.df.callActivityWithRetry(
           "SendMessageActivity",
           retryOptions,
