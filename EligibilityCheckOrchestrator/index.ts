@@ -67,12 +67,18 @@ export const handler = function*(
     input
   );
   if (isLeft(errorOrEligibilityCheckOrchestratorInput)) {
-    context.log.error(`${logPrefix}|Error decoding input`);
     context.log.verbose(
       `${logPrefix}|Error decoding input|ERROR=${readableReport(
         errorOrEligibilityCheckOrchestratorInput.value
       )}`
     );
+    trackException({
+      exception: new Error(`${logPrefix}|Cannot decode input`),
+      properties: {
+        // tslint:disable-next-line: no-duplicate-string
+        name: "bonus.eligibilitycheck.error"
+      }
+    });
     return false;
   }
 
