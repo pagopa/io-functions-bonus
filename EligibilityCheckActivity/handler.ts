@@ -3,11 +3,13 @@ import { addMilliseconds } from "date-fns";
 import { fromEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "io-functions-commons/dist/generated/definitions/FiscalCode";
 import * as t from "io-ts";
+import { UTCISODateFromString } from "italia-ts-commons/lib/dates";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { Hour, Millisecond } from "italia-ts-commons/lib/units";
 import { ConsultazioneSogliaIndicatoreResponse } from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
 import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
 import { Timestamp } from "../generated/definitions/Timestamp";
+import { TableLogger } from "../services/logger";
 import { trackException } from "../utils/appinsights";
 import { ISoapClientAsync } from "../utils/inpsSoapClient";
 
@@ -42,6 +44,13 @@ export type ActivityResult = t.TypeOf<typeof ActivityResult>;
 const toMillisecond = (h: Hour): Millisecond =>
   (h * 60 * 60 * 1000) as Millisecond;
 
+export interface IINPSLoggerEntity {
+  Id: FiscalCode;
+  Timestamp: UTCISODateFromString;
+  RequestPayload: string;
+  ResponsePayload: string;
+}
+
 /**
  * Call INPS webservice to read the ISEE information
  * and parses returned XML
@@ -56,6 +65,7 @@ const toMillisecond = (h: Hour): Millisecond =>
 export const getEligibilityCheckActivityHandler = (
   soapClientAsync: ISoapClientAsync,
   dsuDuration: Hour,
+  logToTable: TableLogger<IINPSLoggerEntity>,
   thresholdCode = "BVAC01"
 ) => {
   return async (context: Context, input: unknown): Promise<ActivityResult> => {

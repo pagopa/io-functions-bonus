@@ -59,6 +59,7 @@
   },
   "dependencies": {
     "applicationinsights": "^1.7.5",
+    "azure-storage": "^2.10.3",
     "date-fns": "^2.14.0",
     "documentdb": "^1.15.3",
     "durable-functions": "^1.4.1",
