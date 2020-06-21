@@ -96,24 +96,16 @@ export const getStartBonusActivationOrchestratorHandler = (
             id: operationId
           }
         });
-        yield context.df.callActivityWithRetry(
-          "SendMessageActivity",
-          retryOptions,
-          SendMessageActivityInput.encode({
-            checkProfile: false,
-            content: MESSAGES.BonusActivationSuccess(),
-            fiscalCode:
-              startBonusActivationOrchestratorInput.bonusActivation
-                .applicantFiscalCode
-          })
-        );
+        // Family members includes applicant
         for (const familyMember of startBonusActivationOrchestratorInput
           .bonusActivation.dsuRequest.familyMembers) {
           yield context.df.callActivityWithRetry(
             "SendMessageActivity",
             retryOptions,
             SendMessageActivityInput.encode({
-              checkProfile: true,
+              checkProfile:
+                startBonusActivationOrchestratorInput.bonusActivation
+                  .applicantFiscalCode !== familyMember.fiscalCode,
               content: MESSAGES.BonusActivationSuccess(),
               fiscalCode: familyMember.fiscalCode
             })
@@ -144,18 +136,6 @@ export const getStartBonusActivationOrchestratorHandler = (
                 .applicantFiscalCode
           })
         );
-        for (const familyMember of startBonusActivationOrchestratorInput
-          .bonusActivation.dsuRequest.familyMembers) {
-          yield context.df.callActivityWithRetry(
-            "SendMessageActivity",
-            retryOptions,
-            SendMessageActivityInput.encode({
-              checkProfile: true,
-              content: MESSAGES.BonusActivationFailure(),
-              fiscalCode: familyMember.fiscalCode
-            })
-          );
-        }
       }
     } catch (e) {
       context.log.error(`${logPrefix}|ID=${operationId}|ERROR=${toString(e)}`);
