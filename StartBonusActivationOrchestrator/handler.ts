@@ -34,12 +34,18 @@ export const getStartBonusActivationOrchestratorHandler = (
       context.df.getInput()
     );
     if (isLeft(errorOrStartBonusActivationOrchestratorInput)) {
-      context.log.error(`${logPrefix}|Error decoding input`);
       context.log.verbose(
         `${logPrefix}|Error decoding input|ERROR=${readableReport(
           errorOrStartBonusActivationOrchestratorInput.value
         )}`
       );
+      trackException({
+        exception: new Error(`${logPrefix}|Cannot decode input`),
+        properties: {
+          // tslint:disable-next-line: no-duplicate-string
+          name: "bonus.activation.error"
+        }
+      });
       return false;
     }
     const startBonusActivationOrchestratorInput =
@@ -55,12 +61,19 @@ export const getStartBonusActivationOrchestratorHandler = (
       startBonusActivationOrchestratorInput.bonusActivation
     );
     if (isLeft(errorOrBonusVacanzaBase)) {
-      context.log.error(`${logPrefix}|Error decoding bonus activation request`);
       context.log.verbose(
         `${logPrefix}|Error decoding bonus activation request|ERROR=${readableReport(
           errorOrBonusVacanzaBase.value
         )}`
       );
+      trackException({
+        exception: new Error(
+          `${logPrefix}|Error decoding bonus activation request`
+        ),
+        properties: {
+          name: "bonus.activation.error"
+        }
+      });
       return false;
     }
     const bonusVacanzaBase = errorOrBonusVacanzaBase.value;
