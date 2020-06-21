@@ -3,13 +3,11 @@ import { addMilliseconds } from "date-fns";
 import { fromEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "io-functions-commons/dist/generated/definitions/FiscalCode";
 import * as t from "io-ts";
-import { UTCISODateFromString } from "italia-ts-commons/lib/dates";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { Hour, Millisecond } from "italia-ts-commons/lib/units";
 import { ConsultazioneSogliaIndicatoreResponse } from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
 import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
 import { Timestamp } from "../generated/definitions/Timestamp";
-import { TableLogger } from "../services/loggers";
 import { trackException } from "../utils/appinsights";
 import { ISoapClientAsync } from "../utils/inpsSoapClient";
 
