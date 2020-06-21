@@ -64,7 +64,7 @@ export const getStartBonusActivationOrchestratorHandler = (
       return false;
     }
     const bonusVacanzaBase = errorOrBonusVacanzaBase.value;
-    const operationId = toHash(bonusVacanzaBase.codiceBuono);
+    const operationId = toHash(bonusVacanzaBase.codiceFiscaleDichiarante);
 
     try {
       // Send bonus details to ADE rest service
