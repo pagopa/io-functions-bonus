@@ -41,7 +41,7 @@
       "port": 5860,
       "restart": true,
       "localRoot": "${workspaceFolder}",
-      "remoteRoot": "/usr/src/app",
+      "remoteRoot": "${workspaceFolder}",
       "outFiles": [
         "${workspaceFolder}/dist/**/*.js"
       ],

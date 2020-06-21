@@ -20,13 +20,11 @@ const getTableLogger = <T>(
   tableName: string,
   toEntity: (payload: T) => ITableEntity
 ) => (payload: T) =>
-  insertTableEntity(tableService, tableName, toEntity(payload))
-    .catch(constVoid)
-    .then(constVoid);
+  insertTableEntity(tableService, tableName, toEntity(payload));
 
 ////////////////////////////////////
 
-const INPS_LOG_TABLE_NAME = "inps-logs";
+const INPS_LOG_TABLE_NAME = "inpslogs";
 const InpsLogEntity = t.type({
   Id: NonEmptyString,
   RequestPayload: t.string,
@@ -35,20 +33,20 @@ const InpsLogEntity = t.type({
 });
 type InpsLogEntity = t.TypeOf<typeof InpsLogEntity>;
 
-export const inpsTableLog = getTableLogger<InpsLogEntity>(
+export const traceInpsRequest = getTableLogger<InpsLogEntity>(
   loggerService,
   INPS_LOG_TABLE_NAME,
   payload => ({
     PartitionKey: payload.Id,
     RequestPayload: JSON.stringify(payload.RequestPayload),
     ResponsePayload: JSON.stringify(payload.ResponsePayload),
-    RowKey: payload.Timestamp.toUTCString()
+    RowKey: payload.Timestamp.getTime().toString()
   })
 );
 
 ////////////////////////////////////
 
-const ADE_LOG_TABLE_NAME = "ade-logs";
+const ADE_LOG_TABLE_NAME = "adelogs";
 const AdeLogEntity = t.type({
   Id: NonEmptyString,
   RequestPayload: t.string,
@@ -57,13 +55,13 @@ const AdeLogEntity = t.type({
 });
 type AdeLogEntity = t.TypeOf<typeof AdeLogEntity>;
 
-export const adeTableLog = getTableLogger<AdeLogEntity>(
+export const traceAdeRequest = getTableLogger<AdeLogEntity>(
   loggerService,
   ADE_LOG_TABLE_NAME,
   payload => ({
     PartitionKey: payload.Id,
     RequestPayload: JSON.stringify(payload.RequestPayload),
     ResponsePayload: JSON.stringify(payload.ResponsePayload),
-    RowKey: payload.Timestamp.toUTCString()
+    RowKey: payload.Timestamp.getTime().toString()
   })
 );
