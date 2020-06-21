@@ -4,7 +4,7 @@ import {
   BONUS_LEASE_COLLECTION_NAME,
   BonusLeaseModel
 } from "../models/bonus_lease";
-import { documentClient } from "../utils/cosmosdb";
+import { documentClient } from "../services/cosmosdb";
 import { getValidateEligibilityCheckActivityHandler } from "./handler";
 
 const cosmosDbName = getRequiredStringEnv("COSMOSDB_BONUS_DATABASE_NAME");

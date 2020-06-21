@@ -9,7 +9,7 @@ import {
   BONUS_ACTIVATION_COLLECTION_NAME,
   BonusActivationModel
 } from "../models/bonus_activation";
-import { documentClient } from "../utils/cosmosdb";
+import { documentClient } from "../services/cosmosdb";
 import { GetBonusActivation } from "./handler";
 
 const cosmosDbName = getRequiredStringEnv("COSMOSDB_BONUS_DATABASE_NAME");

@@ -9,7 +9,7 @@ import {
   BONUS_ACTIVATION_COLLECTION_NAME,
   BonusActivationModel
 } from "../models/bonus_activation";
-import { documentClient } from "../utils/cosmosdb";
+import { documentClient } from "../services/cosmosdb";
 import { Failure, TransientFailure } from "../utils/errors";
 import {
   ContinueBonusActivationHandler,

@@ -2,7 +2,7 @@ import { AzureFunction, Context } from "@azure/functions";
 
 import { readableReport } from "italia-ts-commons/lib/reporters";
 
-import { CosmosDbDocumentCollection, toBaseDoc } from "../utils/cosmosdb";
+import { CosmosDbDocumentCollection, toBaseDoc } from "../services/cosmosdb";
 
 const index: AzureFunction = async (_: Context, input: unknown) => {
   const decoded = CosmosDbDocumentCollection.decode(input);
