@@ -1,5 +1,4 @@
 import { TableService } from "azure-storage";
-import { constVoid } from "fp-ts/lib/function";
 import {
   insertTableEntity,
   ITableEntity
