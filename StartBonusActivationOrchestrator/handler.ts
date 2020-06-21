@@ -21,6 +21,8 @@ import { toHash } from "../utils/hash";
 import { MESSAGES } from "../utils/messages";
 import { retryOptions } from "../utils/retryPolicy";
 
+export const CONTINUE_BONUS_ACTIVATION_EVENT_NAME = "ContinueBonusActivation";
+
 export const OrchestratorInput = t.interface({
   bonusId: BonusCode
 });
@@ -64,7 +66,7 @@ export const getStartBonusActivationOrchestratorHandler = (
 
     // Get bonus activation model object from event input
     const undecodedBonusActivation = yield context.df.waitForExternalEvent(
-      "Continue"
+      CONTINUE_BONUS_ACTIVATION_EVENT_NAME
     );
     const errorOrContinueEventInput = ContinueEventInput.decode(
       undecodedBonusActivation

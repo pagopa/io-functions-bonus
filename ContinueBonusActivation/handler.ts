@@ -9,7 +9,10 @@ import {
 } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 
-import { ContinueEventInput } from "../StartBonusActivationOrchestrator/handler";
+import {
+  CONTINUE_BONUS_ACTIVATION_EVENT_NAME,
+  ContinueEventInput
+} from "../StartBonusActivationOrchestrator/handler";
 
 import { BonusCode } from "../generated/definitions/BonusCode";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
@@ -84,7 +87,7 @@ export function ContinueBonusActivationHandler(
               makeStartBonusActivationOrchestratorId(
                 bonusActivation.applicantFiscalCode
               ),
-              "Continue",
+              CONTINUE_BONUS_ACTIVATION_EVENT_NAME,
               ContinueEventInput.encode({ bonusActivation })
             ),
           err =>
