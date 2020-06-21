@@ -28,6 +28,7 @@ import {
 import { IntegerFromString } from "italia-ts-commons/lib/numbers";
 import { Millisecond } from "italia-ts-commons/lib/units";
 import { UrlFromString } from "italia-ts-commons/lib/url";
+import { inpsTableLog } from "../services/loggers";
 
 // TODO: Handle the inps:Identity element content
 const getSOAPRequest = (
@@ -208,6 +209,14 @@ export function createClient(endpoint: NonEmptyString): ISoapClientAsync {
         });
 
         const responseBody = await response.text();
+
+        // tslint:disable-next-line: no-floating-promises
+        inpsTableLog({
+          Id: params.CodiceFiscale,
+          RequestPayload: requestPayload,
+          ResponsePayload: responseBody,
+          Timestamp: new Date()
+        });
 
         if (response.status !== 200) {
           throw new Error(
