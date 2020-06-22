@@ -20,7 +20,7 @@ export const ContinueBonusActivationInput = t.type({
  * Reads from a queue the tuple (bonusId, fiscalCode)
  * then try to start the orchestrator to activate the bonus.
  */
-const index: AzureFunction = (
+export const index: AzureFunction = (
   context: Context,
   message: unknown
 ): Promise<Failure | string> => {
