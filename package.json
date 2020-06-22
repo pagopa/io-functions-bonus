@@ -15,7 +15,7 @@
     "dev": "npm-run-all --parallel start watch",
     "pretest": "npm-run-all generate:*",
     "test": "yarn test:only",
-    "test:only": "jest",
+    "test:only": "dotenv -e .env jest",
     "pretest:coverage": "npm-run-all generate:*",
     "test:coverage": "jest --coverage",
     "lint": "tslint -p .",

@@ -1,4 +1,5 @@
 import { logHttpFetch } from "../loggers";
+import mockFetch, { mockJsonBody } from "../../__mocks__/node-fetch";
 
 describe("logHttpFetch", () => {
   beforeEach(() => {
@@ -6,15 +7,6 @@ describe("logHttpFetch", () => {
   });
 
   it("should execute the original fetch", async () => {
-    const mockBody = { foo: "bar" };
-    const getMockResponse = () => ({
-      clone: getMockResponse,
-      json: jest.fn(async () => mockBody)
-    });
-    const mockFetch = jest
-      .fn()
-      .mockImplementation(async () => getMockResponse());
-
     const mockTraceFn = jest.fn(async () => void 0);
 
     const wrappedFetch = logHttpFetch(mockTraceFn)(mockFetch);
@@ -24,19 +16,10 @@ describe("logHttpFetch", () => {
     const res = await wrappedFetch(input, init);
 
     expect(mockFetch).toBeCalledWith(input, init);
-    expect(await res.json()).toEqual(mockBody);
+    expect(await res.json()).toEqual(mockJsonBody);
   });
 
   it("should execute the tracer function", async () => {
-    const mockBody = { foo: "bar" };
-    const getMockResponse = () => ({
-      clone: getMockResponse,
-      json: jest.fn(async () => mockBody)
-    });
-    const mockFetch = jest
-      .fn()
-      .mockImplementation(async () => getMockResponse());
-
     const mockTraceFn = jest.fn(async () => void 0);
 
     const wrappedFetch = logHttpFetch(mockTraceFn)(mockFetch);
@@ -50,15 +33,6 @@ describe("logHttpFetch", () => {
   });
 
   it("should ignore tracing exception", async () => {
-    const mockBody = { foo: "bar" };
-    const getMockResponse = () => ({
-      clone: getMockResponse,
-      json: jest.fn(async () => mockBody)
-    });
-    const mockFetch = jest
-      .fn()
-      .mockImplementation(async () => getMockResponse());
-
     const mockTraceFn = jest.fn(async () => {
       throw new Error();
     });
@@ -73,13 +47,8 @@ describe("logHttpFetch", () => {
   });
 
   it("should not hide fetch exception", async () => {
-    const mockBody = { foo: "bar" };
-    const getMockResponse = () => ({
-      clone: getMockResponse,
-      json: jest.fn(async () => mockBody)
-    });
     const mockFetchException = new Error("fetch error");
-    const mockFetch = jest.fn().mockImplementation(async () => {
+    mockFetch.mockImplementationOnce(async () => {
       throw mockFetchException;
     });
 

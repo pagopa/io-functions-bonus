@@ -9,6 +9,7 @@ import { IntegerFromString } from "italia-ts-commons/lib/numbers";
 import { Millisecond } from "italia-ts-commons/lib/units";
 import { UrlFromString } from "italia-ts-commons/lib/url";
 import { ADEClient } from "../clients/adeClient";
+import { withAdeTracer } from "../services/loggers";
 import SendBonusActivationHandler from "./handler";
 
 // 10 seconds timeout by default
@@ -36,7 +37,7 @@ const fetchWithTimeout = setFetchTimeout(
   AbortableFetch(fetchAgent)
 );
 
-const httpFetch = toFetch(fetchWithTimeout);
+const httpFetch = withAdeTracer(toFetch(fetchWithTimeout));
 
 const adeClient = ADEClient(adeServiceEndpoint, httpFetch);
 
