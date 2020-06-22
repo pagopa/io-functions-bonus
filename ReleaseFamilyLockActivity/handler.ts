@@ -8,7 +8,7 @@ import { readableReport } from "italia-ts-commons/lib/reporters";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { Context } from "vm";
 import { BonusLeaseModel } from "../models/bonus_lease";
-import { trackEvent, trackException } from "../utils/appinsights";
+import { trackException } from "../utils/appinsights";
 import { Failure } from "../utils/errors";
 
 export const ReleaseFamilyLockActivitySuccess = t.type({
