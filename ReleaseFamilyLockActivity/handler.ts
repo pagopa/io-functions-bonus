@@ -41,7 +41,7 @@ export function getReleaseFamilyLockActivityHandler(
   logPrefix = `ReleaseFamilyLockActivity`
 ): IReleaseFamilyLockActivityHandler {
   return async (
-    context: Context,
+    _: Context,
     input: unknown
   ): Promise<ReleaseFamilyLockActivityResult> => {
     return fromEither(ReleaseFamilyLockActivityInput.decode(input))
