@@ -12,35 +12,39 @@ import { ADEClient } from "../clients/adeClient";
 import { withAdeTracer } from "../services/loggers";
 import SendBonusActivationHandler from "./handler";
 
-// 10 seconds timeout by default
-const ADE_REQUEST_TIMEOUT_MS = IntegerFromString.decode(
-  process.env.ADE_REQUEST_TIMEOUT_MS
-).getOrElse(10000);
-
 const adeServiceEndpoint = getRequiredStringEnv("ADE_SERVICE_ENDPOINT");
+const adeServiceTimeout = IntegerFromString.decode(
+  process.env.ADE_REQUEST_TIMEOUT_MS
+).getOrElse(10000); // 10 seconds timeout by default
 
-// http when developing locally
-const ADE_SERVICE_PROTOCOL = UrlFromString.decode(adeServiceEndpoint)
-  .map(url => url.protocol?.slice(0, -1))
-  .getOrElse("https");
-
-const fetchAgent =
-  ADE_SERVICE_PROTOCOL === "http"
-    ? agent.getHttpFetch(process.env)
-    : agent.getHttpsFetch(process.env, {
-        cert: process.env.ADE_SERVICE_CERT,
-        key: process.env.ADE_SERVICE_KEY
-      });
-
-const fetchWithTimeout = setFetchTimeout(
-  ADE_REQUEST_TIMEOUT_MS as Millisecond,
-  AbortableFetch(fetchAgent)
+const adeClient = ADEClient(
+  adeServiceEndpoint,
+  createFetchInstance(adeServiceEndpoint, adeServiceTimeout)
 );
-
-const httpFetch = withAdeTracer(toFetch(fetchWithTimeout));
-
-const adeClient = ADEClient(adeServiceEndpoint, httpFetch);
 
 const SendBonusActivationActivity = SendBonusActivationHandler(adeClient);
 
 export default SendBonusActivationActivity;
+
+// util that sets up a instance of fetch suitable for ade api requests
+function createFetchInstance(endpoint: string, timeout: number): typeof fetch {
+  // http when developing locally
+  const ADE_SERVICE_PROTOCOL = UrlFromString.decode(endpoint)
+    .map(url => url.protocol?.slice(0, -1))
+    .getOrElse("https");
+
+  const fetchAgent =
+    ADE_SERVICE_PROTOCOL === "http"
+      ? agent.getHttpFetch(process.env)
+      : agent.getHttpsFetch(process.env, {
+          cert: process.env.ADE_SERVICE_CERT,
+          key: process.env.ADE_SERVICE_KEY
+        });
+
+  const fetchWithTimeout = setFetchTimeout(
+    timeout as Millisecond,
+    AbortableFetch(fetchAgent)
+  );
+
+  return withAdeTracer(toFetch(fetchWithTimeout));
+}
