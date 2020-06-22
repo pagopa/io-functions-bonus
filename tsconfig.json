@@ -8,7 +8,7 @@
     "strict": true,
     "noImplicitAny": true,
     "declaration": false,
-    "sourceMap": false,
+    "sourceMap": true,
     "lib": ["dom"],
     "resolveJsonModule": true
   },
