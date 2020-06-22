@@ -48,7 +48,6 @@ describe("FailedBonusActivationHandler", () => {
   it("should return a success if everything goes well", async () => {
     const handler = FailedBonusActivationHandler(
       mockBonusActivationModel,
-      mockBonusLeaseModel,
       mockEligibilityCheckModel
     );
 
@@ -67,7 +66,6 @@ describe("FailedBonusActivationHandler", () => {
 
     const handler = FailedBonusActivationHandler(
       mockBonusActivationModel,
-      mockBonusLeaseModel,
       mockEligibilityCheckModel
     );
 
@@ -86,7 +84,6 @@ describe("FailedBonusActivationHandler", () => {
 
     const handler = FailedBonusActivationHandler(
       mockBonusActivationModel,
-      mockBonusLeaseModel,
       mockEligibilityCheckModel
     );
 
@@ -101,7 +98,6 @@ describe("FailedBonusActivationHandler", () => {
   it("should fail on invalid input", async () => {
     const handler = FailedBonusActivationHandler(
       mockBonusActivationModel,
-      mockBonusLeaseModel,
       mockEligibilityCheckModel
     );
 
@@ -109,27 +105,5 @@ describe("FailedBonusActivationHandler", () => {
       bonusActivation: { foo: "bar" }
     });
     expect(InvalidInputFailure.decode(response).isRight()).toBeTruthy();
-  });
-
-  it("should fail if lock fails to release", async () => {
-    mockBonusLeaseDeleteOneById.mockImplementationOnce(async () => {
-      throw new Error("any error");
-    });
-
-    const handler = FailedBonusActivationHandler(
-      mockBonusActivationModel,
-      mockBonusLeaseModel,
-      mockEligibilityCheckModel
-    );
-
-    try {
-      await handler(context, {
-        bonusActivation: aBonusActivationWithFamilyUID
-      });
-      // expect that the activity fails
-      fail();
-    } catch (error) {
-      expect(TransientFailure.decode(error).isRight()).toBeTruthy();
-    }
   });
 });
