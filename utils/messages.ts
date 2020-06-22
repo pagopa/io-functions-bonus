@@ -1,15 +1,24 @@
 // tslint:disable: no-duplicate-string object-literal-sort-keys
 
+import { format } from "date-fns";
 import { MessageContent } from "io-functions-commons/dist/generated/definitions/MessageContent";
 
 export const MESSAGES = {
-  EligibilityCheckSuccessEligible: () =>
+  EligibilityCheckSuccessEligible: (validBefore: Date) =>
     ({
       subject: "Abbiamo completato le verifiche sul tuo ISEE",
       markdown: `INPS ha completato le verifiche sull’ISEE del tuo nucleo familiare,
 e risulta che il tuo nucleo familiare ha diritto al Bonus Vacanze.  
 
-Clicca il pulsante qui sotto per proseguire con la richiesta del bonus.
+Prosegui con la richiesta **entro le ${format(
+        validBefore,
+        "HH:mm"
+      )} del ${format(
+        validBefore,
+        "dd-MM"
+      )}**, per ricominciare da dove hai lasciato. 
+Oltre questa scadenza, dovrai iniziare una nuova domanda.
+Clicca il pulsante qui sotto per procedere.
 `
     } as MessageContent),
 
@@ -17,10 +26,10 @@ Clicca il pulsante qui sotto per proseguire con la richiesta del bonus.
     ({
       subject: "Abbiamo completato le verifiche sul tuo ISEE",
       markdown: `INPS ha completato le verifiche e risulta che l’ISEE del tuo nucleo familiare supera la soglia di 40.000€.
-    Di conseguenza non potete accedere al Bonus Vacanze.  
+      Di conseguenza non è possibile accedere al Bonus Vacanze.  
 
-Se non ti risulta corretto, oppure se il tuo reddito familiare è cambiato dall’ultimo ISEE creato,
-puoi aggiornarlo effettuando una nuova Dichiarazione Sostituiva Unica (DSU) sul sito di INPS.
+Se qualcosa è cambiato dall’ultimo ISEE creato, puoi richiederne uno nuovo, 
+presentando una nuova Dichiarazione Sostituiva Unica (DSU) nei canali previsti da INPS.
 `
     } as MessageContent),
 
@@ -37,21 +46,29 @@ Se vuoi, puoi fare subito una simulazione o la richiesta online sul sito di INPS
   EligibilityCheckConflict: () =>
     ({
       subject: "Abbiamo completato le verifiche sul tuo ISEE",
-      markdown: `INPS ha completato le verifiche sull’ISEE del tuo nucleo familiare, e sembra che qualcuno del tuo nucleo familiare abbia già richiesto il Bonus Vacanze.  
+      markdown: `INPS ha completato le verifiche sull’ISEE e risulta che qualcuno del tuo nucleo familiare abbia già richiesto il Bonus Vacanze.  
 
-Se la richiesta è andata a buon fine, puoi trovare il Bonus Vacanze nella sezione Pagamenti.
+Il Bonus è in fase di attivazione. Ti manderemo un messaggio quando sarà attivo.
 `
     } as MessageContent),
 
-  EligibilityCheckSuccessEligibleWithDiscrepancies: () =>
+  EligibilityCheckSuccessEligibleWithDiscrepancies: (validBefore: Date) =>
     ({
       subject: "Abbiamo completato le verifiche sul tuo ISEE",
       markdown: `INPS ha completato le verifiche sull’ISEE del tuo nucleo familiare, e risulta che il tuo nucleo familiare ha diritto al Bonus Vacanze.  
 
-Ti avvisiamo, però, che INPS ha riscontrato alcune omissioni o difformità nel tuo ISEE, per cui ora puoi continuare con la richiesta del bonus,
-ma potrai essere chiamato in futuro a colmare eventuali lacune nella documeazione presentata.
+Ti avvisiamo, però, che INPS ha riscontrato alcune omissioni o difformità nel tuo ISEE, per cui ora puoi continuare con la richiesta del bonus, 
+ma potrai essere chiamato in futuro a colmare eventuali lacune nella documentazione presentata.
 
-Clicca il pulsante qui sotto per proseguire con la richiesta del bonus.
+Prosegui con la richiesta **entro le ${format(
+        validBefore,
+        "HH:mm"
+      )} del ${format(
+        validBefore,
+        "dd-MM"
+      )}**, per ricominciare da dove hai lasciato. Oltre questa scadenza, dovrai iniziare una nuova domanda.
+
+Clicca il pulsante qui sotto per procedere.
 `
     } as MessageContent),
 
@@ -68,7 +85,6 @@ Ti ricordiamo che chiunque della tua famiglia potrà spenderlo presso le struttu
       subject: "Abbiamo riscontrato dei problemi",
       markdown: `Si è verificato un errore nel processare la tua richiesta di Bonus.  
 
-Dovrai iniziare una nuova domanda.
 Clicca il pulsante qui sotto per procedere.`
     } as MessageContent)
 };

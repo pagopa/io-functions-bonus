@@ -26,6 +26,7 @@ import { ValidateEligibilityCheckActivityInput } from "../ValidateEligibilityChe
 
 import { isLeft } from "fp-ts/lib/Either";
 import { toString } from "fp-ts/lib/function";
+import { MessageContent } from "io-functions-commons/dist/generated/definitions/MessageContent";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
@@ -36,6 +37,25 @@ export const OrchestratorInput = FiscalCode;
 export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
 
 const NOTIFICATION_DELAY_SECONDS = 10;
+
+export const getMessage = (
+  messageType: keyof typeof MESSAGES,
+  validBefore: Date
+): MessageContent => {
+  switch (messageType) {
+    case "EligibilityCheckSuccessEligible":
+    case "EligibilityCheckSuccessEligibleWithDiscrepancies":
+      return MESSAGES[messageType](validBefore);
+    case "EligibilityCheckSuccessIneligible":
+    case "EligibilityCheckFailure":
+    case "EligibilityCheckConflict":
+    case "BonusActivationSuccess":
+    case "BonusActivationFailure":
+      return MESSAGES[messageType]();
+    default:
+      throw new Error(`Cannot get Message`);
+  }
+};
 
 export const getMessageType = (
   _: ApiEligibilityCheck
@@ -192,7 +212,10 @@ export const handler = function*(
       retryOptions,
       SendMessageActivityInput.encode({
         checkProfile: false,
-        content: MESSAGES[maybeMessageType.value](),
+        content: getMessage(
+          maybeMessageType.value,
+          eligibilityCheckResponse.validBefore
+        ),
         fiscalCode: eligibilityCheckResponse.fiscalCode
       })
     );
