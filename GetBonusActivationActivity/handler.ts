@@ -86,7 +86,7 @@ export function getGetBonusActivationActivityHandler(
       .chain(
         fromPredicate(
           bonusActivation => bonusActivation.status === "PROCESSING",
-          _ =>
+          __ =>
             Failure.encode({
               kind: "PERMANENT",
               reason: "Bonus activation status is not PROCESSING"

@@ -14,7 +14,6 @@ import {
   GetBonusActivationActivityInput,
   GetBonusActivationActivityOutput
 } from "../GetBonusActivationActivity/handler";
-import { RetrievedBonusActivation } from "../models/bonus_activation";
 import { ReleaseFamilyLockActivityInput } from "../ReleaseFamilyLockActivity/handler";
 import { SendBonusActivationSuccess } from "../SendBonusActivationActivity/handler";
 import { SendBonusActivationInput } from "../SendBonusActivationActivity/handler";
