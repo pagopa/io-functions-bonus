@@ -53,7 +53,9 @@ export const getMessage = (
     case "BonusActivationFailure":
       return MESSAGES[messageType]();
     default:
-      throw new Error(`Cannot get Message`);
+      throw new Error(
+        `Cannot get MessageContent on EligibilityCheckOrchestrator`
+      );
   }
 };
 
