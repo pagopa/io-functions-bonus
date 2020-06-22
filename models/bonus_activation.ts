@@ -1,6 +1,6 @@
 import * as DocumentDb from "documentdb";
-import { Either, left, right } from "fp-ts/lib/Either";
-import { Option } from "fp-ts/lib/Option";
+import { Either, isLeft, left, right } from "fp-ts/lib/Either";
+import { none, Option } from "fp-ts/lib/Option";
 import * as DocumentDbUtils from "io-functions-commons/dist/src/utils/documentdb";
 import { DocumentDbModel } from "io-functions-commons/dist/src/utils/documentdb_model";
 import * as t from "io-ts";
@@ -70,16 +70,12 @@ export class BonusActivationModel extends DocumentDbModel<
     super(dbClient, collectionUrl, toBaseType, toRetrieved);
   }
 
-  public findBonusActivationForUser(
+  public async findBonusActivationForUser(
     bonusId: BonusCode,
     fiscalCode: FiscalCode
-  ): Promise<
-    Either<
-      DocumentDb.QueryError,
-      Option<{ bonusActivation: BonusActivationWithFamilyUID }>
-    >
-  > {
-    return DocumentDbUtils.queryOneDocument(
+  ): Promise<Either<DocumentDb.QueryError, Option<RetrievedBonusActivation>>> {
+    const bonusActivationAlias = "bonusActivation";
+    const errorOrMaybeDocument = await DocumentDbUtils.queryOneDocument(
       this.dbClient,
       this.collectionUri,
       {
@@ -93,9 +89,22 @@ export class BonusActivationModel extends DocumentDbModel<
             value: fiscalCode
           }
         ],
-        query: `SELECT b as bonusActivation FROM b JOIN familyMember IN b.dsuRequest.familyMembers WHERE b.${BONUS_ACTIVATION_MODEL_PK_FIELD} = @bonusId AND familyMember.fiscalCode = @fiscalCode`
+        query: `SELECT b as ${bonusActivationAlias} FROM b JOIN familyMember IN b.dsuRequest.familyMembers WHERE b.${BONUS_ACTIVATION_MODEL_PK_FIELD} = @bonusId AND familyMember.fiscalCode = @fiscalCode`
       },
       bonusId
+    );
+
+    if (
+      isLeft(errorOrMaybeDocument) &&
+      errorOrMaybeDocument.value.code === 404
+    ) {
+      // if the error is 404 (Not Found), we return an empty value
+      return right<DocumentDb.QueryError, Option<RetrievedBonusActivation>>(
+        none
+      );
+    }
+    return errorOrMaybeDocument.map(maybeDocument =>
+      maybeDocument.map(doc => this.toRetrieved(doc[`${bonusActivationAlias}`]))
     );
   }
 

@@ -10,12 +10,10 @@ import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { BonusActivationStatusEnum } from "../generated/models/BonusActivationStatus";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 import { BonusCode } from "../generated/models/BonusCode";
-import { FamilyUID } from "../generated/models/FamilyUID";
 import {
   BonusActivationModel,
   RetrievedBonusActivation
 } from "../models/bonus_activation";
-import { BonusLeaseModel } from "../models/bonus_lease";
 import { EligibilityCheckModel } from "../models/eligibility_check";
 import { TransientFailure } from "../utils/errors";
 
@@ -56,22 +54,6 @@ type IFailedBonusActivationHandler = (
   input: unknown
 ) => Promise<FailedBonusActivationResult>;
 
-/**
- * Release the lock that was eventually acquired for this request. A release attempt on a lock that doesn't exist is considered successful.
- *
- * @param bonusLeaseModel an instance of BonusLeaseModel
- * @param familyMembers the family of the requesting user
- *
- */
-const relaseLockForUserFamily = (
-  bonusLeaseModel: BonusLeaseModel,
-  familyUID: FamilyUID
-): TaskEither<QueryError, void> => {
-  return fromQueryEither(() => bonusLeaseModel.deleteOneById(familyUID)).map(
-    _ => void 0
-  );
-};
-
 const updateBonusAsFailed = (
   bonusActivationModel: BonusActivationModel,
   bonusActivation: BonusActivationWithFamilyUID
@@ -105,7 +87,6 @@ const deleteEligibilityCheck = (
  */
 export function FailedBonusActivationHandler(
   bonusActivationModel: BonusActivationModel,
-  bonusLeaseModel: BonusLeaseModel,
   eligibilityCheckModel: EligibilityCheckModel
 ): IFailedBonusActivationHandler {
   return async (
@@ -144,19 +125,6 @@ export function FailedBonusActivationHandler(
             },
             _ => taskEither.of(bonusActivation)
           )
-      )
-      .chain(bonusActivation =>
-        relaseLockForUserFamily(
-          bonusLeaseModel,
-          bonusActivation.familyUID
-        ).mapLeft(err => {
-          context.log.warn(
-            `FailedBonusActivationHandler|WARN|Failed releasing lock: ${err.body}`
-          );
-          return TransientFailure.encode({
-            kind: "TRANSIENT"
-          });
-        })
       )
       .fold<FailedBonusActivationResult>(
         l => l,

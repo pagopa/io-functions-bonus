@@ -22,10 +22,8 @@ describe("ContinueBonusActivation", () => {
       findBonusActivationForUser: jest.fn().mockImplementationOnce(async () =>
         right(
           some({
-            bonusActivation: {
-              ...aBonusActivation,
-              status: BonusActivationStatusEnum.ACTIVE
-            }
+            ...aBonusActivation,
+            status: BonusActivationStatusEnum.ACTIVE
           })
         )
       )
@@ -114,10 +112,8 @@ describe("ContinueBonusActivation", () => {
       findBonusActivationForUser: jest.fn().mockImplementationOnce(async () =>
         right(
           some({
-            bonusActivation: {
-              ...aBonusActivationWithFamilyUID,
-              status: BonusActivationStatusEnum.PROCESSING
-            }
+            ...aBonusActivationWithFamilyUID,
+            status: BonusActivationStatusEnum.PROCESSING
           })
         )
       )
@@ -142,10 +138,8 @@ describe("ContinueBonusActivation", () => {
       findBonusActivationForUser: jest.fn().mockImplementationOnce(async () =>
         right(
           some({
-            bonusActivation: {
-              ...aBonusActivationWithFamilyUID,
-              status: BonusActivationStatusEnum.PROCESSING
-            }
+            ...aBonusActivationWithFamilyUID,
+            status: BonusActivationStatusEnum.PROCESSING
           })
         )
       )

@@ -65,10 +65,11 @@ export class UserBonusModel extends DocumentDbModel<
   ) {
     super(dbClient, collectionUrl, toBaseType, toRetrieved);
   }
+
   public findBonusActivations(
     fiscalCode: FiscalCode
-  ): DocumentDbUtils.IResultIterator<UserBonus> {
-    return DocumentDbUtils.queryDocuments(
+  ): DocumentDbUtils.IResultIterator<RetrievedUserBonus> {
+    const iterator = DocumentDbUtils.queryDocuments(
       this.dbClient,
       this.collectionUri,
       {
@@ -82,5 +83,6 @@ export class UserBonusModel extends DocumentDbModel<
       },
       fiscalCode
     );
+    return DocumentDbUtils.mapResultIterator(iterator, this.toRetrieved);
   }
 }
