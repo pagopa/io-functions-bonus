@@ -48,8 +48,8 @@ function createFetchInstance(endpoint: string, timeout: number): typeof fetch {
     INPS_SERVICE_PROTOCOL === "http"
       ? agent.getHttpFetch(process.env)
       : agent.getHttpsFetch(process.env, {
-          cert: process.env.INPS_SERVICE_CERT,
-          key: process.env.INPS_SERVICE_KEY
+          cert: getRequiredStringEnv("INPS_SERVICE_CERT"),
+          key: getRequiredStringEnv("INPS_SERVICE_KEY")
         });
 
   const fetchWithTimeout = setFetchTimeout(

@@ -37,8 +37,8 @@ function createFetchInstance(endpoint: string, timeout: number): typeof fetch {
     ADE_SERVICE_PROTOCOL === "http"
       ? agent.getHttpFetch(process.env)
       : agent.getHttpsFetch(process.env, {
-          cert: process.env.ADE_SERVICE_CERT,
-          key: process.env.ADE_SERVICE_KEY
+          cert: getRequiredStringEnv("ADE_SERVICE_CERT"),
+          key: getRequiredStringEnv("ADE_SERVICE_CERT")
         });
 
   const fetchWithTimeout = setFetchTimeout(
