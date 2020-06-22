@@ -10,6 +10,7 @@ import { readableReport } from "italia-ts-commons/lib/reporters";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { FailedBonusActivationInput } from "../FailedBonusActivationActivity/handler";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
+import { ReleaseFamilyLockActivityInput } from "../ReleaseFamilyLockActivity/handler";
 import { SendBonusActivationSuccess } from "../SendBonusActivationActivity/handler";
 import { SendBonusActivationInput } from "../SendBonusActivationActivity/handler";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
@@ -96,6 +97,7 @@ export const getStartBonusActivationOrchestratorHandler = (
         undecodedSendBonusActivation
       );
       if (isSendBonusActivationSuccess) {
+        // update bonus to ACTIVE
         yield context.df.callActivityWithRetry(
           "SuccessBonusActivationActivity",
           retryOptions,
@@ -125,6 +127,17 @@ export const getStartBonusActivationOrchestratorHandler = (
           );
         }
       } else {
+        // release lock in case the bonus activation fails
+        yield context.df.callActivityWithRetry(
+          "ReleaseFamilyLockActivity",
+          retryOptions,
+          ReleaseFamilyLockActivityInput.encode({
+            familyUID:
+              startBonusActivationOrchestratorInput.bonusActivation.familyUID
+          })
+        );
+
+        // update bonus to FAILED
         yield context.df.callActivityWithRetry(
           "FailedBonusActivationActivity",
           retryOptions,
@@ -153,6 +166,17 @@ export const getStartBonusActivationOrchestratorHandler = (
       }
     } catch (e) {
       context.log.error(`${logPrefix}|ID=${operationId}|ERROR=${toString(e)}`);
+
+      // release lock in case the orchestrator fails
+      yield context.df.callActivityWithRetry(
+        "ReleaseFamilyLockActivity",
+        retryOptions,
+        ReleaseFamilyLockActivityInput.encode({
+          familyUID:
+            startBonusActivationOrchestratorInput.bonusActivation.familyUID
+        })
+      );
+
       trackException({
         exception: e,
         properties: {
