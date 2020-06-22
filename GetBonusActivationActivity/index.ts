@@ -1,3 +1,6 @@
+/**
+ * Get a bonus activation in status = PROCESSING for the tuple (bonusId, fiscalCode)
+ */
 import * as documentDbUtils from "io-functions-commons/dist/src/utils/documentdb";
 import { getRequiredStringEnv } from "io-functions-commons/dist/src/utils/env";
 import {
