@@ -11,7 +11,7 @@ import { trackException } from "../utils/appinsights";
 import { Failure, TransientFailure } from "../utils/errors";
 import { makeStartBonusActivationOrchestratorId } from "../utils/orchestrators";
 
-const ContinueBonusActivationInput = t.type({
+export const ContinueBonusActivationInput = t.type({
   applicantFiscalCode: FiscalCode,
   bonusId: BonusCode
 });
@@ -20,7 +20,7 @@ const ContinueBonusActivationInput = t.type({
  * Reads from a queue the tuple (bonusId, fiscalCode)
  * then try to start the orchestrator to activate the bonus.
  */
-const index: AzureFunction = (
+const ContinueBonusActivationHandler: AzureFunction = (
   context: Context,
   message: unknown
 ): Promise<Failure | string> => {
@@ -68,4 +68,4 @@ const index: AzureFunction = (
     .run();
 };
 
-export default index;
+export default ContinueBonusActivationHandler;
