@@ -47,6 +47,7 @@ export const getStartBonusActivationOrchestratorHandler = (
           name: "bonus.activation.error"
         }
       });
+      // TODO: should we relase the lock here ?
       return false;
     }
     const startBonusActivationOrchestratorInput =
@@ -75,6 +76,7 @@ export const getStartBonusActivationOrchestratorHandler = (
           name: "bonus.activation.error"
         }
       });
+      // TODO: should we relase the lock here ?
       return false;
     }
     const bonusVacanzaBase = errorOrBonusVacanzaBase.value;
@@ -117,7 +119,7 @@ export const getStartBonusActivationOrchestratorHandler = (
         // update bonus to ACTIVE
         // TODO: If this operation fails after max retries
         // we don't release the lock as the bous is already sent to ADE.
-        // We should wretry the whole orchestrator (using a sub-orchestrator)
+        // We should retry the whole orchestrator (using a sub-orchestrator)
         yield context.df.callActivityWithRetry(
           "SuccessBonusActivationActivity",
           retryOptions,
