@@ -82,17 +82,33 @@ export const getStartBonusActivationOrchestratorHandler = (
 
     try {
       // Send bonus details to ADE rest service
-      const undecodedSendBonusActivation = yield context.df.callActivityWithRetry(
-        "SendBonusActivationActivity",
-        retryOptions,
-        SendBonusActivationInput.encode(bonusVacanzaBase)
-      );
-      trackEvent({
-        name: "bonus.activation.sent",
-        properties: {
-          id: operationId
-        }
-      });
+      // tslint:disable-next-line: no-let
+      let undecodedSendBonusActivation;
+      try {
+        undecodedSendBonusActivation = yield context.df.callActivityWithRetry(
+          "SendBonusActivationActivity",
+          retryOptions,
+          SendBonusActivationInput.encode(bonusVacanzaBase)
+        );
+        trackEvent({
+          name: "bonus.activation.sent",
+          properties: {
+            id: operationId
+          }
+        });
+      } catch (e) {
+        // release lock in case SendBonusActivationActivity fails
+        yield context.df.callActivityWithRetry(
+          "ReleaseFamilyLockActivity",
+          retryOptions,
+          ReleaseFamilyLockActivityInput.encode({
+            familyUID:
+              startBonusActivationOrchestratorInput.bonusActivation.familyUID
+          })
+        );
+        throw e;
+      }
+
       const isSendBonusActivationSuccess = SendBonusActivationSuccess.is(
         undecodedSendBonusActivation
       );
@@ -127,7 +143,7 @@ export const getStartBonusActivationOrchestratorHandler = (
           );
         }
       } else {
-        // release lock in case the bonus activation fails
+        // release lock in case the bonus activation failed
         yield context.df.callActivityWithRetry(
           "ReleaseFamilyLockActivity",
           retryOptions,
@@ -166,17 +182,6 @@ export const getStartBonusActivationOrchestratorHandler = (
       }
     } catch (e) {
       context.log.error(`${logPrefix}|ID=${operationId}|ERROR=${toString(e)}`);
-
-      // release lock in case the orchestrator fails
-      yield context.df.callActivityWithRetry(
-        "ReleaseFamilyLockActivity",
-        retryOptions,
-        ReleaseFamilyLockActivityInput.encode({
-          familyUID:
-            startBonusActivationOrchestratorInput.bonusActivation.familyUID
-        })
-      );
-
       trackException({
         exception: e,
         properties: {

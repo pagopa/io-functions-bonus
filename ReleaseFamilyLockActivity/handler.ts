@@ -51,7 +51,7 @@ export function getReleaseFamilyLockActivityHandler(
       }))
       .chain(({ familyUID }) =>
         fromQueryEither(() => bonusLeaseModel.deleteOneById(familyUID)).map(
-          _ => familyUID
+          __ => familyUID
         )
       )
       .fold<ReleaseFamilyLockActivityResult>(

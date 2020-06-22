@@ -5,10 +5,6 @@ import {
   BonusActivationModel
 } from "../models/bonus_activation";
 import {
-  BONUS_LEASE_COLLECTION_NAME,
-  BonusLeaseModel
-} from "../models/bonus_lease";
-import {
   ELIGIBILITY_CHECK_COLLECTION_NAME,
   EligibilityCheckModel
 } from "../models/eligibility_check";
@@ -35,17 +31,8 @@ const bonusActivationModel = new BonusActivationModel(
   )
 );
 
-const bonusLeaseModel = new BonusLeaseModel(
-  documentClient,
-  documentDbUtils.getCollectionUri(
-    documentDbDatabaseUrl,
-    BONUS_LEASE_COLLECTION_NAME
-  )
-);
-
 const FailedBonusActivation = FailedBonusActivationHandler(
   bonusActivationModel,
-  bonusLeaseModel,
   eligibilityCheckModel
 );
 
