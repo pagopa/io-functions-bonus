@@ -1,33 +1,20 @@
 import { AzureFunction, Context } from "@azure/functions";
 import * as df from "durable-functions";
-import { fromEither } from "fp-ts/lib/TaskEither";
-import * as documentDbUtils from "io-functions-commons/dist/src/utils/documentdb";
-import { getRequiredStringEnv } from "io-functions-commons/dist/src/utils/env";
+import { toError } from "fp-ts/lib/Either";
+import { fromEither, tryCatch } from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
-import {
-  BONUS_ACTIVATION_COLLECTION_NAME,
-  BonusActivationModel
-} from "../models/bonus_activation";
-import { documentClient } from "../services/cosmosdb";
+import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { BonusCode } from "../generated/models/BonusCode";
+import { OrchestratorInput } from "../StartBonusActivationOrchestrator/handler";
+import { trackException } from "../utils/appinsights";
 import { Failure, TransientFailure } from "../utils/errors";
-import {
-  ContinueBonusActivationHandler,
-  ContinueBonusActivationInput
-} from "./handler";
+import { makeStartBonusActivationOrchestratorId } from "../utils/orchestrators";
 
-const cosmosDbName = getRequiredStringEnv("COSMOSDB_BONUS_DATABASE_NAME");
-
-const documentDbDatabaseUrl = documentDbUtils.getDatabaseUri(cosmosDbName);
-const bonusActivationCollectionUrl = documentDbUtils.getCollectionUri(
-  documentDbDatabaseUrl,
-  BONUS_ACTIVATION_COLLECTION_NAME
-);
-
-const bonusActivationModel = new BonusActivationModel(
-  documentClient,
-  bonusActivationCollectionUrl
-);
+const ContinueBonusActivationInput = t.type({
+  applicantFiscalCode: FiscalCode,
+  bonusId: BonusCode
+});
 
 /**
  * Reads from a queue the tuple (bonusId, fiscalCode)
@@ -45,14 +32,30 @@ const index: AzureFunction = (
       })
     )
     .chain(({ bonusId, applicantFiscalCode }) =>
-      ContinueBonusActivationHandler(
-        df.getClient(context),
-        bonusActivationModel,
-        applicantFiscalCode,
-        bonusId
+      tryCatch(
+        () =>
+          df
+            .getClient(context)
+            .startNew(
+              "StartBonusActivationOrchestrator",
+              makeStartBonusActivationOrchestratorId(applicantFiscalCode),
+              OrchestratorInput.encode({ applicantFiscalCode, bonusId })
+            ),
+        _ =>
+          Failure.encode({
+            kind: "TRANSIENT",
+            reason: `Error starting the orchestrator: ${toError(_).message}`
+          })
       )
     )
     .fold<Failure | string>(err => {
+      const error = `ContinueBonusActivation|${err.kind}_ERROR=${err.reason}`;
+      trackException({
+        exception: new Error(error),
+        properties: {
+          name: "bonus.activation.orchestrator.start"
+        }
+      });
       context.log.error(
         `ContinueBonusActivation|${err.kind}_ERROR=${err.reason}`
       );
