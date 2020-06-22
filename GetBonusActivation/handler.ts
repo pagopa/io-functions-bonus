@@ -73,9 +73,7 @@ export function GetBonusActivationHandler(
         },
         maybeBonusActivation => {
           if (isSome(maybeBonusActivation)) {
-            return toApiBonusActivation(
-              maybeBonusActivation.value.bonusActivation
-            ).fold<
+            return toApiBonusActivation(maybeBonusActivation.value).fold<
               IResponseSuccessJson<BonusActivation> | IResponseErrorInternal
             >(
               err => {

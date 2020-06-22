@@ -101,7 +101,7 @@ export function ContinueBonusActivationHandler(
             reason: "Bonus activation not found"
           })
         ),
-        _ => taskEither.of(_.bonusActivation)
+        bonusActivation => taskEither.of(bonusActivation)
       )
     )
     .chain(
