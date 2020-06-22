@@ -17,9 +17,11 @@ import {
   richiestaBonusDefaultDecoder,
   RichiestaBonusT
 } from "../generated/ade/requestTypes";
+import { withAdeTracer } from "../services/loggers";
 
 export type ADEClient = typeof ADEClient;
 export type ADEClientInstance = ReturnType<typeof ADEClient>;
+
 /**
  * Creates a client which implements the http operations exposed by ADE API service
  * @param baseUrl
@@ -33,7 +35,7 @@ export function ADEClient(
 } {
   const options = {
     baseUrl,
-    fetchApi
+    fetchApi: withAdeTracer(fetchApi)
   };
 
   const richiestaBonusT: RichiestaBonusT = {

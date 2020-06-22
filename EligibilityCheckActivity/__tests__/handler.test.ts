@@ -10,7 +10,7 @@ import {
   EsitoEnum
 } from "../../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
 import { SiNoTypeEnum } from "../../generated/definitions/SiNoType";
-import { ISoapClientAsync } from "../../utils/inpsSoapClient";
+import { ISoapClientAsync } from "../../clients/inpsSoapClient";
 import {
   ActivityResultSuccess,
   getEligibilityCheckActivityHandler

@@ -1,7 +1,7 @@
 ﻿import { getRequiredStringEnv } from "io-functions-commons/dist/src/utils/env";
 import { NumberFromString } from "italia-ts-commons/lib/numbers";
 import { Hour } from "italia-ts-commons/lib/units";
-import { createClient } from "../utils/inpsSoapClient";
+import { createClient } from "../clients/inpsSoapClient";
 import { getEligibilityCheckActivityHandler } from "./handler";
 
 const INPS_SERVICE_ENDPOINT = getRequiredStringEnv("INPS_SERVICE_ENDPOINT");

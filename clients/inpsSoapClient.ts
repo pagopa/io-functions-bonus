@@ -19,7 +19,7 @@ import {
 } from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
 import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
 
-import { constVoid, toString } from "fp-ts/lib/function";
+import { toString } from "fp-ts/lib/function";
 import {
   AbortableFetch,
   setFetchTimeout,
@@ -28,7 +28,7 @@ import {
 import { IntegerFromString } from "italia-ts-commons/lib/numbers";
 import { Millisecond } from "italia-ts-commons/lib/units";
 import { UrlFromString } from "italia-ts-commons/lib/url";
-import { traceInpsRequest } from "../services/loggers";
+import { withInpsTracer } from "../services/loggers";
 
 // TODO: Handle the inps:Identity element content
 const getSOAPRequest = (
@@ -84,7 +84,7 @@ const fetchWithTimeout = setFetchTimeout(
   AbortableFetch(fetchAgent)
 );
 
-const httpFetch = toFetch(fetchWithTimeout);
+const httpFetch = withInpsTracer(toFetch(fetchWithTimeout));
 
 export interface ISoapClientAsync {
   ConsultazioneSogliaIndicatore: (
@@ -209,14 +209,6 @@ export function createClient(endpoint: NonEmptyString): ISoapClientAsync {
         });
 
         const responseBody = await response.text();
-
-        // fire and forget
-        traceInpsRequest({
-          Id: params.CodiceFiscale,
-          RequestPayload: requestPayload,
-          ResponsePayload: responseBody,
-          Timestamp: new Date()
-        }).catch(constVoid);
 
         if (response.status !== 200) {
           throw new Error(

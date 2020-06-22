@@ -33,7 +33,7 @@ import { RetrievedUserBonus, UserBonus } from "../models/user_bonus";
 import {
   BonusVacanzaInvalidRequestError,
   BonusVacanzaTransientError
-} from "../utils/adeClient";
+} from "../clients/adeClient";
 
 export const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
 export const anotherFiscalCode = "CCCDDD80A01C123D" as FiscalCode;

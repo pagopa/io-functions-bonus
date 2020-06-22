@@ -6,7 +6,7 @@ import {
   aBonusVacanzaInvalidRequestError,
   aBonusVacanzaTransientError
 } from "../../__mocks__/mocks";
-import { ADEClientInstance } from "../../utils/adeClient";
+import { ADEClientInstance } from "../../clients/adeClient";
 import {
   ADEServiceFailure,
   InvalidInputFailure,
