@@ -71,11 +71,11 @@ export const getStartBonusActivationOrchestratorHandler = (
       // track bonusId
       context.df.setCustomStatus(bonusId);
 
-      // For logging / tracking
+      // For application insights logging / tracking
       const operationId = toHash(bonusId);
 
-      // Get the bonus activation relative to bonusId, applicantFiscalCode
-      // Must be into PROCESSING status since we're going to activate the bonus
+      // Get the bonus activation relative to the input (bonusId, applicantFiscalCode)
+      // Must have status = PROCESSING since we're going to make it ACTIVE
       const undecodedBonusActivation = yield context.df.callActivityWithRetry(
         "GetBonusActivationActivity",
         retryOptions,
@@ -91,44 +91,28 @@ export const getStartBonusActivationOrchestratorHandler = (
         }
       });
 
+      // Try to decode the result of the activity that get the processing bonus
       const errorOrGetBonusActivationActivityOutput = GetBonusActivationActivityOutput.decode(
         undecodedBonusActivation
       );
       if (isLeft(errorOrGetBonusActivationActivityOutput)) {
-        context.log.verbose(
+        // TODO: should we release the family lock here ?
+        throw new Error(
           `${logPrefix}|Error decoding bonus activation activity output|ERROR=${readableReport(
             errorOrGetBonusActivationActivityOutput.value
           )}`
         );
-        trackException({
-          exception: new Error(
-            `${logPrefix}|Cannot decode bonus activation activity output`
-          ),
-          properties: {
-            // tslint:disable-next-line: no-duplicate-string
-            name: "bonus.activation.error"
-          }
-        });
-        // TODO: should we relase the locks here ?
-        return false;
       }
       const bonusActivationActivityOutput =
         errorOrGetBonusActivationActivityOutput.value;
 
-      // Is it possible that the no bonus activation is found or the status is not PROCESSING
-      // so we cannot go on and activate it
+      // Is it possible that no PROCESSING bonus activation is found
+      // so we cannot go on and make it ACTIVE
       if (Failure.is(bonusActivationActivityOutput)) {
-        const error = `${logPrefix}|Error retrieving processing bonus activation|ERROR=${bonusActivationActivityOutput.reason}`;
-        context.log.verbose(error);
-        trackException({
-          exception: new Error(error),
-          properties: {
-            // tslint:disable-next-line: no-duplicate-string
-            name: "bonus.activation.error"
-          }
-        });
-        // TODO: should we relase the locks here ?
-        return false;
+        // TODO: should we relase the family lock here ?
+        throw new Error(
+          `${logPrefix}|Error retrieving processing bonus activation|ERROR=${bonusActivationActivityOutput.reason}`
+        );
       }
       const bonusActivation = bonusActivationActivityOutput.bonusActivation;
 
@@ -139,21 +123,12 @@ export const getStartBonusActivationOrchestratorHandler = (
         bonusActivation
       );
       if (isLeft(errorOrBonusVacanzaBase)) {
-        context.log.verbose(
+        // TODO: should we relase the lock here ?
+        throw new Error(
           `${logPrefix}|Error decoding bonus activation request|ERROR=${readableReport(
             errorOrBonusVacanzaBase.value
           )}`
         );
-        trackException({
-          exception: new Error(
-            `${logPrefix}|Error decoding bonus activation request`
-          ),
-          properties: {
-            name: "bonus.activation.error"
-          }
-        });
-        // TODO: should we relase the locks here ?
-        return false;
       }
       const bonusVacanzaBase = errorOrBonusVacanzaBase.value;
 
@@ -181,7 +156,9 @@ export const getStartBonusActivationOrchestratorHandler = (
             familyUID: bonusActivation.familyUID
           })
         );
-        throw e;
+        throw new Error(
+          `${logPrefix}|Error sending bonus to ADE|ERROR=${toString(e)}`
+        );
       }
 
       // Call to ADE service succeeded?
