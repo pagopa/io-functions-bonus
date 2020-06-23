@@ -1,7 +1,6 @@
 import { isRight } from "fp-ts/lib/Either";
 import { NewMessage } from "io-functions-commons/dist/generated/definitions/NewMessage";
-import { getMessage } from "../../EligibilityCheckOrchestrator/index";
-import { MESSAGES } from "../messages";
+import { getMessage, MESSAGES } from "../messages";
 
 const aValidBeforeDate = new Date();
 
