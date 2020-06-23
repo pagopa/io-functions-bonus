@@ -15,10 +15,10 @@ import {
   GetBonusActivationActivityOutput
 } from "../GetBonusActivationActivity/handler";
 import { ReleaseFamilyLockActivityInput } from "../ReleaseFamilyLockActivity/handler";
+import { ReleaseUserLockActivityInput } from "../ReleaseUserLockActivity/handler";
 import { SendBonusActivationSuccess } from "../SendBonusActivationActivity/handler";
 import { SendBonusActivationInput } from "../SendBonusActivationActivity/handler";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
-import { documentClient } from "../services/cosmosdb";
 import { SuccessBonusActivationInput } from "../SuccessBonusActivationActivity/handler";
 import { trackEvent, trackException } from "../utils/appinsights";
 import { toApiBonusVacanzaBase } from "../utils/conversions";
@@ -41,6 +41,7 @@ export const getStartBonusActivationOrchestratorHandler = (
   function*(context: IOrchestrationFunctionContext): Generator<TaskSet | Task> {
     const logPrefix = `StartBonusActivationOrchestrator`;
 
+    // Try to decode input from ContinueBonusActivation
     const errorOrStartBonusActivationOrchestratorInput = OrchestratorInput.decode(
       context.df.getInput()
     );
@@ -57,7 +58,7 @@ export const getStartBonusActivationOrchestratorHandler = (
           name: "bonus.activation.error"
         }
       });
-      // TODO: should we relase the lock here ?
+      // We cannot relase any lock here since the decoding failed
       return false;
     }
 
@@ -66,96 +67,96 @@ export const getStartBonusActivationOrchestratorHandler = (
       bonusId
     } = errorOrStartBonusActivationOrchestratorInput.value;
 
-    // Needed to return 202 with bonus ID
-    context.df.setCustomStatus(bonusId);
-
-    // For logging / tracking
-    const operationId = toHash(bonusId);
-
-    // Get the bonus activation relative to bonusId, applicantFiscalCode
-    // Must be into PROCESSING status since we're going to activate the bonus
-    const undecodedBonusActivation = yield context.df.callActivityWithRetry(
-      "GetBonusActivationActivity",
-      retryOptions,
-      GetBonusActivationActivityInput.encode({
-        applicantFiscalCode,
-        bonusId
-      })
-    );
-    trackEvent({
-      name: "bonus.activation.get",
-      properties: {
-        id: operationId
-      }
-    });
-
-    const errorOrGetBonusActivationActivityOutput = GetBonusActivationActivityOutput.decode(
-      undecodedBonusActivation
-    );
-    if (isLeft(errorOrGetBonusActivationActivityOutput)) {
-      context.log.verbose(
-        `${logPrefix}|Error decoding bonus activation activity output|ERROR=${readableReport(
-          errorOrGetBonusActivationActivityOutput.value
-        )}`
-      );
-      trackException({
-        exception: new Error(
-          `${logPrefix}|Cannot decode bonus activation activity output`
-        ),
-        properties: {
-          // tslint:disable-next-line: no-duplicate-string
-          name: "bonus.activation.error"
-        }
-      });
-      // TODO: should we relase the lock here ?
-      return false;
-    }
-    const bonusActivationActivityOutput =
-      errorOrGetBonusActivationActivityOutput.value;
-
-    // Is it possible that the no bonus activation is found or the status is not PROCESSING
-    // so we cannot go on and activate it
-    if (Failure.is(bonusActivationActivityOutput)) {
-      const error = `${logPrefix}|Error retrieving processing bonus activation|ERROR=${bonusActivationActivityOutput.reason}`;
-      context.log.verbose(error);
-      trackException({
-        exception: new Error(error),
-        properties: {
-          // tslint:disable-next-line: no-duplicate-string
-          name: "bonus.activation.error"
-        }
-      });
-      // TODO: should we relase the lock here ?
-      return false;
-    }
-    const bonusActivation = bonusActivationActivityOutput.bonusActivation;
-
-    // Try to convert the internal representation of a bonus activation
-    // in the format needed by the ADE APIs
-    const errorOrBonusVacanzaBase = toApiBonusVacanzaBase(
-      hmacSecret,
-      bonusActivation
-    );
-    if (isLeft(errorOrBonusVacanzaBase)) {
-      context.log.verbose(
-        `${logPrefix}|Error decoding bonus activation request|ERROR=${readableReport(
-          errorOrBonusVacanzaBase.value
-        )}`
-      );
-      trackException({
-        exception: new Error(
-          `${logPrefix}|Error decoding bonus activation request`
-        ),
-        properties: {
-          name: "bonus.activation.error"
-        }
-      });
-      // TODO: should we relase the lock here ?
-      return false;
-    }
-    const bonusVacanzaBase = errorOrBonusVacanzaBase.value;
-
     try {
+      // track bonusId
+      context.df.setCustomStatus(bonusId);
+
+      // For logging / tracking
+      const operationId = toHash(bonusId);
+
+      // Get the bonus activation relative to bonusId, applicantFiscalCode
+      // Must be into PROCESSING status since we're going to activate the bonus
+      const undecodedBonusActivation = yield context.df.callActivityWithRetry(
+        "GetBonusActivationActivity",
+        retryOptions,
+        GetBonusActivationActivityInput.encode({
+          applicantFiscalCode,
+          bonusId
+        })
+      );
+      trackEvent({
+        name: "bonus.activation.get",
+        properties: {
+          id: operationId
+        }
+      });
+
+      const errorOrGetBonusActivationActivityOutput = GetBonusActivationActivityOutput.decode(
+        undecodedBonusActivation
+      );
+      if (isLeft(errorOrGetBonusActivationActivityOutput)) {
+        context.log.verbose(
+          `${logPrefix}|Error decoding bonus activation activity output|ERROR=${readableReport(
+            errorOrGetBonusActivationActivityOutput.value
+          )}`
+        );
+        trackException({
+          exception: new Error(
+            `${logPrefix}|Cannot decode bonus activation activity output`
+          ),
+          properties: {
+            // tslint:disable-next-line: no-duplicate-string
+            name: "bonus.activation.error"
+          }
+        });
+        // TODO: should we relase the locks here ?
+        return false;
+      }
+      const bonusActivationActivityOutput =
+        errorOrGetBonusActivationActivityOutput.value;
+
+      // Is it possible that the no bonus activation is found or the status is not PROCESSING
+      // so we cannot go on and activate it
+      if (Failure.is(bonusActivationActivityOutput)) {
+        const error = `${logPrefix}|Error retrieving processing bonus activation|ERROR=${bonusActivationActivityOutput.reason}`;
+        context.log.verbose(error);
+        trackException({
+          exception: new Error(error),
+          properties: {
+            // tslint:disable-next-line: no-duplicate-string
+            name: "bonus.activation.error"
+          }
+        });
+        // TODO: should we relase the locks here ?
+        return false;
+      }
+      const bonusActivation = bonusActivationActivityOutput.bonusActivation;
+
+      // Try to convert the internal representation of a bonus activation
+      // in the format needed by the ADE APIs
+      const errorOrBonusVacanzaBase = toApiBonusVacanzaBase(
+        hmacSecret,
+        bonusActivation
+      );
+      if (isLeft(errorOrBonusVacanzaBase)) {
+        context.log.verbose(
+          `${logPrefix}|Error decoding bonus activation request|ERROR=${readableReport(
+            errorOrBonusVacanzaBase.value
+          )}`
+        );
+        trackException({
+          exception: new Error(
+            `${logPrefix}|Error decoding bonus activation request`
+          ),
+          properties: {
+            name: "bonus.activation.error"
+          }
+        });
+        // TODO: should we relase the locks here ?
+        return false;
+      }
+      const bonusVacanzaBase = errorOrBonusVacanzaBase.value;
+
       // Send bonus details to ADE rest service
       // tslint:disable-next-line: no-let
       let undecodedSendBonusActivation;
@@ -252,21 +253,22 @@ export const getStartBonusActivationOrchestratorHandler = (
         );
       }
     } catch (e) {
-      context.log.error(`${logPrefix}|ID=${operationId}|ERROR=${toString(e)}`);
+      context.log.error(
+        `${logPrefix}|ID=${toHash(bonusId)}|ERROR=${toString(e)}`
+      );
       trackException({
         exception: e,
         properties: {
-          id: operationId,
           name: "bonus.activation.error"
         }
       });
     } finally {
-      // release bonus lock when the orchestrator ends
+      // release user's lock when the orchestrator ends
       yield context.df.callActivityWithRetry(
-        "ReleaseBonusActivationLockActivity",
+        "ReleaseUserLockActivity",
         retryOptions,
-        ReleaseFamilyLockActivityInput.encode({
-          familyUID: bonusActivation.familyUID
+        ReleaseUserLockActivityInput.encode({
+          id: applicantFiscalCode
         })
       );
     }
