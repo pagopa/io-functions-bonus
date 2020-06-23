@@ -1,7 +1,8 @@
 import { context, mockStartNew } from "../../__mocks__/durable-functions";
 import { aBonusId, aFiscalCode } from "../../__mocks__/mocks";
-import { TransientFailure } from "../../utils/errors";
 import ContinueBonusActivationHandler from "../index";
+
+const aValidBeforeDate = new Date();
 
 describe("ContinueBonusActivation", () => {
   beforeEach(() => {
@@ -15,7 +16,8 @@ describe("ContinueBonusActivation", () => {
     try {
       await ContinueBonusActivationHandler(context, {
         applicantFiscalCode: aFiscalCode,
-        bonusId: aBonusId
+        bonusId: aBonusId,
+        validBefore: aValidBeforeDate
       });
       fail();
     } catch (e) {
