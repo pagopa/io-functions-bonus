@@ -35,9 +35,9 @@ import { generateFamilyUID } from "../utils/hash";
 import { checkBonusActivationIsRunning } from "./locks";
 import {
   acquireLockForUserFamily,
-  ApiBonusActivationWithValidBefore,
   createBonusActivation,
   getLatestValidDSU,
+  IApiBonusActivationWithValidBefore,
   relaseLockForUserFamily
 } from "./models";
 import { checkEligibilityCheckIsRunning } from "./orchestrators";
@@ -84,7 +84,7 @@ export function StartBonusActivationHandler(
           familyUID
         }))
       )
-      .chain<ApiBonusActivationWithValidBefore>(
+      .chain<IApiBonusActivationWithValidBefore>(
         ({ eligibilityCheck, familyUID }) =>
           createBonusActivation(
             bonusActivationModel,

@@ -63,14 +63,10 @@ const withRetryPolicy = withRetries<QueryError, RetrievedBonusActivation>(
   () => CREATION_DELAY_ON_CONFLICT
 );
 
-export const ApiBonusActivationWithValidBefore = t.interface({
-  apiBonusActivation: BonusActivation,
-  validBefore: Timestamp
-});
-
-export type ApiBonusActivationWithValidBefore = t.TypeOf<
-  typeof ApiBonusActivationWithValidBefore
->;
+export interface IApiBonusActivationWithValidBefore {
+  apiBonusActivation: BonusActivation;
+  validBefore: Timestamp;
+}
 
 const eligibilityCheckToResponse = (
   doc: RetrievedEligibilityCheck
