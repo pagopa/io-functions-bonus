@@ -61,7 +61,7 @@
     "applicationinsights": "^1.7.5",
     "date-fns": "^2.14.0",
     "documentdb": "^1.15.3",
-    "durable-functions": "^1.4.2",
+    "durable-functions": "^1.4.1",
     "express": "^4.15.3",
     "fp-ts": "1.17.4",
     "io-functions-commons": "^10.5.0",
