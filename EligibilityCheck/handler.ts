@@ -1,6 +1,8 @@
 import { Context } from "@azure/functions";
 import * as df from "durable-functions";
 import * as express from "express";
+import { isLeft } from "fp-ts/lib/Either";
+import { toString } from "fp-ts/lib/function";
 import { isSome } from "fp-ts/lib/Option";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import { FiscalCodeMiddleware } from "io-functions-commons/dist/src/utils/middlewares/fiscalcode";
@@ -14,17 +16,14 @@ import {
   IResponseSuccessAccepted,
   IResponseSuccessRedirectToResource,
   ResponseErrorInternal,
-  ResponseSuccessAccepted,
   ResponseSuccessRedirectToResource
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { initTelemetryClient, trackException } from "../utils/appinsights";
-import {
-  isOrchestratorRunning,
-  makeStartEligibilityCheckOrchestratorId
-} from "../utils/orchestrators";
+import { makeStartEligibilityCheckOrchestratorId } from "../utils/orchestrators";
 import { checkBonusActivationIsRunning } from "./locks";
+import { checkEligibilityCheckIsRunning } from "./orchestrators";
 
 type IEligibilityCheckHandler = (
   context: Context,
@@ -49,22 +48,21 @@ export function EligibilityCheckHandler(): IEligibilityCheckHandler {
 
     // If a bonus activation for that user is in progress
     // returns 403 status response
-    const maybeResponse = checkBonusActivationIsRunning(
+    const maybeBonusActivationResponse = checkBonusActivationIsRunning(
       context.bindings.processingBonusIdIn
     );
-    if (isSome(maybeResponse)) {
-      return maybeResponse.value;
+    if (isSome(maybeBonusActivationResponse)) {
+      return maybeBonusActivationResponse.value;
     }
 
     // If another ElegibilityCheck operation is in progress for that user
     // returns 202 status response
-    if (
-      isOrchestratorRunning(
-        client,
-        makeStartEligibilityCheckOrchestratorId(fiscalCode)
-      )
-    ) {
-      return ResponseSuccessAccepted("Still running");
+    const maybeEligibilityCheckResponse = await checkEligibilityCheckIsRunning(
+      client,
+      fiscalCode
+    ).run();
+    if (isLeft(maybeEligibilityCheckResponse)) {
+      return maybeEligibilityCheckResponse.value;
     }
 
     try {
@@ -74,10 +72,7 @@ export function EligibilityCheckHandler(): IEligibilityCheckHandler {
         fiscalCode
       );
     } catch (err) {
-      context.log.error(
-        "EligibilityCheck|ERROR|Orchestrator cannot start (status=%s)",
-        status
-      );
+      context.log.error("EligibilityCheck|ERROR|Orchestrator cannot start");
 
       trackException({
         exception: err,
@@ -86,9 +81,7 @@ export function EligibilityCheckHandler(): IEligibilityCheckHandler {
         }
       });
 
-      return ResponseErrorInternal(
-        `Orchestrator error=${err} status=${status}`
-      );
+      return ResponseErrorInternal(`Orchestrator error=${toString(err)}`);
     }
     const instanceId: InstanceId = {
       id: (fiscalCode as unknown) as NonEmptyString

@@ -6,10 +6,9 @@ import {
   mockStatusCompleted,
   mockStatusRunning
 } from "../../__mocks__/durable-functions";
-import {
-  makeStartBonusActivationOrchestratorId,
-  makeStartEligibilityCheckOrchestratorId
-} from "../../utils/orchestrators";
+import { aBonusId } from "../../__mocks__/mocks";
+import { BonusProcessing } from "../../models/bonus_processing";
+import { makeStartEligibilityCheckOrchestratorId } from "../../utils/orchestrators";
 import { EligibilityCheckHandler } from "../handler";
 
 // implement temporary mockGetStatus
@@ -30,20 +29,22 @@ describe("EligibilityCheckHandler", () => {
     // This is the default, happy path behavior
     // I need this because I don't know how many times df.getStatus get called.
     mockGetStatus.mockImplementation(async () => mockStatusCompleted);
+    // tslint:disable-next-line: no-object-mutation
+    context.bindings = {};
   });
 
   it("should returns a 403 status response if a bonus activation is running", async () => {
-    simulateOrchestratorIsRunning(
-      makeStartBonusActivationOrchestratorId(aFiscalCode)
-    );
+    // tslint:disable-next-line: no-object-mutation
+    context.bindings.processingBonusIdIn = BonusProcessing.encode({
+      bonusId: aBonusId,
+      id: aFiscalCode
+    });
 
     const handler = EligibilityCheckHandler();
 
     const response = await handler(context, aFiscalCode);
 
-    expect(response.kind).toBe(
-      "IResponseErrorForbiddenNotAuthorizedForRecipient"
-    );
+    expect(response.kind).toBe("IResponseErrorForbiddenNotAuthorized");
   });
   it("should returns a 202 status response if another EligibilityCheck is running", async () => {
     simulateOrchestratorIsRunning(
