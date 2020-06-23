@@ -73,22 +73,22 @@ export function StartBonusActivationHandler(
         checkBonusActivationIsRunning(context.bindings.processingBonusIdIn)
       )
       .chainSecond(getLatestValidDSU(eligibilityCheckModel, fiscalCode))
-      .map(validDsu => ({
-        familyUID: generateFamilyUID(validDsu.dsuRequest.familyMembers),
-        validDsu
+      .map(dsu => ({
+        dsu,
+        familyUID: generateFamilyUID(dsu.dsuRequest.familyMembers)
       }))
-      .chain(({ validDsu, familyUID }) =>
+      .chain(({ dsu, familyUID }) =>
         acquireLockForUserFamily(bonusLeaseModel, familyUID).map(_ => ({
-          familyUID,
-          validDsu
+          dsu,
+          familyUID
         }))
       )
-      .chain<ApiBonusActivationWithValidBefore>(({ validDsu, familyUID }) =>
+      .chain<ApiBonusActivationWithValidBefore>(({ dsu, familyUID }) =>
         createBonusActivation(
           bonusActivationModel,
           fiscalCode,
           familyUID,
-          validDsu.dsuRequest
+          dsu.dsuRequest
         )
           .chain(bonusActivation =>
             fromEither(toApiBonusActivation(bonusActivation))
@@ -101,7 +101,7 @@ export function StartBonusActivationHandler(
               )
               .map(apiBonusActivation => ({
                 apiBonusActivation,
-                validBefore: validDsu.validBefore
+                validBefore: dsu.validBefore
               }))
           )
           .foldTaskEither(
