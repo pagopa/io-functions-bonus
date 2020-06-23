@@ -137,7 +137,7 @@ describe("getStartBonusActivationOrchestratorHandler", () => {
     expect(trackException).toHaveBeenCalled();
   });
 
-  it("should fail when there's an error in reading the current bonus activation", () => {
+  it("should not release the lock when there's an error in reading the current bonus activation", () => {
     mockGetBonusActivationActivityCall.mockReturnValueOnce(
       PermanentFailure.encode({ kind: "PERMANENT", reason: "a bug" })
     );
@@ -151,7 +151,7 @@ describe("getStartBonusActivationOrchestratorHandler", () => {
       getStartBonusActivationOrchestratorHandler(aHmacSecret)(context)
     );
 
-    expect(result).toBe(false);
+    expect(result).toBe(true);
     expect(mockGetBonusActivationActivityCall).toHaveBeenCalled();
     expect(mockSendBonusActivationActivityCall).not.toHaveBeenCalled();
     expect(mockSendMessageActivityCall).not.toHaveBeenCalled();
@@ -161,7 +161,7 @@ describe("getStartBonusActivationOrchestratorHandler", () => {
     expect(trackException).toHaveBeenCalled();
   });
 
-  it("should fail on bonus activation invalid output", () => {
+  it("should not release the lock when bonus activation returns an invalid output", () => {
     mockGetBonusActivationActivityCall.mockReturnValueOnce("invalid output");
 
     mockOrchestratorGetInput.mockReturnValueOnce({
@@ -173,7 +173,7 @@ describe("getStartBonusActivationOrchestratorHandler", () => {
       getStartBonusActivationOrchestratorHandler(aHmacSecret)(context)
     );
 
-    expect(result).toBe(false);
+    expect(result).toBe(true);
     expect(mockGetBonusActivationActivityCall).toHaveBeenCalled();
     expect(mockSendBonusActivationActivityCall).not.toHaveBeenCalled();
     expect(mockReleaseFamilyLockActivityCall).not.toHaveBeenCalled();
@@ -183,7 +183,7 @@ describe("getStartBonusActivationOrchestratorHandler", () => {
     expect(trackException).toHaveBeenCalled();
   });
 
-  it("should fail when SendBonusActivationActivity fails after all retries", () => {
+  it("should release the lock SendBonusActivationActivity fails after all retries", () => {
     mockSendBonusActivationActivityCall.mockImplementationOnce(() => {
       throw new Error("unexpected");
     });
@@ -197,7 +197,7 @@ describe("getStartBonusActivationOrchestratorHandler", () => {
       getStartBonusActivationOrchestratorHandler(aHmacSecret)(context)
     );
 
-    expect(result).toBe(false);
+    expect(result).toBe(true);
     expect(mockGetBonusActivationActivityCall).toHaveBeenCalled();
     expect(mockSendBonusActivationActivityCall).toHaveBeenCalled();
     expect(mockSendMessageActivityCall).not.toHaveBeenCalled();
