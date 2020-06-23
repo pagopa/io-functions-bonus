@@ -29,19 +29,18 @@ import { ContinueBonusActivationInput } from "../ContinueBonusActivation";
 import { BonusActivation as ApiBonusActivation } from "../generated/definitions/BonusActivation";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { BonusLeaseModel } from "../models/bonus_lease";
+import { BonusProcessing } from "../models/bonus_processing";
 import { trackException } from "../utils/appinsights";
 import { toApiBonusActivation } from "../utils/conversions";
 import { generateFamilyUID } from "../utils/hash";
+import { checkBonusActivationIsRunning } from "./locks";
 import {
   acquireLockForUserFamily,
   createBonusActivation,
   getLatestValidDSU,
   relaseLockForUserFamily
 } from "./models";
-import {
-  checkBonusActivationIsRunning,
-  checkEligibilityCheckIsRunning
-} from "./orchestrators";
+import { checkEligibilityCheckIsRunning } from "./orchestrators";
 import { makeBonusActivationResourceUri } from "./utils";
 
 // when creating the document on cosmos, the logic will retry in case of a
@@ -71,7 +70,9 @@ export function StartBonusActivationHandler(
     return taskEither
       .of<StartBonusActivationResponse, void>(void 0)
       .chainSecond(checkEligibilityCheckIsRunning(dfClient, fiscalCode))
-      .chainSecond(checkBonusActivationIsRunning(dfClient, fiscalCode))
+      .chainSecond(
+        checkBonusActivationIsRunning(context.bindings.processingBonusIdIn)
+      )
       .chainSecond(getLatestValidDSU(eligibilityCheckModel, fiscalCode))
       .map((dsu: Dsu) => ({
         dsu,
@@ -116,6 +117,14 @@ export function StartBonusActivationHandler(
           )
       )
       .fold(identity, apiBonusActivation => {
+        // Add the tuple (fiscalCode, bonusId) to the processing bonus collection
+        // this is used a s lock to avoid having more than one bonus in processing status
+        // The lock is removed when the orchestrator terminate
+        // tslint:disable-next-line: no-object-mutation
+        context.bindings.processingBonusIdOut = BonusProcessing.encode({
+          bonusId: apiBonusActivation.id,
+          id: apiBonusActivation.applicant_fiscal_code
+        });
         // Send the (bonusId, applicantFiscalCode) to the bonus activations queue
         // in order to be processed later (asynchronously)
         // tslint:disable-next-line: no-object-mutation

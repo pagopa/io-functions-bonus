@@ -31,9 +31,13 @@ export const isOrchestratorRunning = (
   orchestratorId: string
 ): TaskEither<
   Error,
-  PromiseType<ReturnType<typeof client["getStatus"]>> & { isRunning: boolean }
+  PromiseType<ReturnType<typeof client["getStatus"]>> & {
+    isRunning: boolean;
+  }
 > =>
   tryCatch(() => client.getStatus(orchestratorId), toError).map(status => ({
     ...status,
-    isRunning: status.runtimeStatus === df.OrchestrationRuntimeStatus.Running
+    isRunning:
+      status.runtimeStatus === df.OrchestrationRuntimeStatus.Running ||
+      status.runtimeStatus === df.OrchestrationRuntimeStatus.Pending
   }));
