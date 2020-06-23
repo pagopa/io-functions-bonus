@@ -58,8 +58,8 @@ export const createBasicHttpRequestTracer = <T extends IBasicHttpTrace>(
 ) =>
   getTableLogger<T>(loggerService, tableName, payload => ({
     PartitionKey: payload.Timestamp.getTime().toString(),
-    RequestPayload: JSON.stringify(payload.RequestPayload),
-    ResponsePayload: JSON.stringify(payload.ResponsePayload),
+    RequestPayload: payload.RequestPayload,
+    ResponsePayload: payload.ResponsePayload,
     RowKey: payload.Timestamp.getTime().toString()
   }));
 
@@ -84,10 +84,9 @@ export const withInpsTracer = logHttpFetch(async (_, init, res) => {
   const ResponsePayload = await res.json();
   await traceInpsRequest({
     RequestPayload: JSON.stringify(init?.body || ""),
-    ResponsePayload,
+    ResponsePayload: JSON.stringify(ResponsePayload),
     Timestamp: new Date()
   });
-  return void 0;
 });
 
 ////////////////////////////////////
@@ -110,9 +109,8 @@ export const traceAdeRequest = createBasicHttpRequestTracer<AdeLogEntity>(
 export const withAdeTracer = logHttpFetch(async (_, init, res) => {
   const ResponsePayload = await res.json();
   await traceAdeRequest({
-    RequestPayload: init?.body?.toString() || "",
-    ResponsePayload,
+    RequestPayload: JSON.stringify(init?.body || ""),
+    ResponsePayload: JSON.stringify(ResponsePayload),
     Timestamp: new Date()
   });
-  return void 0;
 });
