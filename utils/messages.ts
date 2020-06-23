@@ -2,6 +2,7 @@
 
 import { format } from "date-fns";
 import { MessageContent } from "io-functions-commons/dist/generated/definitions/MessageContent";
+import { assertNever } from "./types";
 
 export const MESSAGES = {
   EligibilityCheckSuccessEligible: (validBefore: Date) =>
@@ -87,4 +88,23 @@ Ti ricordiamo che chiunque della tua famiglia potrà spenderlo presso le struttu
 
 Clicca il pulsante qui sotto per procedere.`
     } as MessageContent)
+};
+
+export const getMessage = (
+  messageType: keyof typeof MESSAGES,
+  validBefore: Date
+): MessageContent => {
+  switch (messageType) {
+    case "EligibilityCheckSuccessEligible":
+    case "EligibilityCheckSuccessEligibleWithDiscrepancies":
+      return MESSAGES[messageType](validBefore);
+    case "EligibilityCheckSuccessIneligible":
+    case "EligibilityCheckFailure":
+    case "EligibilityCheckConflict":
+    case "BonusActivationSuccess":
+    case "BonusActivationFailure":
+      return MESSAGES[messageType]();
+    default:
+      return assertNever(messageType);
+  }
 };

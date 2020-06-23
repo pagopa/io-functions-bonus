@@ -2,7 +2,7 @@
 
 import { addSeconds } from "date-fns";
 import * as df from "durable-functions";
-import { isSome, none, Option, some } from "fp-ts/lib/Option";
+import { fromNullable, isSome, none, Option, some } from "fp-ts/lib/Option";
 import * as t from "io-ts";
 import {
   ActivityResult as DeleteEligibilityCheckActivityResult,
@@ -20,7 +20,7 @@ import { EligibilityCheckSuccessEligible } from "../generated/definitions/Eligib
 import { EligibilityCheckSuccessIneligible } from "../generated/definitions/EligibilityCheckSuccessIneligible";
 import { UpsertEligibilityCheckActivityInput } from "../UpsertEligibilityCheckActivity/handler";
 import { toApiEligibilityCheckFromDSU } from "../utils/conversions";
-import { MESSAGES } from "../utils/messages";
+import { getMessage, MESSAGES } from "../utils/messages";
 import { retryOptions } from "../utils/retryPolicy";
 import { ValidateEligibilityCheckActivityInput } from "../ValidateEligibilityCheckActivity/handler";
 
@@ -32,32 +32,12 @@ import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
 import { trackEvent, trackException } from "../utils/appinsights";
 import { toHash } from "../utils/hash";
+import { assertNever } from "../utils/types";
 
 export const OrchestratorInput = FiscalCode;
 export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
 
 const NOTIFICATION_DELAY_SECONDS = 10;
-
-export const getMessage = (
-  messageType: keyof typeof MESSAGES,
-  validBefore: Date
-): MessageContent => {
-  switch (messageType) {
-    case "EligibilityCheckSuccessEligible":
-    case "EligibilityCheckSuccessEligibleWithDiscrepancies":
-      return MESSAGES[messageType](validBefore);
-    case "EligibilityCheckSuccessIneligible":
-    case "EligibilityCheckFailure":
-    case "EligibilityCheckConflict":
-    case "BonusActivationSuccess":
-    case "BonusActivationFailure":
-      return MESSAGES[messageType]();
-    default:
-      throw new Error(
-        `Cannot get MessageContent on EligibilityCheckOrchestrator`
-      );
-  }
-};
 
 export const getMessageType = (
   _: ApiEligibilityCheck
