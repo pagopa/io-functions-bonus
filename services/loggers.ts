@@ -113,7 +113,7 @@ export const traceAdeRequest = createBasicHttpRequestTracer<AdeLogEntity>(
  * @returns a fetch-like function
  */
 export const withAdeTracer = logHttpFetch(async (_, init, res) => {
-  const ResponsePayload = await res.json();
+  const ResponsePayload = await res.text();
   await traceAdeRequest({
     RequestPayload: JSON.stringify(init?.body || ""),
     ResponsePayload: JSON.stringify(ResponsePayload),
