@@ -87,14 +87,23 @@ export function StartBonusActivationHandler(
       .chain<ApiBonusActivation>(({ dsu, familyUID }) =>
         createBonusActivation(bonusActivationModel, fiscalCode, familyUID, dsu)
           .chain(bonusActivation =>
-            fromEither(toApiBonusActivation(bonusActivation)).mapLeft(err =>
-              // TODO: Must the BonusActivation be deleted? Can we send a specific error traking event?
-              ResponseErrorInternal(
+            fromEither(toApiBonusActivation(bonusActivation)).mapLeft(err => {
+              trackException({
+                exception: new Error(
+                  `Fatal error on coversion of BonusActivation from Model to API. [${readableReport(
+                    err
+                  )}]`
+                ),
+                properties: {
+                  name: "bonus.activation.start"
+                }
+              });
+              return ResponseErrorInternal(
                 `Error converting BonusActivation to ApiBonusActivation: ${readableReport(
                   err
                 )}`
-              )
-            )
+              );
+            })
           )
           .foldTaskEither(
             // bonus creation failed
