@@ -59,7 +59,7 @@ describe("FailedBonusActivationHandler", () => {
     ).toBeTruthy();
   });
 
-  it("should return a success if dsu fails to delete", async () => {
+  it("should throw a transient error if dsu fails to delete", async () => {
     mockEligibilityCheckDeleteOneById.mockImplementationOnce(async () => {
       throw new Error("any error");
     });
@@ -69,15 +69,17 @@ describe("FailedBonusActivationHandler", () => {
       mockEligibilityCheckModel
     );
 
-    const response = await handler(context, {
-      bonusActivation: aBonusActivationWithFamilyUID
-    });
-    expect(
-      FailedBonusActivationSuccess.decode(response).isRight()
-    ).toBeTruthy();
+    try {
+      await handler(context, {
+        bonusActivation: aBonusActivationWithFamilyUID
+      });
+      fail();
+    } catch (err) {
+      expect(TransientFailure.decode(err).isRight()).toBeTruthy();
+    }
   });
 
-  it("should return a success if bonus fails to update", async () => {
+  it("should throw a transient error if bonus fails to update", async () => {
     mockBonusActivationReplace.mockImplementationOnce(async () => {
       throw new Error("any error");
     });
@@ -87,12 +89,14 @@ describe("FailedBonusActivationHandler", () => {
       mockEligibilityCheckModel
     );
 
-    const response = await handler(context, {
-      bonusActivation: aBonusActivationWithFamilyUID
-    });
-    expect(
-      FailedBonusActivationSuccess.decode(response).isRight()
-    ).toBeTruthy();
+    try {
+      await handler(context, {
+        bonusActivation: aBonusActivationWithFamilyUID
+      });
+      fail();
+    } catch (err) {
+      expect(TransientFailure.decode(err).isRight()).toBeTruthy();
+    }
   });
 
   it("should fail on invalid input", async () => {

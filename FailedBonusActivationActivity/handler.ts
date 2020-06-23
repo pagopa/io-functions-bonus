@@ -1,5 +1,5 @@
 import { Context } from "@azure/functions";
-import { TaskEither, taskEither } from "fp-ts/lib/TaskEither";
+import { fromLeft, TaskEither, taskEither } from "fp-ts/lib/TaskEither";
 import { fromEither } from "fp-ts/lib/TaskEither";
 import {
   fromQueryEither,
@@ -97,7 +97,9 @@ export function FailedBonusActivationHandler(
       .of<FailedBonusActivationFailure, void>(void 0)
       .chain(_ =>
         fromEither(FailedBonusActivationInput.decode(input))
-          .mapLeft(() => InvalidInputFailure.encode({ kind: "INVALID_INPUT" }))
+          .mapLeft<FailedBonusActivationFailure>(() =>
+            InvalidInputFailure.encode({ kind: "INVALID_INPUT" })
+          )
           .map(({ bonusActivation }) => bonusActivation)
       )
       .chain(bonusActivation =>
@@ -108,6 +110,17 @@ export function FailedBonusActivationHandler(
               context.log.warn(
                 `FailedBonusActivationHandler|WARN|Failed deleting dsu: ${err.body}`
               );
+              if (err.code !== 404) {
+                return fromLeft<
+                  FailedBonusActivationFailure,
+                  BonusActivationWithFamilyUID
+                >(
+                  TransientFailure.encode({
+                    kind: "TRANSIENT",
+                    reason: `Query Error: code=${err.code} body=${err.body}`
+                  })
+                );
+              }
               return taskEither.of(bonusActivation);
             },
             _ => taskEither.of(bonusActivation)
@@ -121,7 +134,12 @@ export function FailedBonusActivationHandler(
               context.log.warn(
                 `FailedBonusActivationHandler|WARN|Failed updating bonus: ${err.body}`
               );
-              return taskEither.of(bonusActivation);
+              return fromLeft(
+                TransientFailure.encode({
+                  kind: "TRANSIENT",
+                  reason: `Query Error: code=${err.code} body=${err.body}`
+                })
+              );
             },
             _ => taskEither.of(bonusActivation)
           )

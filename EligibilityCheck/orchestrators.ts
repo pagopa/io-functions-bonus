@@ -2,10 +2,10 @@ import { DurableOrchestrationClient } from "durable-functions/lib/src/durableorc
 import { left, right } from "fp-ts/lib/Either";
 import { fromEither, TaskEither } from "fp-ts/lib/TaskEither";
 import {
-  IResponseErrorForbiddenNotAuthorized,
   IResponseErrorInternal,
-  ResponseErrorForbiddenNotAuthorized,
-  ResponseErrorInternal
+  IResponseSuccessAccepted,
+  ResponseErrorInternal,
+  ResponseSuccessAccepted
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import {
@@ -15,26 +15,15 @@ import {
 
 /**
  * Check if the current user has a pending dsu validation request.
- * If there's no pending requests right(false) is returned
- * @param client
- * @param fiscalCode
- *
- * @returns either false or a custom response indicating whether there's a process running or there has been an internal error during the check
  */
 export const checkEligibilityCheckIsRunning = (
   client: DurableOrchestrationClient,
   fiscalCode: FiscalCode
-): TaskEither<
-  IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized,
-  false
-> =>
+): TaskEither<IResponseErrorInternal | IResponseSuccessAccepted, false> =>
   isOrchestratorRunning(
     client,
     makeStartEligibilityCheckOrchestratorId(fiscalCode)
-  ).foldTaskEither<
-    IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized,
-    false
-  >(
+  ).foldTaskEither<IResponseErrorInternal | IResponseSuccessAccepted, false>(
     err =>
       fromEither(
         left(
@@ -44,7 +33,5 @@ export const checkEligibilityCheckIsRunning = (
         )
       ),
     ({ isRunning }) =>
-      fromEither(
-        isRunning ? left(ResponseErrorForbiddenNotAuthorized) : right(false)
-      )
+      fromEither(isRunning ? left(ResponseSuccessAccepted()) : right(false))
   );
