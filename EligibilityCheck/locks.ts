@@ -6,16 +6,7 @@ import {
   ResponseErrorForbiddenNotAuthorized,
   ResponseErrorInternal
 } from "italia-ts-commons/lib/responses";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { BonusCode } from "../generated/models/BonusCode";
-
-import * as t from "io-ts";
-
-export const ProcessingBonus = t.type({
-  bonusId: BonusCode,
-  id: FiscalCode
-});
-export type ProcessingBonus = t.TypeOf<typeof ProcessingBonus>;
+import { BonusProcessing } from "../models/bonus_Processing";
 
 /**
  * Check if the current user has a pending activation request.
@@ -34,7 +25,7 @@ export const checkBonusActivationIsRunning = (
     _ =>
       // processing bonus found for this user fiscal code
       // try to decode the result obtained from cosmosdb
-      ProcessingBonus.decode(_).fold<
+      BonusProcessing.decode(_).fold<
         Either<
           IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized,
           false
