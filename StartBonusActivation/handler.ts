@@ -61,6 +61,7 @@ import {
   fromQueryEither,
   QueryError
 } from "io-functions-commons/dist/src/utils/documentdb";
+import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { Millisecond } from "italia-ts-commons/lib/units";
 import { ContinueBonusActivationInput } from "../ContinueBonusActivation/handler";
@@ -68,12 +69,28 @@ import { BonusActivation as ApiBonusActivation } from "../generated/definitions/
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 import { FamilyUID } from "../generated/models/FamilyUID";
+import { Timestamp } from "../generated/models/Timestamp";
 import { BonusLeaseModel } from "../models/bonus_lease";
 import { trackException } from "../utils/appinsights";
 import { toApiBonusActivation } from "../utils/conversions";
 import { generateFamilyUID } from "../utils/hash";
 
 export const BONUS_CREATION_MAX_ATTEMPTS = 5;
+
+export const DsuWithValidBefore = t.interface({
+  dsu: Dsu,
+  validBefore: Timestamp
+});
+export type DsuWithValidBefore = t.TypeOf<typeof DsuWithValidBefore>;
+
+export const ApiBonusActivationWithValidBefore = t.interface({
+  apiBonusActivation: ApiBonusActivation,
+  validBefore: Timestamp
+});
+
+export type ApiBonusActivationWithValidBefore = t.TypeOf<
+  typeof ApiBonusActivationWithValidBefore
+>;
 
 const checkOrchestratorIsRunning = (
   client: DurableOrchestrationClient,
@@ -212,7 +229,7 @@ const getLatestValidDSU = (
   | IResponseErrorForbiddenNotAuthorized
   | IResponseErrorGone
   | IResponseErrorInternal,
-  Dsu
+  DsuWithValidBefore
 > =>
   fromQueryEither(() =>
     eligibilityCheckModel.find(fiscalCode, fiscalCode)
@@ -225,7 +242,7 @@ const getLatestValidDSU = (
           | IResponseErrorForbiddenNotAuthorized
           | IResponseErrorGone
           | IResponseErrorInternal,
-          Dsu
+          DsuWithValidBefore
         >
       >(fromEither(left(ResponseErrorForbiddenNotAuthorized)), doc =>
         // the found document is not in eligible status
@@ -235,7 +252,9 @@ const getLatestValidDSU = (
           isBefore(doc.validBefore, new Date())
           ? fromEither(left(ResponseErrorGone(`DSU expired`)))
           : // the check is fine, I can extract the DSU data from it
-            fromEither(right(doc.dsuRequest))
+            fromEither(
+              right({ dsu: doc.dsuRequest, validBefore: doc.validBefore })
+            )
       );
     }
   );
@@ -388,26 +407,36 @@ export function StartBonusActivationHandler(
       .chainSecond(checkEligibilityCheckIsRunning(dfClient, fiscalCode))
       .chainSecond(checkBonusActivationIsRunning(dfClient, fiscalCode))
       .chainSecond(getLatestValidDSU(eligibilityCheckModel, fiscalCode))
-      .map((dsu: Dsu) => ({
-        dsu,
-        familyUID: generateFamilyUID(dsu.familyMembers)
+      .map((validDsu: DsuWithValidBefore) => ({
+        familyUID: generateFamilyUID(validDsu.dsu.familyMembers),
+        validDsu
       }))
-      .chain(({ dsu, familyUID }) =>
+      .chain(({ validDsu, familyUID }) =>
         acquireLockForUserFamily(bonusLeaseModel, familyUID).map(_ => ({
-          dsu,
-          familyUID
+          familyUID,
+          validDsu
         }))
       )
-      .chain<ApiBonusActivation>(({ dsu, familyUID }) =>
-        createBonusActivation(bonusActivationModel, fiscalCode, familyUID, dsu)
+      .chain<ApiBonusActivationWithValidBefore>(({ validDsu, familyUID }) =>
+        createBonusActivation(
+          bonusActivationModel,
+          fiscalCode,
+          familyUID,
+          validDsu.dsu
+        )
           .chain(bonusActivation =>
-            fromEither(toApiBonusActivation(bonusActivation)).mapLeft(err =>
-              ResponseErrorInternal(
-                `Error converting BonusActivation to ApiBonusActivation: ${readableReport(
-                  err
-                )}`
+            fromEither(toApiBonusActivation(bonusActivation))
+              .mapLeft(err =>
+                ResponseErrorInternal(
+                  `Error converting BonusActivation to ApiBonusActivation: ${readableReport(
+                    err
+                  )}`
+                )
               )
-            )
+              .map(apiBonusActivation => ({
+                apiBonusActivation,
+                validBefore: validDsu.validBefore
+              }))
           )
           .foldTaskEither(
             // bonus creation failed
@@ -427,22 +456,30 @@ export function StartBonusActivationHandler(
               );
             },
             // bonus creation succeeded
-            bonusActivation => taskEither.of(bonusActivation)
+            bonusActivationWithValidBefore =>
+              taskEither.of(bonusActivationWithValidBefore)
           )
       )
-      .fold(identity, apiBonusActivation => {
+      .fold(identity, apiBonusActivationWithValidBefore => {
         // Send the (bonusId, applicantFiscalCode) to the bonus activations queue
         // in order to be processed later (asynchronously)
         // tslint:disable-next-line: no-object-mutation
         context.bindings.bonusActivation = ContinueBonusActivationInput.encode({
-          applicantFiscalCode: apiBonusActivation.applicant_fiscal_code,
-          bonusId: apiBonusActivation.id
+          applicantFiscalCode:
+            apiBonusActivationWithValidBefore.apiBonusActivation
+              .applicant_fiscal_code,
+          bonusId: apiBonusActivationWithValidBefore.apiBonusActivation.id,
+          validBefore: apiBonusActivationWithValidBefore.validBefore
         });
         return ResponseSuccessRedirectToResource(
-          apiBonusActivation,
-          makeBonusActivationResourceUri(fiscalCode, apiBonusActivation.id),
+          apiBonusActivationWithValidBefore.apiBonusActivation,
+          makeBonusActivationResourceUri(
+            fiscalCode,
+            apiBonusActivationWithValidBefore.apiBonusActivation.id
+          ),
           InstanceId.encode({
-            id: (apiBonusActivation.id as unknown) as NonEmptyString
+            id: (apiBonusActivationWithValidBefore.apiBonusActivation
+              .id as unknown) as NonEmptyString
           })
         );
       })

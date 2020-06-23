@@ -20,10 +20,12 @@ import { Failure } from "../utils/errors";
 import { makeStartBonusActivationOrchestratorId } from "../utils/orchestrators";
 
 import * as t from "io-ts";
+import { Timestamp } from "../generated/models/Timestamp";
 
 export const ContinueBonusActivationInput = t.type({
   applicantFiscalCode: FiscalCode,
-  bonusId: BonusCode
+  bonusId: BonusCode,
+  validBefore: Timestamp
 });
 
 /**
@@ -38,9 +40,10 @@ export const ContinueBonusActivationInput = t.type({
 const runStartBonusActivationOrchestrator = (
   client: DurableOrchestrationClient,
   bonusActivation: BonusActivationWithFamilyUID,
-  fiscalCode: FiscalCode
+  fiscalCode: FiscalCode,
+  validBefore: Date
 ): TaskEither<Failure, string> =>
-  fromEither(OrchestratorInput.decode({ bonusActivation }))
+  fromEither(OrchestratorInput.decode({ bonusActivation, validBefore }))
     .mapLeft(err =>
       // validate input here, so we can make the http handler fail too. This shouldn't happen anyway
       Failure.encode({
@@ -73,7 +76,8 @@ export function ContinueBonusActivationHandler(
   dfClient: DurableOrchestrationClient,
   bonusActivationModel: BonusActivationModel,
   fiscalCode: FiscalCode,
-  bonusId: BonusCode
+  bonusId: BonusCode,
+  validBefore: Date
 ): TaskEither<Failure, string> {
   return tryCatch(
     () => bonusActivationModel.findBonusActivationForUser(bonusId, fiscalCode),
@@ -120,7 +124,8 @@ export function ContinueBonusActivationHandler(
         runStartBonusActivationOrchestrator(
           dfClient,
           bonusActivation,
-          fiscalCode
+          fiscalCode,
+          validBefore
         )
     );
 }

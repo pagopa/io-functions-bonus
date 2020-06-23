@@ -44,12 +44,13 @@ const index: AzureFunction = (
         reason: `Cannot decode input: ${readableReport(errs)}`
       })
     )
-    .chain(({ bonusId, applicantFiscalCode }) =>
+    .chain(({ bonusId, applicantFiscalCode, validBefore }) =>
       ContinueBonusActivationHandler(
         df.getClient(context),
         bonusActivationModel,
         applicantFiscalCode,
-        bonusId
+        bonusId,
+        validBefore
       )
     )
     .fold<Failure | string>(err => {

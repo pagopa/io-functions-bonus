@@ -219,7 +219,8 @@ describe("StartBonusActivationHandler", () => {
     const response = await handler(context, aFiscalCode);
     expect(context.bindings.bonusActivation).toEqual({
       applicantFiscalCode: aFiscalCode,
-      bonusId: aBonusId
+      bonusId: aBonusId,
+      validBefore: aEligibilityCheckSuccessEligibleValid.validBefore
     });
 
     // the first attempt failed, so it's called twice
@@ -345,7 +346,8 @@ describe("StartBonusActivationHandler", () => {
     const response = await handler(context, aFiscalCode);
     expect(context.bindings.bonusActivation).toEqual({
       applicantFiscalCode: aFiscalCode,
-      bonusId: aBonusId
+      bonusId: aBonusId,
+      validBefore: aEligibilityCheckSuccessEligibleValid.validBefore
     });
     expect(response.kind).toBe("IResponseSuccessRedirectToResource");
   });

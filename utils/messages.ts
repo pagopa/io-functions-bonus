@@ -80,11 +80,17 @@ Clicca il pulsante qui sotto per procedere.
 Ti ricordiamo che chiunque della tua famiglia potrà spenderlo presso le strutture ricettive aderenti dal 1 luglio al 31 dicembre 2020.`
     } as MessageContent),
 
-  BonusActivationFailure: () =>
+  BonusActivationFailure: (validBefore: Date) =>
     ({
       subject: "Abbiamo riscontrato dei problemi",
       markdown: `Si è verificato un errore nel processare la tua richiesta di Bonus.  
-
+      Ti chiediamo di confermare di nuovo la tua richiesta **entro le ${format(
+        validBefore,
+        "HH:mm"
+      )} del ${format(
+        validBefore,
+        "dd-MM"
+      )}**, per ricominciare da dove hai lasciato. Oltre questa scadenza, dovrai iniziare una nuova domanda.
 Clicca il pulsante qui sotto per procedere.`
     } as MessageContent)
 };

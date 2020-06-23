@@ -45,12 +45,12 @@ export const getMessage = (
   switch (messageType) {
     case "EligibilityCheckSuccessEligible":
     case "EligibilityCheckSuccessEligibleWithDiscrepancies":
+    case "BonusActivationFailure":
       return MESSAGES[messageType](validBefore);
     case "EligibilityCheckSuccessIneligible":
     case "EligibilityCheckFailure":
     case "EligibilityCheckConflict":
     case "BonusActivationSuccess":
-    case "BonusActivationFailure":
       return MESSAGES[messageType]();
     default:
       throw new Error(

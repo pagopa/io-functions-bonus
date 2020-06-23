@@ -10,6 +10,7 @@ import { readableReport } from "italia-ts-commons/lib/reporters";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { FailedBonusActivationInput } from "../FailedBonusActivationActivity/handler";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
+import { Timestamp } from "../generated/models/Timestamp";
 import { ReleaseFamilyLockActivityInput } from "../ReleaseFamilyLockActivity/handler";
 import { SendBonusActivationSuccess } from "../SendBonusActivationActivity/handler";
 import { SendBonusActivationInput } from "../SendBonusActivationActivity/handler";
@@ -22,7 +23,8 @@ import { MESSAGES } from "../utils/messages";
 import { retryOptions } from "../utils/retryPolicy";
 
 export const OrchestratorInput = t.interface({
-  bonusActivation: BonusActivationWithFamilyUID
+  bonusActivation: BonusActivationWithFamilyUID,
+  validBefore: Timestamp
 });
 export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
 
@@ -179,7 +181,9 @@ export const getStartBonusActivationOrchestratorHandler = (
           retryOptions,
           SendMessageActivityInput.encode({
             checkProfile: false,
-            content: MESSAGES.BonusActivationFailure(),
+            content: MESSAGES.BonusActivationFailure(
+              startBonusActivationOrchestratorInput.validBefore
+            ),
             fiscalCode:
               startBonusActivationOrchestratorInput.bonusActivation
                 .applicantFiscalCode

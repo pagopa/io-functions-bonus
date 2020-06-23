@@ -12,6 +12,8 @@ import { BonusActivationStatusEnum } from "../../generated/models/BonusActivatio
 import { BonusActivationModel } from "../../models/bonus_activation";
 import { ContinueBonusActivationHandler } from "../handler";
 
+const aValidBeforeDate = new Date();
+
 describe("ContinueBonusActivation", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -33,7 +35,8 @@ describe("ContinueBonusActivation", () => {
       df.getClient(context),
       mockBonusActivationkModel,
       aFiscalCode,
-      aBonusId
+      aBonusId,
+      aValidBeforeDate
     ).run();
 
     expect(isLeft(response)).toBeTruthy();
@@ -53,7 +56,8 @@ describe("ContinueBonusActivation", () => {
       df.getClient(context),
       mockBonusActivationkModel,
       aFiscalCode,
-      aBonusId
+      aBonusId,
+      aValidBeforeDate
     ).run();
 
     expect(isLeft(response)).toBeTruthy();
@@ -74,7 +78,8 @@ describe("ContinueBonusActivation", () => {
       df.getClient(context),
       mockBonusActivationkModel,
       aFiscalCode,
-      aBonusId
+      aBonusId,
+      aValidBeforeDate
     ).run();
 
     expect(isLeft(response)).toBeTruthy();
@@ -95,7 +100,8 @@ describe("ContinueBonusActivation", () => {
       df.getClient(context),
       mockBonusActivationkModel,
       aFiscalCode,
-      aBonusId
+      aBonusId,
+      aValidBeforeDate
     ).run();
 
     expect(isLeft(response)).toBeTruthy();
@@ -123,7 +129,8 @@ describe("ContinueBonusActivation", () => {
       df.getClient(context),
       mockBonusActivationkModel,
       aFiscalCode,
-      aBonusId
+      aBonusId,
+      aValidBeforeDate
     ).run();
 
     expect(isLeft(response)).toBeTruthy();
@@ -149,7 +156,8 @@ describe("ContinueBonusActivation", () => {
       df.getClient(context),
       mockBonusActivationkModel,
       aFiscalCode,
-      aBonusId
+      aBonusId,
+      aValidBeforeDate
     ).run();
 
     expect(isRight(response)).toBeTruthy();
