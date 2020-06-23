@@ -29,7 +29,7 @@ const bonusLeaseModel = new BonusLeaseModel(
   )
 );
 
-const index: AzureFunction = async (context: Context, input: unknown) => {
+const index: AzureFunction = async (_: Context, input: unknown) => {
   const decoded = CosmosDbDocumentCollection.decode(input);
   if (decoded.isLeft()) {
     throw Error(
@@ -43,15 +43,18 @@ const index: AzureFunction = async (context: Context, input: unknown) => {
       decoded.value
         .map(BonusActivation.decode)
         .filter(isRight)
-        .map(_ => _.value)
-        .filter(_ => _.status === BonusActivationStatusEnum.PROCESSING)
-        .map(_ => ({
-          bonusID: _.id,
-          id: generateFamilyUID(_.dsuRequest.familyMembers)
+        .map(bonusActivation => bonusActivation.value)
+        .filter(
+          bonusActivation =>
+            bonusActivation.status === BonusActivationStatusEnum.PROCESSING
+        )
+        .map(processingBonus => ({
+          bonusID: processingBonus.id,
+          id: generateFamilyUID(processingBonus.dsuRequest.familyMembers)
         }))
-        .map(_ =>
+        .map(bonusLease =>
           tryCatch(
-            () => bonusLeaseModel.replaceDocument(_, _.id),
+            () => bonusLeaseModel.replaceDocument(bonusLease, bonusLease.id),
             () => new Error("Error updating BonusLease")
           )
         )

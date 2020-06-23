@@ -6,9 +6,8 @@ import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { pick, tag } from "italia-ts-commons/lib/types";
-import { keys } from "../utils/types";
-import { BonusActivation } from "../generated/models/BonusActivation";
 import { BonusCode } from "../generated/models/BonusCode";
+import { keys } from "../utils/types";
 
 export const BONUS_LEASE_COLLECTION_NAME = "bonus-leases";
 
