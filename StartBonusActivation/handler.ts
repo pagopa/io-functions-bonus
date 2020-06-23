@@ -29,6 +29,7 @@ import { ContinueBonusActivationInput } from "../ContinueBonusActivation";
 import { BonusActivation as ApiBonusActivation } from "../generated/definitions/BonusActivation";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { BonusLeaseModel } from "../models/bonus_lease";
+import { BonusProcessing } from "../models/bonus_processing";
 import { trackException } from "../utils/appinsights";
 import { toApiBonusActivation } from "../utils/conversions";
 import { generateFamilyUID } from "../utils/hash";
@@ -122,7 +123,7 @@ export function StartBonusActivationHandler(
         // this is used a s lock to avoid having more than one bonus in processing status
         // The lock is removed when the orchestrator terminate
         // tslint:disable-next-line: no-object-mutation
-        context.bindings.processingBonusIdOut = ProcessingBonus.encode({
+        context.bindings.processingBonusIdOut = BonusProcessing.encode({
           bonusId: apiBonusActivation.id,
           id: apiBonusActivation.applicant_fiscal_code
         });

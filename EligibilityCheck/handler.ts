@@ -1,7 +1,6 @@
 import { Context } from "@azure/functions";
 import * as df from "durable-functions";
 import * as express from "express";
-import { isLeft } from "fp-ts/lib/Either";
 import { isSome } from "fp-ts/lib/Option";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import { FiscalCodeMiddleware } from "io-functions-commons/dist/src/utils/middlewares/fiscalcode";
