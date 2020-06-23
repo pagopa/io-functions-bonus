@@ -15,7 +15,7 @@ import {
   RetrievedBonusActivation
 } from "../models/bonus_activation";
 import { trackException } from "../utils/appinsights";
-import { Failure } from "../utils/errors";
+import { Failure, TransientFailure } from "../utils/errors";
 
 export const GetBonusActivationActivityInput = t.type({
   applicantFiscalCode: FiscalCode,
@@ -67,7 +67,7 @@ export function getGetBonusActivationActivityHandler(
         ).mapLeft(err =>
           // Promise rejected or thrown
           Failure.encode({
-            kind: "PERMANENT",
+            kind: "TRANSIENT",
             reason: `Query error: ${err.code}=${err.body}`
           })
         )
@@ -102,6 +102,9 @@ export function getGetBonusActivationActivityHandler(
               name: "bonus.activation.processing"
             }
           });
+          if (TransientFailure.is(err)) {
+            throw err;
+          }
           return err;
         },
         bonusActivation => ({

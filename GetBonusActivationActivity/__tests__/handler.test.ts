@@ -12,7 +12,7 @@ import {
   RetrievedBonusActivation
 } from "../../models/bonus_activation";
 import { trackException } from "../../utils/appinsights";
-import { Failure } from "../../utils/errors";
+import { Failure, TransientFailure } from "../../utils/errors";
 import { getGetBonusActivationActivityHandler } from "../handler";
 
 jest.mock("../../utils/appinsights");
@@ -55,7 +55,7 @@ describe("getGetBonusActivationActivityHandler", () => {
     expect(trackException).toHaveBeenCalled();
   });
 
-  it("should return error on query error", async () => {
+  it("should throw an error on query error", async () => {
     mockBonusActivationFind.mockImplementationOnce(async () =>
       left(aQueryError)
     );
@@ -64,16 +64,19 @@ describe("getGetBonusActivationActivityHandler", () => {
       mockBonusActivationModel
     );
 
-    const result = await handler(context, {
-      applicantFiscalCode: aFiscalCode,
-      bonusId: aBonusId
-    });
-
-    expect(Failure.decode(result).isRight()).toBeTruthy();
-    expect(trackException).toHaveBeenCalled();
+    try {
+      await handler(context, {
+        applicantFiscalCode: aFiscalCode,
+        bonusId: aBonusId
+      });
+      fail();
+    } catch (err) {
+      expect(TransientFailure.decode(err).isRight()).toBeTruthy();
+      expect(trackException).toHaveBeenCalled();
+    }
   });
 
-  it("should return error on query unhandled exception", async () => {
+  it("should throw an error on query unhandled exception", async () => {
     mockBonusActivationFind.mockImplementationOnce(async () => {
       throw new Error("any error");
     });
@@ -82,13 +85,16 @@ describe("getGetBonusActivationActivityHandler", () => {
       mockBonusActivationModel
     );
 
-    const result = await handler(context, {
-      applicantFiscalCode: aFiscalCode,
-      bonusId: aBonusId
-    });
-
-    expect(Failure.decode(result).isRight()).toBeTruthy();
-    expect(trackException).toHaveBeenCalled();
+    try {
+      await handler(context, {
+        applicantFiscalCode: aFiscalCode,
+        bonusId: aBonusId
+      });
+      fail();
+    } catch (err) {
+      expect(TransientFailure.decode(err).isRight()).toBeTruthy();
+      expect(trackException).toHaveBeenCalled();
+    }
   });
 
   it("should return error on bonus not found", async () => {
