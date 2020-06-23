@@ -220,7 +220,7 @@ describe("StartBonusActivationHandler", () => {
     expect(context.bindings.bonusActivation).toEqual({
       applicantFiscalCode: aFiscalCode,
       bonusId: aBonusId,
-      validBefore: aEligibilityCheckSuccessEligibleValid.validBefore
+      validBefore: aEligibilityCheckSuccessEligibleValid.validBefore.toISOString()
     });
 
     // the first attempt failed, so it's called twice
@@ -347,7 +347,7 @@ describe("StartBonusActivationHandler", () => {
     expect(context.bindings.bonusActivation).toEqual({
       applicantFiscalCode: aFiscalCode,
       bonusId: aBonusId,
-      validBefore: aEligibilityCheckSuccessEligibleValid.validBefore
+      validBefore: aEligibilityCheckSuccessEligibleValid.validBefore.toISOString()
     });
     expect(response.kind).toBe("IResponseSuccessRedirectToResource");
   });
