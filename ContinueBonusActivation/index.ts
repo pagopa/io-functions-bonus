@@ -6,6 +6,7 @@ import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { BonusCode } from "../generated/models/BonusCode";
+import { Timestamp } from "../generated/models/Timestamp";
 import { OrchestratorInput } from "../StartBonusActivationOrchestrator/handler";
 import { trackException } from "../utils/appinsights";
 import { Failure, TransientFailure } from "../utils/errors";
@@ -13,7 +14,9 @@ import { makeStartBonusActivationOrchestratorId } from "../utils/orchestrators";
 
 export const ContinueBonusActivationInput = t.type({
   applicantFiscalCode: FiscalCode,
-  bonusId: BonusCode
+  bonusId: BonusCode,
+  // we need the following value to send notifications
+  validBefore: Timestamp
 });
 
 /**
@@ -31,16 +34,18 @@ export const index: AzureFunction = (
         reason: `Cannot decode input: ${readableReport(errs)}`
       })
     )
-    .chain(({ bonusId, applicantFiscalCode }) =>
+    .chain(({ bonusId, applicantFiscalCode, validBefore }) =>
       tryCatch(
         () =>
-          df
-            .getClient(context)
-            .startNew(
-              "StartBonusActivationOrchestrator",
-              makeStartBonusActivationOrchestratorId(applicantFiscalCode),
-              OrchestratorInput.encode({ applicantFiscalCode, bonusId })
-            ),
+          df.getClient(context).startNew(
+            "StartBonusActivationOrchestrator",
+            makeStartBonusActivationOrchestratorId(applicantFiscalCode),
+            OrchestratorInput.encode({
+              applicantFiscalCode,
+              bonusId,
+              validBefore
+            })
+          ),
         _ =>
           Failure.encode({
             kind: "TRANSIENT",

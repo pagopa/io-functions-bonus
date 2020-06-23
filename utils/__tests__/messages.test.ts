@@ -3,7 +3,6 @@ import { NewMessage } from "io-functions-commons/dist/generated/definitions/NewM
 import { getMessage, MESSAGES } from "../messages";
 
 const aValidBeforeDate = new Date();
-
 describe("Messages", () => {
   it("should decode all messages", () => {
     Object.keys(MESSAGES).forEach(k => {

@@ -44,8 +44,10 @@ import {
   QueryError
 } from "io-functions-commons/dist/src/utils/documentdb";
 import { Millisecond } from "italia-ts-commons/lib/units";
+import { BonusActivation } from "../generated/definitions/BonusActivation";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 import { FamilyUID } from "../generated/models/FamilyUID";
+import { Timestamp } from "../generated/models/Timestamp";
 import { BonusLeaseModel } from "../models/bonus_lease";
 import { errorToQueryError } from "./utils";
 
@@ -60,9 +62,17 @@ const withRetryPolicy = withRetries<QueryError, RetrievedBonusActivation>(
   () => CREATION_DELAY_ON_CONFLICT
 );
 
+export interface IApiBonusActivationWithValidBefore {
+  apiBonusActivation: BonusActivation;
+  validBefore: Timestamp;
+}
+
 const eligibilityCheckToResponse = (
   doc: RetrievedEligibilityCheck
-): TaskEither<IResponseErrorForbiddenNotAuthorized | IResponseErrorGone, Dsu> =>
+): TaskEither<
+  IResponseErrorForbiddenNotAuthorized | IResponseErrorGone,
+  EligibilityCheckSuccessEligible
+> =>
   // the found document is not in eligible status
   !EligibilityCheckSuccessEligible.is(doc)
     ? fromLeft(ResponseErrorForbiddenNotAuthorized)
@@ -70,7 +80,7 @@ const eligibilityCheckToResponse = (
     isBefore(doc.validBefore, new Date())
     ? fromLeft(ResponseErrorGone("DSU expired"))
     : // the check is fine, I can extract the DSU data from it
-      fromEither(right(doc.dsuRequest));
+      fromEither(right(doc));
 
 /**
  * Query for a valid DSU relative to the current user.
@@ -86,7 +96,7 @@ export const getLatestValidDSU = (
   | IResponseErrorForbiddenNotAuthorized
   | IResponseErrorGone
   | IResponseErrorInternal,
-  Dsu
+  EligibilityCheckSuccessEligible
 > =>
   fromQueryEither(() =>
     eligibilityCheckModel.find(fiscalCode, fiscalCode)
