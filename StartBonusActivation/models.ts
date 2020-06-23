@@ -43,7 +43,6 @@ import {
   fromQueryEither,
   QueryError
 } from "io-functions-commons/dist/src/utils/documentdb";
-import * as t from "io-ts";
 import { Millisecond } from "italia-ts-commons/lib/units";
 import { BonusActivation } from "../generated/definitions/BonusActivation";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
