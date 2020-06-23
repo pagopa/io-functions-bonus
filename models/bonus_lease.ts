@@ -7,15 +7,21 @@ import { readableReport } from "italia-ts-commons/lib/reporters";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { pick, tag } from "italia-ts-commons/lib/types";
 import { keys } from "../utils/types";
+import { BonusActivation } from "../generated/models/BonusActivation";
+import { BonusCode } from "../generated/models/BonusCode";
 
 export const BONUS_LEASE_COLLECTION_NAME = "bonus-leases";
 
 // Computed unique ID from family members fiscal codes
 export const BONUS_LEASE_MODEL_PK_FIELD = "id";
 
-export const BonusLease = t.interface({
+const BonusLeaseR = t.interface({
   id: NonEmptyString
 });
+const BonusLeaseO = t.partial({
+  bonusID: BonusCode
+});
+export const BonusLease = t.intersection([BonusLeaseR, BonusLeaseO]);
 export type BonusLease = t.TypeOf<typeof BonusLease>;
 
 interface IRetrievedBonusLease {
@@ -86,6 +92,24 @@ export class BonusLeaseModel extends DocumentDbModel<
         { partitionKey: documentId },
         (err: DocumentDb.QueryError) =>
           resolve(err ? left(err) : right(documentId))
+      )
+    );
+  }
+
+  public replaceDocument(
+    document: BonusLease,
+    partitionKey: BonusLease["id"]
+  ): Promise<Either<DocumentDb.QueryError, BonusLease>> {
+    const documentUri = DocumentDbUtils.getDocumentUri(
+      this.collectionUri,
+      partitionKey
+    );
+    return new Promise(resolve =>
+      this.dbClient.replaceDocument(
+        documentUri.uri,
+        document,
+        (err: DocumentDb.QueryError) =>
+          resolve(err ? left(err) : right(document))
       )
     );
   }

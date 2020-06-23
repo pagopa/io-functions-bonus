@@ -1,0 +1,17 @@
+{
+  "bindings": [
+    {
+      "type": "cosmosDBTrigger",
+      "name": "documents",
+      "direction": "in",
+      "leaseCollectionName": "change-feed-bonus",
+      "leaseCollectionPrefix": "ba",
+      "connectionStringSetting": "COSMOSDB_CONNECTION_STRING",
+      "databaseName": "%COSMOSDB_BONUS_DATABASE_NAME%",
+      "collectionName": "bonus-activations",
+      "createLeaseCollectionIfNotExists": true,
+      "startFromBeginning": false
+    }
+  ],
+  "scriptFile": "../dist/BindFamilyLockBonusActivation/index.js"
+}
