@@ -24,6 +24,25 @@
       "name": "bonusActivation",
       "queueName": "bonusactivations",
       "connection": "BONUS_STORAGE_CONNECTION_STRING"
+    },
+    {
+      "type": "cosmosDB",
+      "name": "processingBonusIdIn",
+      "databaseName": "%COSMOSDB_BONUS_DATABASE_NAME%",
+      "collectionName": "bonus-processing",
+      "connectionStringSetting": "COSMOSDB_CONNECTION_STRING",
+      "direction": "in",
+      "Id": "{fiscalcode}",
+      "PartitionKey": "{fiscalcode}"
+    },
+    {
+      "type": "cosmosDB",
+      "name": "processingBonusIdOut",
+      "databaseName": "%COSMOSDB_BONUS_DATABASE_NAME%",
+      "createIfNotExists": false,
+      "collectionName": "bonus-processing",
+      "connectionStringSetting": "COSMOSDB_CONNECTION_STRING",
+      "direction": "out"
     }
   ],
   "scriptFile": "../dist/StartBonusActivation/index.js"

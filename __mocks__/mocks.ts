@@ -17,6 +17,10 @@ import {
   StatusEnum as EligibilityCheckSuccessIneligibleStatus
 } from "../generated/models/EligibilityCheckSuccessIneligible";
 
+import {
+  BonusVacanzaInvalidRequestError,
+  BonusVacanzaTransientError
+} from "../clients/adeClient";
 import { BonusVacanzaBase } from "../generated/ade/BonusVacanzaBase";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 import { FamilyUID } from "../generated/models/FamilyUID";
@@ -30,10 +34,6 @@ import {
   RetrievedBonusLease
 } from "../models/bonus_lease";
 import { RetrievedUserBonus, UserBonus } from "../models/user_bonus";
-import {
-  BonusVacanzaInvalidRequestError,
-  BonusVacanzaTransientError
-} from "../clients/adeClient";
 
 export const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
 export const anotherFiscalCode = "CCCDDD80A01C123D" as FiscalCode;

@@ -18,6 +18,7 @@ import { ReleaseFamilyLockActivityInput } from "../ReleaseFamilyLockActivity/han
 import { SendBonusActivationSuccess } from "../SendBonusActivationActivity/handler";
 import { SendBonusActivationInput } from "../SendBonusActivationActivity/handler";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
+import { documentClient } from "../services/cosmosdb";
 import { SuccessBonusActivationInput } from "../SuccessBonusActivationActivity/handler";
 import { trackEvent, trackException } from "../utils/appinsights";
 import { toApiBonusVacanzaBase } from "../utils/conversions";
@@ -259,7 +260,15 @@ export const getStartBonusActivationOrchestratorHandler = (
           name: "bonus.activation.error"
         }
       });
-      return false;
+    } finally {
+      // release bonus lock when the orchestrator ends
+      yield context.df.callActivityWithRetry(
+        "ReleaseBonusActivationLockActivity",
+        retryOptions,
+        ReleaseFamilyLockActivityInput.encode({
+          familyUID: bonusActivation.familyUID
+        })
+      );
     }
 
     return true;
