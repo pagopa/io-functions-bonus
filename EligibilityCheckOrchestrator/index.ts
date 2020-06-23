@@ -20,7 +20,7 @@ import { EligibilityCheckSuccessEligible } from "../generated/definitions/Eligib
 import { EligibilityCheckSuccessIneligible } from "../generated/definitions/EligibilityCheckSuccessIneligible";
 import { UpsertEligibilityCheckActivityInput } from "../UpsertEligibilityCheckActivity/handler";
 import { toApiEligibilityCheckFromDSU } from "../utils/conversions";
-import { MESSAGES } from "../utils/messages";
+import { getMessage, MESSAGES } from "../utils/messages";
 import { retryOptions } from "../utils/retryPolicy";
 import { ValidateEligibilityCheckActivityInput } from "../ValidateEligibilityCheckActivity/handler";
 

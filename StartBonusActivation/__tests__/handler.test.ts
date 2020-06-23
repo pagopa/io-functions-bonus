@@ -19,6 +19,7 @@ import {
 } from "../../__mocks__/mocks";
 import { BonusActivationModel } from "../../models/bonus_activation";
 import { BonusLeaseModel } from "../../models/bonus_lease";
+import { BonusProcessing } from "../../models/bonus_processing";
 import { EligibilityCheckModel } from "../../models/eligibility_check";
 import {
   makeStartBonusActivationOrchestratorId,
@@ -97,19 +98,11 @@ describe("StartBonusActivationHandler", () => {
   });
 
   it("should notify the user if there's already a bonus activation running", async () => {
-    mockGetStatus.mockImplementation(async orchestratorId => {
-      if (
-        orchestratorId === makeStartBonusActivationOrchestratorId(aFiscalCode)
-      ) {
-        return {
-          ...mockStatusRunning,
-          customStatus: aBonusId
-        };
-      } else {
-        return mockStatusCompleted;
-      }
+    // tslint:disable-next-line: no-object-mutation
+    context.bindings.processingBonusIdIn = BonusProcessing.encode({
+      bonusId: aBonusId,
+      id: aFiscalCode
     });
-
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,

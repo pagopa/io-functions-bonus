@@ -122,7 +122,8 @@ export function SuccessBonusActivationHandler(
               `FailedBonusActivationHandler|WARN|Failed updating bonus: ${err.body}`
             );
             return TransientFailure.encode({
-              kind: "TRANSIENT"
+              kind: "TRANSIENT",
+              reason: err.body
             });
           }
         )
@@ -134,7 +135,8 @@ export function SuccessBonusActivationHandler(
               `FailedBonusActivationHandler|WARN|Failed saving user bonus: ${err.body}`
             );
             return TransientFailure.encode({
-              kind: "TRANSIENT"
+              kind: "TRANSIENT",
+              reason: err.body
             });
           }
         )

@@ -3,7 +3,7 @@
   "description": "",
   "author": "IO team",
   "repository": "https://github.com/pagopa/io-functions-bonus",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "license": "MIT",
   "scripts": {
     "prebuild": "shx rm -rf dist && yarn generate",
@@ -59,6 +59,7 @@
   },
   "dependencies": {
     "applicationinsights": "^1.7.5",
+    "azure-storage": "^2.10.3",
     "date-fns": "^2.14.0",
     "documentdb": "^1.15.3",
     "durable-functions": "^1.4.1",

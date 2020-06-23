@@ -10,13 +10,13 @@ import {
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { TypeofApiResponse } from "italia-ts-commons/lib/requests";
-import { BonusVacanzaBase } from "../generated/ade/BonusVacanzaBase";
-import { RichiestaBonusT } from "../generated/ade/requestTypes";
 import {
   ADEClientInstance,
   BonusVacanzaInvalidRequestError,
   BonusVacanzaTransientError
-} from "../utils/adeClient";
+} from "../clients/adeClient";
+import { BonusVacanzaBase } from "../generated/ade/BonusVacanzaBase";
+import { RichiestaBonusT } from "../generated/ade/requestTypes";
 import { trackException } from "../utils/appinsights";
 
 export const SendBonusActivationInput = BonusVacanzaBase;
@@ -163,7 +163,7 @@ export function SendBonusActivationHandler(
     context: Context,
     input: unknown
   ): Promise<SendBonusActivationResult> => {
-    context.log.verbose(`${logPrefix}|ACTIVITY_INPUT=${input}`);
+    context.log.verbose(`${logPrefix}|ACTIVITY_INPUT=${JSON.stringify(input)}`);
     return taskEither
       .of<ActivityRuntimeFailure, void>(void 0)
       .chain(_ =>
