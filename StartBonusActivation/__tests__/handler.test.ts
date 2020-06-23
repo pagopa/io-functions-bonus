@@ -21,6 +21,7 @@ import { BonusActivationModel } from "../../models/bonus_activation";
 import { BonusLeaseModel } from "../../models/bonus_lease";
 import { BonusProcessing } from "../../models/bonus_processing";
 import { EligibilityCheckModel } from "../../models/eligibility_check";
+import { OrchestratorInput } from "../../StartBonusActivationOrchestrator/handler";
 import {
   makeStartBonusActivationOrchestratorId,
   makeStartEligibilityCheckOrchestratorId
@@ -210,11 +211,13 @@ describe("StartBonusActivationHandler", () => {
     );
 
     const response = await handler(context, aFiscalCode);
-    expect(context.bindings.bonusActivation).toEqual({
-      applicantFiscalCode: aFiscalCode,
-      bonusId: aBonusId,
-      validBefore: aEligibilityCheckSuccessEligibleValid.validBefore.toISOString()
-    });
+    expect(context.bindings.bonusActivation).toEqual(
+      OrchestratorInput.encode({
+        applicantFiscalCode: aFiscalCode,
+        bonusId: aBonusId,
+        validBefore: aEligibilityCheckSuccessEligibleValid.validBefore
+      })
+    );
 
     // the first attempt failed, so it's called twice
     expect(mockBonusActivationCreate).toHaveBeenCalledTimes(2);
@@ -337,11 +340,13 @@ describe("StartBonusActivationHandler", () => {
     );
 
     const response = await handler(context, aFiscalCode);
-    expect(context.bindings.bonusActivation).toEqual({
-      applicantFiscalCode: aFiscalCode,
-      bonusId: aBonusId,
-      validBefore: aEligibilityCheckSuccessEligibleValid.validBefore.toISOString()
-    });
+    expect(context.bindings.bonusActivation).toEqual(
+      OrchestratorInput.encode({
+        applicantFiscalCode: aFiscalCode,
+        bonusId: aBonusId,
+        validBefore: aEligibilityCheckSuccessEligibleValid.validBefore
+      })
+    );
     expect(response.kind).toBe("IResponseSuccessRedirectToResource");
   });
 });

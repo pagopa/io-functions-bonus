@@ -15,6 +15,7 @@ import { makeStartBonusActivationOrchestratorId } from "../utils/orchestrators";
 export const ContinueBonusActivationInput = t.type({
   applicantFiscalCode: FiscalCode,
   bonusId: BonusCode,
+  // we need the following value to send notifications
   validBefore: Timestamp
 });
 

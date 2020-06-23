@@ -66,6 +66,7 @@ export function StartBonusActivationHandler(
 ): IStartBonusActivationHandler {
   return async (context, fiscalCode) => {
     const dfClient = df.getClient(context);
+
     return taskEither
       .of<StartBonusActivationResponse, void>(void 0)
       .chainSecond(checkEligibilityCheckIsRunning(dfClient, fiscalCode))
@@ -127,36 +128,28 @@ export function StartBonusActivationHandler(
                 taskEither.of(bonusActivationWithValidBefore)
             )
       )
-      .fold(identity, apiBonusActivationWithValidBefore => {
+      .fold(identity, ({ apiBonusActivation, validBefore }) => {
         // Add the tuple (fiscalCode, bonusId) to the processing bonus collection
         // this is used a s lock to avoid having more than one bonus in processing status
         // The lock is removed when the orchestrator terminate
         // tslint:disable-next-line: no-object-mutation
         context.bindings.processingBonusIdOut = BonusProcessing.encode({
-          bonusId: apiBonusActivationWithValidBefore.apiBonusActivation.id,
-          id:
-            apiBonusActivationWithValidBefore.apiBonusActivation
-              .applicant_fiscal_code
+          bonusId: apiBonusActivation.id,
+          id: apiBonusActivation.applicant_fiscal_code
         });
         // Send the (bonusId, applicantFiscalCode) to the bonus activations queue
         // in order to be processed later (asynchronously)
         // tslint:disable-next-line: no-object-mutation
         context.bindings.bonusActivation = ContinueBonusActivationInput.encode({
-          applicantFiscalCode:
-            apiBonusActivationWithValidBefore.apiBonusActivation
-              .applicant_fiscal_code,
-          bonusId: apiBonusActivationWithValidBefore.apiBonusActivation.id,
-          validBefore: apiBonusActivationWithValidBefore.validBefore
+          applicantFiscalCode: apiBonusActivation.applicant_fiscal_code,
+          bonusId: apiBonusActivation.id,
+          validBefore
         });
         return ResponseSuccessRedirectToResource(
-          apiBonusActivationWithValidBefore.apiBonusActivation,
-          makeBonusActivationResourceUri(
-            fiscalCode,
-            apiBonusActivationWithValidBefore.apiBonusActivation.id
-          ),
+          apiBonusActivation,
+          makeBonusActivationResourceUri(fiscalCode, apiBonusActivation.id),
           InstanceId.encode({
-            id: (apiBonusActivationWithValidBefore.apiBonusActivation
-              .id as unknown) as NonEmptyString
+            id: (apiBonusActivation.id as unknown) as NonEmptyString
           })
         );
       })
