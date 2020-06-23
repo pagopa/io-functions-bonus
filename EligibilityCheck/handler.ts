@@ -2,6 +2,7 @@ import { Context } from "@azure/functions";
 import * as df from "durable-functions";
 import * as express from "express";
 import { isLeft } from "fp-ts/lib/Either";
+import { isSome } from "fp-ts/lib/Option";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import { FiscalCodeMiddleware } from "io-functions-commons/dist/src/utils/middlewares/fiscalcode";
 import {
@@ -49,11 +50,11 @@ export function EligibilityCheckHandler(): IEligibilityCheckHandler {
 
     // If a bonus activation for that user is in progress
     // returns 403 status response
-    const responseOrNotRunning = checkBonusActivationIsRunning(
+    const maybeResponse = checkBonusActivationIsRunning(
       context.bindings.processingBonusIdIn
     );
-    if (isLeft(responseOrNotRunning)) {
-      return responseOrNotRunning.value;
+    if (isSome(maybeResponse)) {
+      return maybeResponse.value;
     }
 
     // If another ElegibilityCheck operation is in progress for that user

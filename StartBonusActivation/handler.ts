@@ -32,7 +32,7 @@ import { BonusLeaseModel } from "../models/bonus_lease";
 import { trackException } from "../utils/appinsights";
 import { toApiBonusActivation } from "../utils/conversions";
 import { generateFamilyUID } from "../utils/hash";
-import { checkBonusActivationIsRunning, ProcessingBonus } from "./locks";
+import { checkBonusActivationIsRunning } from "./locks";
 import {
   acquireLockForUserFamily,
   createBonusActivation,

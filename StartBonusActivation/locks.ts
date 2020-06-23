@@ -8,7 +8,7 @@ import {
 } from "italia-ts-commons/lib/responses";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { InstanceId } from "../generated/definitions/InstanceId";
-import { BonusProcessing } from "../models/bonus_Processing";
+import { BonusProcessing } from "../models/bonus_processing";
 
 /**
  * Check if the current user has a pending activation request.

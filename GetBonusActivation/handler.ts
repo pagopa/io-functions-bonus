@@ -75,15 +75,14 @@ export function GetBonusActivationHandler(
               bonusActivation => ResponseSuccessJson(bonusActivation)
             );
           }
-          // When the bonus is not found into the database but a new bonus activation
-          // is in progress for the user, we return 202 Accepted with the bonus id
           return checkBonusActivationIsRunning(
             context.bindings.processingBonusIdIn
           ).fold<IGetBonusActivationHandlerOutput>(
-            response => response,
-            () =>
-              // Otherwise we return 4040 not found
-              ResponseErrorNotFound("Not Found", "Bonus activation not found")
+            // Return  not found in case no running bonus activation is found
+            ResponseErrorNotFound("Not Found", "Bonus activation not found"),
+            // When the bonus is not found into the database but a bonus activation
+            // is still in progress for the user, we return 202 Accepted with the bonus id
+            response => response
           );
         }
       )

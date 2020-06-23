@@ -4,7 +4,7 @@ import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { Context } from "vm";
-import { BonusProcessingModel } from "../models/bonus_Processing";
+import { BonusProcessingModel } from "../models/bonus_processing";
 import { trackException } from "../utils/appinsights";
 import { Failure, TransientFailure } from "../utils/errors";
 
