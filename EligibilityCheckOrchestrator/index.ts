@@ -26,7 +26,6 @@ import { ValidateEligibilityCheckActivityInput } from "../ValidateEligibilityChe
 
 import { isLeft } from "fp-ts/lib/Either";
 import { toString } from "fp-ts/lib/function";
-import { MessageContent } from "io-functions-commons/dist/generated/definitions/MessageContent";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";

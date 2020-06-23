@@ -63,12 +63,6 @@ const withRetryPolicy = withRetries<QueryError, RetrievedBonusActivation>(
   () => CREATION_DELAY_ON_CONFLICT
 );
 
-export const DsuWithValidBefore = t.interface({
-  dsu: Dsu,
-  validBefore: Timestamp
-});
-export type DsuWithValidBefore = t.TypeOf<typeof DsuWithValidBefore>;
-
 export const ApiBonusActivationWithValidBefore = t.interface({
   apiBonusActivation: BonusActivation,
   validBefore: Timestamp
@@ -82,7 +76,7 @@ const eligibilityCheckToResponse = (
   doc: RetrievedEligibilityCheck
 ): TaskEither<
   IResponseErrorForbiddenNotAuthorized | IResponseErrorGone,
-  DsuWithValidBefore
+  EligibilityCheckSuccessEligible
 > =>
   // the found document is not in eligible status
   !EligibilityCheckSuccessEligible.is(doc)
@@ -91,7 +85,7 @@ const eligibilityCheckToResponse = (
     isBefore(doc.validBefore, new Date())
     ? fromLeft(ResponseErrorGone("DSU expired"))
     : // the check is fine, I can extract the DSU data from it
-      fromEither(right({ dsu: doc.dsuRequest, validBefore: doc.validBefore }));
+      fromEither(right(doc));
 
 /**
  * Query for a valid DSU relative to the current user.
@@ -107,7 +101,7 @@ export const getLatestValidDSU = (
   | IResponseErrorForbiddenNotAuthorized
   | IResponseErrorGone
   | IResponseErrorInternal,
-  DsuWithValidBefore
+  EligibilityCheckSuccessEligible
 > =>
   fromQueryEither(() =>
     eligibilityCheckModel.find(fiscalCode, fiscalCode)

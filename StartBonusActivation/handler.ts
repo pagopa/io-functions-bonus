@@ -37,7 +37,6 @@ import {
   acquireLockForUserFamily,
   ApiBonusActivationWithValidBefore,
   createBonusActivation,
-  DsuWithValidBefore,
   getLatestValidDSU,
   relaseLockForUserFamily
 } from "./models";
@@ -74,8 +73,8 @@ export function StartBonusActivationHandler(
         checkBonusActivationIsRunning(context.bindings.processingBonusIdIn)
       )
       .chainSecond(getLatestValidDSU(eligibilityCheckModel, fiscalCode))
-      .map((validDsu: DsuWithValidBefore) => ({
-        familyUID: generateFamilyUID(validDsu.dsu.familyMembers),
+      .map(validDsu => ({
+        familyUID: generateFamilyUID(validDsu.dsuRequest.familyMembers),
         validDsu
       }))
       .chain(({ validDsu, familyUID }) =>
@@ -89,7 +88,7 @@ export function StartBonusActivationHandler(
           bonusActivationModel,
           fiscalCode,
           familyUID,
-          validDsu.dsu
+          validDsu.dsuRequest
         )
           .chain(bonusActivation =>
             fromEither(toApiBonusActivation(bonusActivation))
