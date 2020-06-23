@@ -73,58 +73,59 @@ export function StartBonusActivationHandler(
         checkBonusActivationIsRunning(context.bindings.processingBonusIdIn)
       )
       .chainSecond(getLatestValidDSU(eligibilityCheckModel, fiscalCode))
-      .map(dsu => ({
-        dsu,
-        familyUID: generateFamilyUID(dsu.dsuRequest.familyMembers)
+      .map(eligibilityCheck => ({
+        eligibilityCheck,
+        familyUID: generateFamilyUID(eligibilityCheck.dsuRequest.familyMembers)
       }))
-      .chain(({ dsu, familyUID }) =>
+      .chain(({ eligibilityCheck, familyUID }) =>
         acquireLockForUserFamily(bonusLeaseModel, familyUID).map(_ => ({
-          dsu,
+          eligibilityCheck,
           familyUID
         }))
       )
-      .chain<ApiBonusActivationWithValidBefore>(({ dsu, familyUID }) =>
-        createBonusActivation(
-          bonusActivationModel,
-          fiscalCode,
-          familyUID,
-          dsu.dsuRequest
-        )
-          .chain(bonusActivation =>
-            fromEither(toApiBonusActivation(bonusActivation))
-              .mapLeft(err =>
-                ResponseErrorInternal(
-                  `Error converting BonusActivation to ApiBonusActivation: ${readableReport(
-                    err
-                  )}`
+      .chain<ApiBonusActivationWithValidBefore>(
+        ({ eligibilityCheck, familyUID }) =>
+          createBonusActivation(
+            bonusActivationModel,
+            fiscalCode,
+            familyUID,
+            eligibilityCheck.dsuRequest
+          )
+            .chain(bonusActivation =>
+              fromEither(toApiBonusActivation(bonusActivation))
+                .mapLeft(err =>
+                  ResponseErrorInternal(
+                    `Error converting BonusActivation to ApiBonusActivation: ${readableReport(
+                      err
+                    )}`
+                  )
                 )
-              )
-              .map(apiBonusActivation => ({
-                apiBonusActivation,
-                validBefore: dsu.validBefore
-              }))
-          )
-          .foldTaskEither(
-            // bonus creation failed
-            response => {
-              trackException({
-                exception: new Error(response.detail),
-                properties: {
-                  name: "bonus.activation.start"
-                }
-              });
-              return relaseLockForUserFamily(
-                bonusLeaseModel,
-                familyUID
-              ).foldTaskEither(
-                _ => fromLeft(response),
-                _ => fromLeft(response)
-              );
-            },
-            // bonus creation succeeded
-            bonusActivationWithValidBefore =>
-              taskEither.of(bonusActivationWithValidBefore)
-          )
+                .map(apiBonusActivation => ({
+                  apiBonusActivation,
+                  validBefore: eligibilityCheck.validBefore
+                }))
+            )
+            .foldTaskEither(
+              // bonus creation failed
+              response => {
+                trackException({
+                  exception: new Error(response.detail),
+                  properties: {
+                    name: "bonus.activation.start"
+                  }
+                });
+                return relaseLockForUserFamily(
+                  bonusLeaseModel,
+                  familyUID
+                ).foldTaskEither(
+                  _ => fromLeft(response),
+                  _ => fromLeft(response)
+                );
+              },
+              // bonus creation succeeded
+              bonusActivationWithValidBefore =>
+                taskEither.of(bonusActivationWithValidBefore)
+            )
       )
       .fold(identity, apiBonusActivationWithValidBefore => {
         // Add the tuple (fiscalCode, bonusId) to the processing bonus collection
