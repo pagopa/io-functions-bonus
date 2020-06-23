@@ -2,7 +2,7 @@
 
 import { addSeconds } from "date-fns";
 import * as df from "durable-functions";
-import { fromNullable, isSome, none, Option, some } from "fp-ts/lib/Option";
+import { isSome, none, Option, some } from "fp-ts/lib/Option";
 import * as t from "io-ts";
 import {
   ActivityResult as DeleteEligibilityCheckActivityResult,
@@ -26,13 +26,11 @@ import { ValidateEligibilityCheckActivityInput } from "../ValidateEligibilityChe
 
 import { isLeft } from "fp-ts/lib/Either";
 import { toString } from "fp-ts/lib/function";
-import { MessageContent } from "io-functions-commons/dist/generated/definitions/MessageContent";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
 import { trackEvent, trackException } from "../utils/appinsights";
 import { toHash } from "../utils/hash";
-import { assertNever } from "../utils/types";
 
 export const OrchestratorInput = FiscalCode;
 export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
