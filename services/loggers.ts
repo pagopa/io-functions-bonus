@@ -74,7 +74,7 @@ export const traceInpsRequest = createBasicHttpRequestTracer<InpsLogEntity>(
 );
 
 /**
- * Creates a fetch-like function which wraps the provided fetch implementation to add INPS-spcific tracing
+ * Creates a fetch-like function which wraps the provided fetch implementation to add INPS-specific tracing
  *
  * @param fetch a fetch implementation to wrap
  *
@@ -101,7 +101,7 @@ export const traceAdeRequest = createBasicHttpRequestTracer<AdeLogEntity>(
 );
 
 /**
- * Creates a fetch-like function which wraps the provided fetch implementation to add ADE-spcific tracing
+ * Creates a fetch-like function which wraps the provided fetch implementation to add ADE-specific tracing
  *
  * @param fetch a fetch implementation to wrap
  *
