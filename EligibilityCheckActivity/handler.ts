@@ -5,11 +5,11 @@ import { FiscalCode } from "io-functions-commons/dist/generated/definitions/Fisc
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { Hour, Millisecond } from "italia-ts-commons/lib/units";
+import { ISoapClientAsync } from "../clients/inpsSoapClient";
 import { ConsultazioneSogliaIndicatoreResponse } from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
 import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
 import { Timestamp } from "../generated/definitions/Timestamp";
 import { trackException } from "../utils/appinsights";
-import { ISoapClientAsync } from "../utils/inpsSoapClient";
 
 export const EligibilityCheckActivityInput = FiscalCode;
 export type EligibilityCheckActivityInput = t.TypeOf<

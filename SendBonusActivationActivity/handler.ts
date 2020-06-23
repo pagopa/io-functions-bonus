@@ -10,13 +10,13 @@ import {
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { TypeofApiResponse } from "italia-ts-commons/lib/requests";
-import { BonusVacanzaBase } from "../generated/ade/BonusVacanzaBase";
-import { RichiestaBonusT } from "../generated/ade/requestTypes";
 import {
   ADEClientInstance,
   BonusVacanzaInvalidRequestError,
   BonusVacanzaTransientError
-} from "../utils/adeClient";
+} from "../clients/adeClient";
+import { BonusVacanzaBase } from "../generated/ade/BonusVacanzaBase";
+import { RichiestaBonusT } from "../generated/ade/requestTypes";
 import { trackException } from "../utils/appinsights";
 
 export const SendBonusActivationInput = BonusVacanzaBase;

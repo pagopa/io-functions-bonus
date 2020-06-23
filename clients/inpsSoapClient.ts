@@ -8,7 +8,6 @@ import {
 } from "fp-ts/lib/Either";
 import { fromNullable as fromNullableOption } from "fp-ts/lib/Option";
 import { TaskEither, tryCatch } from "fp-ts/lib/TaskEither";
-import { agent } from "italia-ts-commons";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { DOMParser } from "xmldom";
@@ -20,14 +19,6 @@ import {
 import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
 
 import { toString } from "fp-ts/lib/function";
-import {
-  AbortableFetch,
-  setFetchTimeout,
-  toFetch
-} from "italia-ts-commons/lib/fetch";
-import { IntegerFromString } from "italia-ts-commons/lib/numbers";
-import { Millisecond } from "italia-ts-commons/lib/units";
-import { UrlFromString } from "italia-ts-commons/lib/url";
 
 // TODO: Handle the inps:Identity element content
 const getSOAPRequest = (
@@ -57,33 +48,6 @@ const INPS_NAMESPACE = "http://inps.it/ConsultazioneISEE";
 
 const INPS_SOAP_ACTION =
   "http://inps.it/ConsultazioneISEE/ISvcConsultazione/ConsultazioneSogliaIndicatore";
-
-// 10 seconds timeout by default
-const INPS_REQUEST_TIMEOUT_MS = IntegerFromString.decode(
-  process.env.INPS_REQUEST_TIMEOUT_MS
-).getOrElse(10000);
-
-// http when developing locally
-const INPS_SERVICE_PROTOCOL = UrlFromString.decode(
-  process.env.INPS_SERVICE_ENDPOINT
-)
-  .map(url => url.protocol?.slice(0, -1))
-  .getOrElse("https");
-
-const fetchAgent =
-  INPS_SERVICE_PROTOCOL === "http"
-    ? agent.getHttpFetch(process.env)
-    : agent.getHttpsFetch(process.env, {
-        cert: process.env.INPS_SERVICE_CERT,
-        key: process.env.INPS_SERVICE_KEY
-      });
-
-const fetchWithTimeout = setFetchTimeout(
-  INPS_REQUEST_TIMEOUT_MS as Millisecond,
-  AbortableFetch(fetchAgent)
-);
-
-const httpFetch = toFetch(fetchWithTimeout);
 
 export interface ISoapClientAsync {
   ConsultazioneSogliaIndicatore: (
@@ -186,7 +150,10 @@ export function parseSoapResponse(
     );
 }
 
-export function createClient(endpoint: NonEmptyString): ISoapClientAsync {
+export function createClient(
+  endpoint: NonEmptyString,
+  fetchApi: typeof fetch
+): ISoapClientAsync {
   return {
     ConsultazioneSogliaIndicatore: (
       params: ConsultazioneSogliaIndicatoreInput
@@ -199,7 +166,7 @@ export function createClient(endpoint: NonEmptyString): ISoapClientAsync {
           params.CodiceSoglia
         );
 
-        const response = await httpFetch(`${endpoint}`, {
+        const response = await fetchApi(`${endpoint}`, {
           body: requestPayload,
           headers: {
             SOAPAction: INPS_SOAP_ACTION

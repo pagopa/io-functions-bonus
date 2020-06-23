@@ -9,6 +9,8 @@ import {
   serializeBonus
 } from "../adeClient";
 
+import mockFetch from "../../__mocks__/node-fetch";
+
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { toHmac } from "../../utils/hash";
 
@@ -30,8 +32,6 @@ const aBonusVacanzaError: BonusVacanzaError = {
   errorCode: "aErrorCode",
   errorMessage: "lorem ipsum"
 };
-
-const mockFetch = jest.fn();
 
 describe("ADEClient#richiestaBonus", () => {
   beforeEach(() => {

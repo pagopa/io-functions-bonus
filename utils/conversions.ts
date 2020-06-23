@@ -40,6 +40,7 @@ import { generateFamilyUID, toHmac } from "./hash";
 import { renameObjectKeys } from "./rename_keys";
 import { camelCaseToSnakeCase, snakeCaseToCamelCase } from "./strings";
 
+import { serializeBonus } from "../clients/adeClient";
 import { BonusVacanzaWithoutMac as ApiBonusVacanzaWithoutMac } from "../generated/ade/BonusVacanzaWithoutMac";
 import {
   BonusAmount,
@@ -47,7 +48,6 @@ import {
   ThreeOrMoreFamilyMembersBonus,
   TwoFamilyMembersBonus
 } from "../models/bonus_amount";
-import { serializeBonus } from "./adeClient";
 
 /**
  * Maps EligibilityCheck API object into an EligibilityCheck domain object

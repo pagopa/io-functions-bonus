@@ -20,6 +20,7 @@ import {
 
 export type ADEClient = typeof ADEClient;
 export type ADEClientInstance = ReturnType<typeof ADEClient>;
+
 /**
  * Creates a client which implements the http operations exposed by ADE API service
  * @param baseUrl
