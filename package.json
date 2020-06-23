@@ -17,7 +17,7 @@
     "test": "yarn test:only",
     "test:only": "dotenv -e .env jest",
     "pretest:coverage": "npm-run-all generate:*",
-    "test:coverage": "jest --coverage",
+    "test:coverage": "dotenv -e .env jest --coverage",
     "lint": "tslint -p .",
     "lint-api": "oval validate -p openapi/index.yaml",
     "dist:modules": "modclean -r -n default:safe && yarn install --production",
