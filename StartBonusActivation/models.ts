@@ -43,9 +43,12 @@ import {
   fromQueryEither,
   QueryError
 } from "io-functions-commons/dist/src/utils/documentdb";
+import * as t from "io-ts";
 import { Millisecond } from "italia-ts-commons/lib/units";
+import { BonusActivation } from "../generated/definitions/BonusActivation";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 import { FamilyUID } from "../generated/models/FamilyUID";
+import { Timestamp } from "../generated/models/Timestamp";
 import { BonusLeaseModel } from "../models/bonus_lease";
 import { errorToQueryError } from "./utils";
 
@@ -60,9 +63,27 @@ const withRetryPolicy = withRetries<QueryError, RetrievedBonusActivation>(
   () => CREATION_DELAY_ON_CONFLICT
 );
 
+export const DsuWithValidBefore = t.interface({
+  dsu: Dsu,
+  validBefore: Timestamp
+});
+export type DsuWithValidBefore = t.TypeOf<typeof DsuWithValidBefore>;
+
+export const ApiBonusActivationWithValidBefore = t.interface({
+  apiBonusActivation: BonusActivation,
+  validBefore: Timestamp
+});
+
+export type ApiBonusActivationWithValidBefore = t.TypeOf<
+  typeof ApiBonusActivationWithValidBefore
+>;
+
 const eligibilityCheckToResponse = (
   doc: RetrievedEligibilityCheck
-): TaskEither<IResponseErrorForbiddenNotAuthorized | IResponseErrorGone, Dsu> =>
+): TaskEither<
+  IResponseErrorForbiddenNotAuthorized | IResponseErrorGone,
+  DsuWithValidBefore
+> =>
   // the found document is not in eligible status
   !EligibilityCheckSuccessEligible.is(doc)
     ? fromLeft(ResponseErrorForbiddenNotAuthorized)
@@ -70,7 +91,7 @@ const eligibilityCheckToResponse = (
     isBefore(doc.validBefore, new Date())
     ? fromLeft(ResponseErrorGone("DSU expired"))
     : // the check is fine, I can extract the DSU data from it
-      fromEither(right(doc.dsuRequest));
+      fromEither(right({ dsu: doc.dsuRequest, validBefore: doc.validBefore }));
 
 /**
  * Query for a valid DSU relative to the current user.
@@ -86,7 +107,7 @@ export const getLatestValidDSU = (
   | IResponseErrorForbiddenNotAuthorized
   | IResponseErrorGone
   | IResponseErrorInternal,
-  Dsu
+  DsuWithValidBefore
 > =>
   fromQueryEither(() =>
     eligibilityCheckModel.find(fiscalCode, fiscalCode)

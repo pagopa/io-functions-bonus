@@ -38,27 +38,6 @@ export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
 
 const NOTIFICATION_DELAY_SECONDS = 10;
 
-export const getMessage = (
-  messageType: keyof typeof MESSAGES,
-  validBefore: Date
-): MessageContent => {
-  switch (messageType) {
-    case "EligibilityCheckSuccessEligible":
-    case "EligibilityCheckSuccessEligibleWithDiscrepancies":
-    case "BonusActivationFailure":
-      return MESSAGES[messageType](validBefore);
-    case "EligibilityCheckSuccessIneligible":
-    case "EligibilityCheckFailure":
-    case "EligibilityCheckConflict":
-    case "BonusActivationSuccess":
-      return MESSAGES[messageType]();
-    default:
-      throw new Error(
-        `Cannot get MessageContent on EligibilityCheckOrchestrator`
-      );
-  }
-};
-
 export const getMessageType = (
   _: ApiEligibilityCheck
 ): Option<keyof typeof MESSAGES> => {
