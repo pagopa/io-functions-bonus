@@ -9,10 +9,8 @@ import {
 } from "../../__mocks__/durable-functions";
 import {
   aBonusId,
-  aBonusVacanzaBase,
   aFamilyUID,
   aFiscalCode,
-  anotherFiscalCode,
   aRetrievedBonusActivation
 } from "../../__mocks__/mocks";
 import { FailedBonusActivationResult } from "../../FailedBonusActivationActivity/handler";
@@ -20,12 +18,11 @@ import { GetBonusActivationActivityOutput } from "../../GetBonusActivationActivi
 import { ReleaseFamilyLockActivityResult } from "../../ReleaseFamilyLockActivity/handler";
 import {
   SendBonusActivationFailure,
-  SendBonusActivationInput,
   SendBonusActivationSuccess
 } from "../../SendBonusActivationActivity/handler";
 import { ActivityResult as SendMessageActivityResult } from "../../SendMessageActivity/handler";
 import { SuccessBonusActivationSuccess } from "../../SuccessBonusActivationActivity/handler";
-import { trackEvent, trackException } from "../../utils/appinsights";
+import { trackException } from "../../utils/appinsights";
 import { PermanentFailure } from "../../utils/errors";
 import { getStartBonusActivationOrchestratorHandler } from "../handler";
 
