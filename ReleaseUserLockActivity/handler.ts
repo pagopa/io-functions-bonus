@@ -1,3 +1,4 @@
+import { toString } from "fp-ts/lib/function";
 import { fromEither } from "fp-ts/lib/TaskEither";
 import { fromQueryEither } from "io-functions-commons/dist/src/utils/documentdb";
 import * as t from "io-ts";
@@ -67,7 +68,7 @@ export function getReleaseUserLockActivityHandler(
       .fold<ReleaseUserLockActivityResult>(
         err => {
           if (TransientFailure.is(err)) {
-            const ex = new Error(`${logPrefix}|`);
+            const ex = new Error(`${logPrefix}|${toString(err)}`);
             trackException({
               exception: ex,
               properties: {
@@ -77,6 +78,7 @@ export function getReleaseUserLockActivityHandler(
             // trigger a retry in case of failures
             throw ex;
           }
+          // permanent failures are tracked into the orchestrator
           return err;
         },
         id =>

@@ -9,7 +9,7 @@ import { pick, tag } from "italia-ts-commons/lib/types";
 import { BonusCode } from "../generated/models/BonusCode";
 import { keys } from "../utils/types";
 
-export const BONUS_PROCESSING_COLLECTION_NAME = "bonus-processings";
+export const BONUS_PROCESSING_COLLECTION_NAME = "bonus-processing";
 
 // Applicant fiscal code
 export const BONUS_PROCESSING_MODEL_PK_FIELD = "id";

@@ -71,9 +71,7 @@ export function StartBonusActivationHandler(
       .of<StartBonusActivationResponse, void>(void 0)
       .chainSecond(checkEligibilityCheckIsRunning(dfClient, fiscalCode))
       .chainSecond(
-        fromEither(
-          checkBonusActivationIsRunning(context.bindings.processingBonusIdIn)
-        )
+        checkBonusActivationIsRunning(context.bindings.processingBonusIdIn)
       )
       .chainSecond(getLatestValidDSU(eligibilityCheckModel, fiscalCode))
       .map((dsu: Dsu) => ({
