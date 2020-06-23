@@ -95,6 +95,7 @@ export const aEligibilityCheckFailure: EligibilityCheckFailure = {
 
 export const aBonusId = "AAAAAAAAAAAA" as NonEmptyString & BonusCode;
 export const aBonusActivationId = aBonusId;
+
 export const aBonusActivation: BonusActivation = {
   id: "AAAAAAAAAAAA" as BonusCode,
 
