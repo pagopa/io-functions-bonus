@@ -172,7 +172,7 @@ export const getStartBonusActivationOrchestratorHandler = (
       if (isSendBonusActivationSuccess) {
         // Update bonus to ACTIVE
         // TODO: If this operation fails after max retries
-        // we don't release the lock as the bous is already sent to ADE.
+        // we don't release the lock as the bonus is already sent to ADE.
         // We should retry the whole orchestrator (using a sub-orchestrator)
         yield context.df.callActivityWithRetry(
           "SuccessBonusActivationActivity",
