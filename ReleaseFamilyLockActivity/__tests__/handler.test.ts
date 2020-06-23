@@ -74,7 +74,7 @@ describe("getReleaseFamilyLockActivityHandler", () => {
     }
   });
 
-  it("should return success if anything is fine", async () => {
+  it("should return success if everything is fine", async () => {
     const handler = getReleaseFamilyLockActivityHandler(mockBonusLeaseModel);
 
     const result = await handler(context, {
