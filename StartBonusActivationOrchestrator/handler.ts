@@ -151,17 +151,17 @@ export const getStartBonusActivationOrchestratorHandler = (
           }
         });
       } catch (e) {
-        // release family lock in case SendBonusActivationActivity fails
-        yield context.df.callActivityWithRetry(
-          "ReleaseFamilyLockActivity",
-          retryOptions,
-          ReleaseFamilyLockActivityInput.encode({
-            familyUID: bonusActivation.familyUID
-          })
-        );
-        throw new Error(
-          `${logPrefix}|Error sending bonus to ADE|ERROR=${toString(e)}`
-        );
+        trackEvent({
+          name: "bonus.activation.ade.failure",
+          properties: {
+            id: operationId
+          }
+        });
+        trackException({
+          exception: new Error(
+            `${logPrefix}|Error sending bonus to ADE|ERROR=${toString(e)}`
+          )
+        });
       }
 
       // Call to ADE service succeeded?
