@@ -17,6 +17,7 @@ import {
   StatusEnum as EligibilityCheckSuccessIneligibleStatus
 } from "../generated/models/EligibilityCheckSuccessIneligible";
 
+import { QueryError } from "io-functions-commons/dist/src/utils/documentdb";
 import {
   BonusVacanzaInvalidRequestError,
   BonusVacanzaTransientError
@@ -95,6 +96,7 @@ export const aEligibilityCheckFailure: EligibilityCheckFailure = {
 
 export const aBonusId = "AAAAAAAAAAAA" as NonEmptyString & BonusCode;
 export const aBonusActivationId = aBonusId;
+
 export const aBonusActivation: BonusActivation = {
   id: "AAAAAAAAAAAA" as BonusCode,
 
@@ -183,4 +185,19 @@ export const aBonusVacanzaInvalidRequestError: BonusVacanzaInvalidRequestError =
 export const aBonusVacanzaTransientError: BonusVacanzaTransientError = {
   errorCode: "3000",
   errorMessage: "Generic Error"
+};
+
+export const aGenericQueryError: QueryError = {
+  body: "generic error",
+  code: "error"
+};
+
+export const aNotFoundQueryError: QueryError = {
+  body: "Not Found",
+  code: 404
+};
+
+export const aConflictQueryError: QueryError = {
+  body: "Conflict",
+  code: 409
 };
