@@ -81,7 +81,7 @@ export const traceInpsRequest = createBasicHttpRequestTracer<InpsLogEntity>(
  * @returns a fetch-like function
  */
 export const withInpsTracer = logHttpFetch(async (_, init, res) => {
-  const ResponsePayload = await res.json();
+  const ResponsePayload = await res.text();
   await traceInpsRequest({
     RequestPayload: JSON.stringify(init?.body || ""),
     ResponsePayload: JSON.stringify(ResponsePayload),
