@@ -88,6 +88,7 @@ export function StartBonusActivationHandler(
         createBonusActivation(bonusActivationModel, fiscalCode, familyUID, dsu)
           .chain(bonusActivation =>
             fromEither(toApiBonusActivation(bonusActivation)).mapLeft(err =>
+              // TODO: Must the BonusActivation be deleted? Can we send a specific error traking event?
               ResponseErrorInternal(
                 `Error converting BonusActivation to ApiBonusActivation: ${readableReport(
                   err

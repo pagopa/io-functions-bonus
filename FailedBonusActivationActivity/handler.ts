@@ -108,6 +108,7 @@ export function FailedBonusActivationHandler(
               context.log.warn(
                 `FailedBonusActivationHandler|WARN|Failed deleting dsu: ${err.body}`
               );
+              // TODO: Could this case fire an Activity retry?
               return taskEither.of(bonusActivation);
             },
             _ => taskEither.of(bonusActivation)
@@ -121,6 +122,7 @@ export function FailedBonusActivationHandler(
               context.log.warn(
                 `FailedBonusActivationHandler|WARN|Failed updating bonus: ${err.body}`
               );
+              // TODO: Could this case fire an Activity retry?
               return taskEither.of(bonusActivation);
             },
             _ => taskEither.of(bonusActivation)

@@ -66,6 +66,7 @@ export function getGetBonusActivationActivityHandler(
           )
         ).mapLeft(err =>
           // Promise rejected or thrown
+          // TODO: Could be a TRANSIENT Error?
           Failure.encode({
             kind: "PERMANENT",
             reason: `Query error: ${err.code}=${err.body}`
