@@ -163,7 +163,7 @@ export function SendBonusActivationHandler(
     context: Context,
     input: unknown
   ): Promise<SendBonusActivationResult> => {
-    context.log.verbose(`${logPrefix}|ACTIVITY_INPUT=${input}`);
+    context.log.verbose(`${logPrefix}|ACTIVITY_INPUT=${JSON.stringify(input)}`);
     return taskEither
       .of<ActivityRuntimeFailure, void>(void 0)
       .chain(_ =>

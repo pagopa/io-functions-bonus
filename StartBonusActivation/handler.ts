@@ -63,7 +63,7 @@ import {
 } from "io-functions-commons/dist/src/utils/documentdb";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { Millisecond } from "italia-ts-commons/lib/units";
-import { ContinueBonusActivationInput } from "../ContinueBonusActivation/handler";
+import { ContinueBonusActivationInput } from "../ContinueBonusActivation";
 import { BonusActivation as ApiBonusActivation } from "../generated/definitions/BonusActivation";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
