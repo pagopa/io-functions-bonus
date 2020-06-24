@@ -11,6 +11,13 @@
       "collectionName": "bonus-activations",
       "createLeaseCollectionIfNotExists": true,
       "startFromBeginning": false
+    },
+    {
+      "tableName": "bonusleasebindings",
+      "connection": "BONUS_STORAGE_CONNECTION_STRING",
+      "name": "bonusLeaseBindings",
+      "type": "table",
+      "direction": "out"
     }
   ],
   "scriptFile": "../dist/BindFamilyLockBonusActivation/index.js"

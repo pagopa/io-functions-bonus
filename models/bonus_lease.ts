@@ -94,22 +94,4 @@ export class BonusLeaseModel extends DocumentDbModel<
       )
     );
   }
-
-  public replaceDocument(
-    document: BonusLease,
-    partitionKey: BonusLease["id"]
-  ): Promise<Either<DocumentDb.QueryError, BonusLease>> {
-    const documentUri = DocumentDbUtils.getDocumentUri(
-      this.collectionUri,
-      partitionKey
-    );
-    return new Promise(resolve =>
-      this.dbClient.replaceDocument(
-        documentUri.uri,
-        document,
-        (err: DocumentDb.QueryError) =>
-          resolve(err ? left(err) : right(document))
-      )
-    );
-  }
 }
