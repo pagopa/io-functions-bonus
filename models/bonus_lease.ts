@@ -6,7 +6,6 @@ import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { pick, tag } from "italia-ts-commons/lib/types";
-import { BonusCode } from "../generated/models/BonusCode";
 import { keys } from "../utils/types";
 
 export const BONUS_LEASE_COLLECTION_NAME = "bonus-leases";
@@ -14,13 +13,9 @@ export const BONUS_LEASE_COLLECTION_NAME = "bonus-leases";
 // Computed unique ID from family members fiscal codes
 export const BONUS_LEASE_MODEL_PK_FIELD = "id";
 
-const BonusLeaseR = t.interface({
+export const BonusLease = t.interface({
   id: NonEmptyString
 });
-const BonusLeaseO = t.partial({
-  bonusID: BonusCode
-});
-export const BonusLease = t.intersection([BonusLeaseR, BonusLeaseO]);
 export type BonusLease = t.TypeOf<typeof BonusLease>;
 
 interface IRetrievedBonusLease {
