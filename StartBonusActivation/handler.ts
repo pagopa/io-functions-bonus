@@ -22,7 +22,6 @@ import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { BonusActivationModel } from "../models/bonus_activation";
 import { EligibilityCheckModel } from "../models/eligibility_check";
 
-import { QueueService } from "azure-storage";
 import { identity } from "fp-ts/lib/function";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { BonusActivation as ApiBonusActivation } from "../generated/definitions/BonusActivation";
