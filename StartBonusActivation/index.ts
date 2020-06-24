@@ -18,7 +18,9 @@ import {
   EligibilityCheckModel
 } from "../models/eligibility_check";
 import { documentClient } from "../services/cosmosdb";
+import { BONUS_ACTIVATIONS_QUEUE_NAME, queueService } from "../services/queue";
 import { StartBonusActivation } from "./handler";
+import { getEnqueueBonusActivation } from "./models";
 
 const cosmosDbName = getRequiredStringEnv("COSMOSDB_BONUS_DATABASE_NAME");
 
@@ -58,7 +60,8 @@ app.post(
   StartBonusActivation(
     bonusActivationModel,
     bonusLeaseModel,
-    eligibilityCheckModel
+    eligibilityCheckModel,
+    getEnqueueBonusActivation(queueService, BONUS_ACTIVATIONS_QUEUE_NAME)
   )
 );
 

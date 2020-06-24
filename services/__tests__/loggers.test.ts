@@ -1,5 +1,5 @@
-import { logHttpFetch } from "../loggers";
 import mockFetch, { mockJsonBody } from "../../__mocks__/node-fetch";
+import { logHttpFetch } from "../loggers";
 
 describe("logHttpFetch", () => {
   beforeEach(() => {

@@ -18,6 +18,9 @@ export const ContinueBonusActivationInput = t.type({
   // we need the following value to send notifications
   validBefore: Timestamp
 });
+export type ContinueBonusActivationInput = t.TypeOf<
+  typeof ContinueBonusActivationInput
+>;
 
 /**
  * Reads from a queue the tuple (bonusId, fiscalCode)

@@ -4,6 +4,7 @@ import {
   fromEither,
   fromLeft,
   TaskEither,
+  taskify,
   tryCatch
 } from "fp-ts/lib/TaskEither";
 import {
@@ -39,11 +40,14 @@ import {
 } from "../models/eligibility_check";
 import { genRandomBonusCode } from "../utils/bonusCode";
 
+import { QueueService } from "azure-storage";
+import { toString } from "fp-ts/lib/function";
 import {
   fromQueryEither,
   QueryError
 } from "io-functions-commons/dist/src/utils/documentdb";
 import { Millisecond } from "italia-ts-commons/lib/units";
+import { ContinueBonusActivationInput } from "../ContinueBonusActivation";
 import { BonusActivation } from "../generated/definitions/BonusActivation";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 import { FamilyUID } from "../generated/models/FamilyUID";
@@ -234,3 +238,26 @@ export const relaseLockForUserFamily = (
     _ => familyUID
   );
 };
+
+/**
+ * Enqueue bonusId to schedule a bonus activation procedure
+ */
+export const getEnqueueBonusActivation = (
+  queueService: QueueService,
+  queueName: NonEmptyString
+) => {
+  const createMessage = taskify(queueService.createMessage.bind(queueService));
+  return (
+    input: ContinueBonusActivationInput
+  ): TaskEither<IResponseErrorInternal, QueueService.QueueMessageResult> => {
+    // see https://github.com/Azure/Azure-Functions/issues/1091
+    const message = Buffer.from(JSON.stringify(input)).toString("base64");
+    return createMessage(queueName, message).mapLeft(err =>
+      ResponseErrorInternal(`Cannot enqueue bonus activation: ${toString(err)}`)
+    );
+  };
+};
+
+export type EnqueueBonusActivationT = ReturnType<
+  typeof getEnqueueBonusActivation
+>;
