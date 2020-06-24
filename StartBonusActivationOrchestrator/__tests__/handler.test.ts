@@ -144,7 +144,8 @@ describe("getStartBonusActivationOrchestratorHandler", () => {
 
     mockOrchestratorGetInput.mockReturnValueOnce({
       applicantFiscalCode: aFiscalCode,
-      bonusId: aBonusId
+      bonusId: aBonusId,
+      validBefore: new Date()
     });
 
     const result = consumeOrchestrator(
@@ -166,7 +167,8 @@ describe("getStartBonusActivationOrchestratorHandler", () => {
 
     mockOrchestratorGetInput.mockReturnValueOnce({
       applicantFiscalCode: aFiscalCode,
-      bonusId: aBonusId
+      bonusId: aBonusId,
+      validBefore: new Date()
     });
 
     const result = consumeOrchestrator(
@@ -190,7 +192,8 @@ describe("getStartBonusActivationOrchestratorHandler", () => {
 
     mockOrchestratorGetInput.mockReturnValueOnce({
       applicantFiscalCode: aFiscalCode,
-      bonusId: aBonusId
+      bonusId: aBonusId,
+      validBefore: new Date()
     });
 
     const result = consumeOrchestrator(
@@ -207,7 +210,7 @@ describe("getStartBonusActivationOrchestratorHandler", () => {
     expect(trackException).toHaveBeenCalled();
   });
 
-  it("should succeed when ADE activaction succeeds", () => {
+  it("should handle success when ADE activaction succeeds", () => {
     mockSendBonusActivationActivityCall.mockReturnValueOnce(
       SendBonusActivationSuccess.encode({
         kind: "SUCCESS"
@@ -215,7 +218,8 @@ describe("getStartBonusActivationOrchestratorHandler", () => {
     );
     mockOrchestratorGetInput.mockReturnValueOnce({
       applicantFiscalCode: aFiscalCode,
-      bonusId: aBonusId
+      bonusId: aBonusId,
+      validBefore: new Date()
     });
 
     const result = consumeOrchestrator(
@@ -232,7 +236,7 @@ describe("getStartBonusActivationOrchestratorHandler", () => {
     expect(trackException).not.toHaveBeenCalled();
   });
 
-  it("should succeed when ADE activaction fails", () => {
+  it("should handle failure when ADE activaction fails", () => {
     mockSendBonusActivationActivityCall.mockReturnValueOnce(
       // any failure kind is fine for this test
       SendBonusActivationFailure.encode({
@@ -243,7 +247,8 @@ describe("getStartBonusActivationOrchestratorHandler", () => {
 
     mockOrchestratorGetInput.mockReturnValueOnce({
       applicantFiscalCode: aFiscalCode,
-      bonusId: aBonusId
+      bonusId: aBonusId,
+      validBefore: new Date()
     });
 
     const result = consumeOrchestrator(
