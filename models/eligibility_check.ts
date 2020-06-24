@@ -51,7 +51,6 @@ function toRetrieved(
 
 function toBaseType(o: RetrievedEligibilityCheck): EligibilityCheck {
   // removes attributes of RetrievedEligibilityCheck which aren't of EligibilityCheck
-  // TODO: try to use t.exact(EligibilityCheck).encode(o)
   return EligibilityCheckSuccessEligible.is(o)
     ? pick(keys(EligibilityCheckSuccessEligible._A), o)
     : EligibilityCheckSuccessIneligible.is(o)

@@ -49,6 +49,8 @@ export const logHttpFetch = (
 const IBasicHttpTrace = t.type({
   RequestPayload: t.string,
   ResponsePayload: t.string,
+  ResponseStatus: t.Integer,
+  ResponseStatusText: t.string,
   Timestamp: UTCISODateFromString
 });
 type IBasicHttpTrace = t.TypeOf<typeof IBasicHttpTrace>;
@@ -60,6 +62,8 @@ export const createBasicHttpRequestTracer = <T extends IBasicHttpTrace>(
     PartitionKey: payload.Timestamp.getTime().toString(),
     RequestPayload: payload.RequestPayload,
     ResponsePayload: payload.ResponsePayload,
+    ResponseStatus: payload.ResponseStatus,
+    ResponseStatusText: payload.ResponseStatusText,
     RowKey: payload.Timestamp.getTime().toString()
   }));
 
@@ -81,10 +85,12 @@ export const traceInpsRequest = createBasicHttpRequestTracer<InpsLogEntity>(
  * @returns a fetch-like function
  */
 export const withInpsTracer = logHttpFetch(async (_, init, res) => {
-  const ResponsePayload = await res.json();
+  const ResponsePayload = await res.text();
   await traceInpsRequest({
     RequestPayload: JSON.stringify(init?.body || ""),
     ResponsePayload: JSON.stringify(ResponsePayload),
+    ResponseStatus: res.status,
+    ResponseStatusText: res.statusText,
     Timestamp: new Date()
   });
 });
@@ -107,10 +113,12 @@ export const traceAdeRequest = createBasicHttpRequestTracer<AdeLogEntity>(
  * @returns a fetch-like function
  */
 export const withAdeTracer = logHttpFetch(async (_, init, res) => {
-  const ResponsePayload = await res.json();
+  const ResponsePayload = await res.text();
   await traceAdeRequest({
     RequestPayload: JSON.stringify(init?.body || ""),
     ResponsePayload: JSON.stringify(ResponsePayload),
+    ResponseStatus: res.status,
+    ResponseStatusText: res.statusText,
     Timestamp: new Date()
   });
 });

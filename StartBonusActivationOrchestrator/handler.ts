@@ -151,17 +151,17 @@ export const getStartBonusActivationOrchestratorHandler = (
           }
         });
       } catch (e) {
-        // release family lock in case SendBonusActivationActivity fails
-        yield context.df.callActivityWithRetry(
-          "ReleaseFamilyLockActivity",
-          retryOptions,
-          ReleaseFamilyLockActivityInput.encode({
-            familyUID: bonusActivation.familyUID
-          })
-        );
-        throw new Error(
-          `${logPrefix}|Error sending bonus to ADE|ERROR=${toString(e)}`
-        );
+        trackEvent({
+          name: "bonus.activation.ade.failure",
+          properties: {
+            id: operationId
+          }
+        });
+        trackException({
+          exception: new Error(
+            `${logPrefix}|Error sending bonus to ADE|ERROR=${toString(e)}`
+          )
+        });
       }
 
       // Call to ADE service succeeded?
@@ -172,7 +172,7 @@ export const getStartBonusActivationOrchestratorHandler = (
       if (isSendBonusActivationSuccess) {
         // Update bonus to ACTIVE
         // TODO: If this operation fails after max retries
-        // we don't release the lock as the bous is already sent to ADE.
+        // we don't release the lock as the bonus is already sent to ADE.
         // We should retry the whole orchestrator (using a sub-orchestrator)
         yield context.df.callActivityWithRetry(
           "SuccessBonusActivationActivity",

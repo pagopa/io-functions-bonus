@@ -20,7 +20,6 @@ import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
 
 import { toString } from "fp-ts/lib/function";
 
-// TODO: Handle the inps:Identity element content
 const getSOAPRequest = (
   dataValidita: string,
   fiscalCode: string,
