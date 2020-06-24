@@ -203,9 +203,9 @@ describe("getStartBonusActivationOrchestratorHandler", () => {
     expect(result).toBe(true);
     expect(mockGetBonusActivationActivityCall).toHaveBeenCalled();
     expect(mockSendBonusActivationActivityCall).toHaveBeenCalled();
-    expect(mockSendMessageActivityCall).not.toHaveBeenCalled();
+    expect(mockSendMessageActivityCall).toHaveBeenCalled();
     expect(mockSuccessBonusActivationActivityCall).not.toHaveBeenCalled();
-    expect(mockFailedBonusActivationActivityCall).not.toHaveBeenCalled();
+    expect(mockFailedBonusActivationActivityCall).toHaveBeenCalled();
     expect(mockReleaseFamilyLockActivityCall).toHaveBeenCalled();
     expect(trackException).toHaveBeenCalled();
   });
