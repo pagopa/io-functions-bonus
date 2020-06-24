@@ -1,8 +1,6 @@
 // tslint:disable: no-any
 import { Context } from "@azure/functions";
 import * as df from "durable-functions";
-import { IOrchestrationFunctionContext } from "durable-functions/lib/src/classes";
-import { unknown } from "io-ts";
 
 export const mockStatusRunning = {
   runtimeStatus: df.OrchestrationRuntimeStatus.Running
