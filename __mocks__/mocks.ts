@@ -17,7 +17,9 @@ import {
   StatusEnum as EligibilityCheckSuccessIneligibleStatus
 } from "../generated/models/EligibilityCheckSuccessIneligible";
 
+import { MessageContent } from "io-functions-commons/dist/generated/definitions/MessageContent";
 import { QueryError } from "io-functions-commons/dist/src/utils/documentdb";
+import { readableReport } from "italia-ts-commons/lib/reporters";
 import {
   BonusVacanzaInvalidRequestError,
   BonusVacanzaTransientError
@@ -201,3 +203,20 @@ export const aConflictQueryError: QueryError = {
   body: "Conflict",
   code: 409
 };
+
+export const aMessageContent = MessageContent.decode({
+  due_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000 /* +3gg */),
+  markdown:
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed eu dolor nec metus.",
+  payment_data: {
+    amount: 100,
+    invalid_after_due_date: true,
+    notice_number: "012345678901234567"
+  },
+  prescription_data: {
+    nre: "Lorem ipsum et."
+  },
+  subject: "a fake subject"
+}).getOrElseL(e => {
+  throw new Error(readableReport(e));
+});

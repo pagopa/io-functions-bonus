@@ -1,6 +1,8 @@
 // tslint:disable: no-any
 import { Context } from "@azure/functions";
 import * as df from "durable-functions";
+import { IOrchestrationFunctionContext } from "durable-functions/lib/src/classes";
+import { unknown } from "io-ts";
 
 export const mockStatusRunning = {
   runtimeStatus: df.OrchestrationRuntimeStatus.Running
@@ -27,8 +29,6 @@ export const getClient = jest.fn(() => ({
   terminate: mockTerminate
 }));
 
-export const orchestrator = jest.fn();
-
 export const RetryOptions = jest.fn(() => ({}));
 
 export const context = ({
@@ -44,3 +44,41 @@ export const context = ({
     warn: jest.fn().mockImplementation(console.log)
   }
 } as any) as Context;
+
+//
+// Orchestrator context
+//
+
+export const mockOrchestratorGetInput = jest.fn();
+export const mockOrchestratorCallActivity = jest
+  .fn()
+  .mockImplementation((name: string, input?: unknown) => ({
+    input,
+    name
+  }));
+export const mockOrchestratorCallActivityWithRetry = jest
+  .fn()
+  .mockImplementation(
+    (name: string, retryOptions: df.RetryOptions, input?: unknown) => ({
+      input,
+      name,
+      retryOptions
+    })
+  );
+export const mockOrchestratorSetCustomStatus = jest.fn();
+export const mockOrchestratorCreateTimer = jest.fn();
+
+export const mockOrchestratorContext = {
+  ...context,
+  df: {
+    callActivity: mockOrchestratorCallActivity,
+    callActivityWithRetry: mockOrchestratorCallActivityWithRetry,
+    createTimer: mockOrchestratorCreateTimer,
+    getInput: mockOrchestratorGetInput,
+    setCustomStatus: mockOrchestratorSetCustomStatus
+  }
+};
+
+export const orchestrator = jest
+  .fn()
+  .mockImplementation(fn => () => fn(mockOrchestratorContext));
