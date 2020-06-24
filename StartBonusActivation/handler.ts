@@ -22,9 +22,9 @@ import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { BonusActivationModel } from "../models/bonus_activation";
 import { EligibilityCheckModel } from "../models/eligibility_check";
 
+import { QueueService } from "azure-storage";
 import { identity } from "fp-ts/lib/function";
 import { readableReport } from "italia-ts-commons/lib/reporters";
-import { ContinueBonusActivationInput } from "../ContinueBonusActivation";
 import { BonusActivation as ApiBonusActivation } from "../generated/definitions/BonusActivation";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { BonusLeaseModel } from "../models/bonus_lease";
@@ -36,6 +36,7 @@ import { checkBonusActivationIsRunning } from "./locks";
 import {
   acquireLockForUserFamily,
   createBonusActivation,
+  EnqueueBonusActivationT,
   getLatestValidDSU,
   IApiBonusActivationWithValidBefore,
   relaseLockForUserFamily
@@ -62,7 +63,8 @@ type IStartBonusActivationHandler = (
 export function StartBonusActivationHandler(
   bonusActivationModel: BonusActivationModel,
   bonusLeaseModel: BonusLeaseModel,
-  eligibilityCheckModel: EligibilityCheckModel
+  eligibilityCheckModel: EligibilityCheckModel,
+  enqueueBonusActivation: EnqueueBonusActivationT
 ): IStartBonusActivationHandler {
   return async (context, fiscalCode) => {
     const dfClient = df.getClient(context);
@@ -106,8 +108,18 @@ export function StartBonusActivationHandler(
                   validBefore: eligibilityCheck.validBefore
                 }))
             )
+            // Send the (bonusId, applicantFiscalCode) to the bonus activations queue
+            // in order to be processed later (asynchronously)
+            .chain(({ apiBonusActivation, validBefore }) =>
+              enqueueBonusActivation({
+                applicantFiscalCode: apiBonusActivation.applicant_fiscal_code,
+                bonusId: apiBonusActivation.id,
+                validBefore
+              }).map(_ => ({ apiBonusActivation, validBefore }))
+            )
             .foldTaskEither(
               // bonus creation failed
+              // or enqueue failed
               response => {
                 trackException({
                   exception: new Error(response.detail),
@@ -128,7 +140,7 @@ export function StartBonusActivationHandler(
                 taskEither.of(bonusActivationWithValidBefore)
             )
       )
-      .fold(identity, ({ apiBonusActivation, validBefore }) => {
+      .fold(identity, ({ apiBonusActivation }) => {
         // Add the tuple (fiscalCode, bonusId) to the processing bonus collection
         // this is used a s lock to avoid having more than one bonus in processing status
         // The lock is removed when the orchestrator terminate
@@ -136,14 +148,6 @@ export function StartBonusActivationHandler(
         context.bindings.processingBonusIdOut = BonusProcessing.encode({
           bonusId: apiBonusActivation.id,
           id: apiBonusActivation.applicant_fiscal_code
-        });
-        // Send the (bonusId, applicantFiscalCode) to the bonus activations queue
-        // in order to be processed later (asynchronously)
-        // tslint:disable-next-line: no-object-mutation
-        context.bindings.bonusActivation = ContinueBonusActivationInput.encode({
-          applicantFiscalCode: apiBonusActivation.applicant_fiscal_code,
-          bonusId: apiBonusActivation.id,
-          validBefore
         });
         return ResponseSuccessRedirectToResource(
           apiBonusActivation,
@@ -160,12 +164,14 @@ export function StartBonusActivationHandler(
 export function StartBonusActivation(
   bonusActivationModel: BonusActivationModel,
   bonusLeaseModel: BonusLeaseModel,
-  eligibilityCheckModel: EligibilityCheckModel
+  eligibilityCheckModel: EligibilityCheckModel,
+  enqueueBonusActivation: EnqueueBonusActivationT
 ): express.RequestHandler {
   const handler = StartBonusActivationHandler(
     bonusActivationModel,
     bonusLeaseModel,
-    eligibilityCheckModel
+    eligibilityCheckModel,
+    enqueueBonusActivation
   );
   const middlewaresWrap = withRequestMiddlewares(
     // Extract Azure Functions bindings

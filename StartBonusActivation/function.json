@@ -19,13 +19,6 @@
       "direction": "in"
     },
     {
-      "type": "queue",
-      "direction": "out",
-      "name": "bonusActivation",
-      "queueName": "bonusactivations",
-      "connection": "BONUS_STORAGE_CONNECTION_STRING"
-    },
-    {
       "type": "cosmosDB",
       "name": "processingBonusIdIn",
       "databaseName": "%COSMOSDB_BONUS_DATABASE_NAME%",

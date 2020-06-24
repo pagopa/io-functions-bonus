@@ -2,7 +2,9 @@
 
 import { left, right } from "fp-ts/lib/Either";
 import { none, some } from "fp-ts/lib/Option";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
+import { ResponseErrorInternal } from "italia-ts-commons/lib/responses";
+import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import {
   context,
   mockGetStatus,
@@ -22,11 +24,12 @@ import { BonusLeaseModel } from "../../models/bonus_lease";
 import { BonusProcessing } from "../../models/bonus_processing";
 import { EligibilityCheckModel } from "../../models/eligibility_check";
 import { OrchestratorInput } from "../../StartBonusActivationOrchestrator/handler";
-import {
-  makeStartBonusActivationOrchestratorId,
-  makeStartEligibilityCheckOrchestratorId
-} from "../../utils/orchestrators";
+import { makeStartEligibilityCheckOrchestratorId } from "../../utils/orchestrators";
 import { StartBonusActivationHandler } from "../handler";
+
+const enqueueBonusActivation = jest.fn().mockReturnValue(taskEither.of("foo"));
+
+const queueName = "somequeuename" as NonEmptyString;
 
 // implement temporary mockGetStatus
 const simulateOrchestratorIsRunning = (forOrchestratorId: string) => {
@@ -89,11 +92,11 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      enqueueBonusActivation
     );
 
     const response = await handler(context, aFiscalCode);
-    expect(context.bindings.bonusActivation).toBeUndefined();
 
     expect(response.kind).toBe("IResponseErrorForbiddenNotAuthorized");
   });
@@ -107,11 +110,11 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      enqueueBonusActivation
     );
 
     const response = await handler(context, aFiscalCode);
-    expect(context.bindings.bonusActivation).toBeUndefined();
 
     expect(response.kind).toBe("IResponseSuccessAccepted");
     if (response.kind === "IResponseSuccessAccepted") {
@@ -126,11 +129,11 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      enqueueBonusActivation
     );
 
     const response = await handler(context, aFiscalCode);
-    expect(context.bindings.bonusActivation).toBeUndefined();
 
     expect(response.kind).toBe("IResponseErrorGone");
   });
@@ -140,11 +143,11 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      enqueueBonusActivation
     );
 
     const response = await handler(context, aFiscalCode);
-    expect(context.bindings.bonusActivation).toBeUndefined();
 
     expect(response.kind).toBe("IResponseErrorForbiddenNotAuthorized");
   });
@@ -156,11 +159,11 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      enqueueBonusActivation
     );
 
     const response = await handler(context, aFiscalCode);
-    expect(context.bindings.bonusActivation).toBeUndefined();
 
     expect(response.kind).toBe("IResponseErrorForbiddenNotAuthorized");
   });
@@ -172,11 +175,11 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      enqueueBonusActivation
     );
 
     const response = await handler(context, aFiscalCode);
-    expect(context.bindings.bonusActivation).toBeUndefined();
 
     expect(response.kind).toBe("IResponseErrorInternal");
   });
@@ -188,16 +191,16 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      enqueueBonusActivation
     );
 
     const response = await handler(context, aFiscalCode);
-    expect(context.bindings.bonusActivation).toBeUndefined();
 
     expect(response.kind).toBe("IResponseErrorInternal");
   });
 
-  it("should retry bonus code generation if there's already the same code on the db", async () => {
+  it("should retry bonus code generation if theres already the same code on the db", async () => {
     mockBonusActivationCreate.mockImplementationOnce(async _ =>
       left({
         code: 409
@@ -207,17 +210,17 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      enqueueBonusActivation
     );
 
     const response = await handler(context, aFiscalCode);
-    expect(context.bindings.bonusActivation).toEqual(
-      OrchestratorInput.encode({
-        applicantFiscalCode: aFiscalCode,
-        bonusId: aBonusId,
-        validBefore: aEligibilityCheckSuccessEligibleValid.validBefore
-      })
-    );
+    const input = {
+      applicantFiscalCode: aFiscalCode,
+      bonusId: aBonusId,
+      validBefore: aEligibilityCheckSuccessEligibleValid.validBefore
+    };
+    expect(enqueueBonusActivation).toHaveBeenCalledWith(input);
 
     // the first attempt failed, so it's called twice
     expect(mockBonusActivationCreate).toHaveBeenCalledTimes(2);
@@ -237,11 +240,11 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      enqueueBonusActivation
     );
 
     const response = await handler(context, aFiscalCode);
-    expect(context.bindings.bonusActivation).toBeUndefined();
 
     expect(mockBonusActivationCreate).toHaveBeenCalledTimes(1);
     expect(response.kind).toBe("IResponseErrorInternal");
@@ -254,11 +257,11 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      enqueueBonusActivation
     );
 
     const response = await handler(context, aFiscalCode);
-    expect(context.bindings.bonusActivation).toBeUndefined();
 
     expect(mockBonusActivationCreate).toHaveBeenCalledTimes(1);
     expect(response.kind).toBe("IResponseErrorInternal");
@@ -273,11 +276,11 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      enqueueBonusActivation
     );
 
     const response = await handler(context, aFiscalCode);
-    expect(context.bindings.bonusActivation).toBeUndefined();
 
     expect(response.kind).toBe("IResponseErrorConflict");
   });
@@ -289,11 +292,11 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      enqueueBonusActivation
     );
 
     const response = await handler(context, aFiscalCode);
-    expect(context.bindings.bonusActivation).toBeUndefined();
 
     expect(response.kind).toBe("IResponseErrorInternal");
   });
@@ -306,11 +309,11 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      enqueueBonusActivation
     );
 
     const response = await handler(context, aFiscalCode);
-    expect(context.bindings.bonusActivation).toBeUndefined();
     expect(mockBonusLeaseDeleteOneById).toHaveBeenCalledTimes(1);
     expect(response.kind).toBe("IResponseErrorInternal");
   });
@@ -323,30 +326,57 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      enqueueBonusActivation
     );
 
     await handler(context, aFiscalCode);
-    expect(context.bindings.bonusActivation).toBeUndefined();
 
     expect(mockBonusLeaseDeleteOneById).not.toHaveBeenCalled();
   });
 
-  it("should set queue bindings in case bonus creation succeed", async () => {
+  it("should enqueue bonusid in case bonus creation succeed", async () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
-      mockEligibilityCheckModel
+      mockEligibilityCheckModel,
+      enqueueBonusActivation
     );
 
     const response = await handler(context, aFiscalCode);
-    expect(context.bindings.bonusActivation).toEqual(
-      OrchestratorInput.encode({
-        applicantFiscalCode: aFiscalCode,
-        bonusId: aBonusId,
-        validBefore: aEligibilityCheckSuccessEligibleValid.validBefore
-      })
-    );
+
+    const input = {
+      applicantFiscalCode: aFiscalCode,
+      bonusId: aBonusId,
+      validBefore: aEligibilityCheckSuccessEligibleValid.validBefore
+    };
+
+    expect(enqueueBonusActivation).toHaveBeenCalledWith(input);
     expect(response.kind).toBe("IResponseSuccessRedirectToResource");
+  });
+
+  it("should release family lock when message enqueing fail", async () => {
+    enqueueBonusActivation.mockReturnValueOnce(
+      fromLeft(ResponseErrorInternal("foo"))
+    );
+
+    const handler = StartBonusActivationHandler(
+      mockBonusActivationModel,
+      mockBonusLeaseModel,
+      mockEligibilityCheckModel,
+      enqueueBonusActivation
+    );
+
+    const response = await handler(context, aFiscalCode);
+
+    const input = {
+      applicantFiscalCode: aFiscalCode,
+      bonusId: aBonusId,
+      validBefore: aEligibilityCheckSuccessEligibleValid.validBefore
+    };
+    expect(enqueueBonusActivation).toHaveBeenCalledWith(input);
+
+    expect(mockBonusLeaseModel.deleteOneById).toHaveBeenCalledTimes(1);
+    expect(response.kind).toBe("IResponseErrorInternal");
   });
 });
