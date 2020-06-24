@@ -168,6 +168,7 @@ export function createClient(
         const response = await fetchApi(`${endpoint}`, {
           body: requestPayload,
           headers: {
+            "Content-Type": "text/xml; charset=utf-8",
             SOAPAction: INPS_SOAP_ACTION
           },
           method: "POST"
