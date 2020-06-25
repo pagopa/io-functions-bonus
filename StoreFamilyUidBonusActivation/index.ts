@@ -1,9 +1,12 @@
 import { AzureFunction, Context } from "@azure/functions";
 import { TableService } from "azure-storage";
-import { rights } from "fp-ts/lib/Array";
-import { isLeft } from "fp-ts/lib/Either";
-import { toString } from "fp-ts/lib/function";
-import { taskify } from "fp-ts/lib/TaskEither";
+import { array } from "fp-ts/lib/Array";
+import {
+  fromLeft,
+  taskEither,
+  TaskEither,
+  taskify
+} from "fp-ts/lib/TaskEither";
 import { getRequiredStringEnv } from "io-functions-commons/dist/src/utils/env";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { RetrievedBonusActivation } from "../models/bonus_activation";
@@ -28,33 +31,37 @@ const insertOrReplaceEntity = taskify(
  */
 const index: AzureFunction = async (context: Context, input: unknown) => {
   const logPrefix = `StoreFamilyLockBonusActivation`;
-  const decoded = CosmosDbDocumentCollection.decode(input);
-  if (isLeft(decoded)) {
-    context.log.error(
-      `${logPrefix}|ERROR=cannot decode input [${readableReport(
-        decoded.value
-      )}]`
-    );
-    return;
-  }
-
-  const documents = rights(decoded.value.map(RetrievedBonusActivation.decode));
-
-  // it looks like we must use the table storage SDK:
-  // see https://docs.microsoft.com/it-it/azure/azure-functions/functions-bindings-storage-table?tabs=csharp#output
-
-  documents.forEach(document => {
-    insertOrReplaceEntity(BONUS_LEASE_TO_BONUS_ACTIVATIONS_TABLE_NAME, {
-      BonusID: document.id,
-      PartitionKey: document.familyUID,
-      RowKey: document.familyUID,
-      Status: document.status
-    })
-      .run()
-      .catch(err => {
-        context.log.error(`${logPrefix}|ERROR=${toString(err)}`);
-      });
-  });
+  const tasks = CosmosDbDocumentCollection.decode(input).fold(
+    errs => {
+      const error = `${logPrefix}|ERROR=cannot decode input [${readableReport(
+        errs
+      )}]`;
+      context.log.error(error);
+      // tslint:disable-next-line: readonly-array
+      return [] as Array<TaskEither<Error, TableService.EntityMetadata>>;
+    },
+    docs =>
+      docs.map(_ =>
+        RetrievedBonusActivation.decode(_).fold(
+          errs => fromLeft(new Error(readableReport(errs))),
+          document =>
+            // it looks like we must use the table storage SDK:
+            // see https://docs.microsoft.com/it-it/azure/azure-functions/functions-bindings-storage-table?tabs=csharp#output
+            insertOrReplaceEntity(BONUS_LEASE_TO_BONUS_ACTIVATIONS_TABLE_NAME, {
+              BonusID: document.id,
+              PartitionKey: document.familyUID,
+              RowKey: document.familyUID,
+              Status: document.status
+            })
+        )
+      )
+  );
+  return array
+    .sequence(taskEither)(tasks)
+    .run()
+    .catch(err => {
+      context.log.error(err);
+    });
 };
 
 export default index;
