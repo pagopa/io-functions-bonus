@@ -379,4 +379,60 @@ describe("StartBonusActivationHandler", () => {
     expect(mockBonusLeaseModel.deleteOneById).toHaveBeenCalledTimes(1);
     expect(response.kind).toBe("IResponseErrorInternal");
   });
+
+  it("should ignore if lock release fails because no lock is found", async () => {
+    enqueueBonusActivation.mockReturnValueOnce(
+      fromLeft(ResponseErrorInternal("foo"))
+    );
+    mockBonusLeaseDeleteOneById.mockImplementationOnce(async () =>
+      left({ code: 404 })
+    );
+
+    const handler = StartBonusActivationHandler(
+      mockBonusActivationModel,
+      mockBonusLeaseModel,
+      mockEligibilityCheckModel,
+      enqueueBonusActivation
+    );
+
+    const response = await handler(context, aFiscalCode);
+
+    const input = {
+      applicantFiscalCode: aFiscalCode,
+      bonusId: aBonusId,
+      validBefore: aEligibilityCheckSuccessEligibleValid.validBefore
+    };
+    expect(enqueueBonusActivation).toHaveBeenCalledWith(input);
+
+    expect(mockBonusLeaseModel.deleteOneById).toHaveBeenCalledTimes(1);
+    expect(response.kind).toBe("IResponseErrorInternal");
+  });
+
+  it("should ignore if lock release fails for any reason", async () => {
+    enqueueBonusActivation.mockReturnValueOnce(
+      fromLeft(ResponseErrorInternal("foo"))
+    );
+    mockBonusLeaseDeleteOneById.mockImplementationOnce(async () =>
+      left({ code: 500, body: "any reason" })
+    );
+
+    const handler = StartBonusActivationHandler(
+      mockBonusActivationModel,
+      mockBonusLeaseModel,
+      mockEligibilityCheckModel,
+      enqueueBonusActivation
+    );
+
+    const response = await handler(context, aFiscalCode);
+
+    const input = {
+      applicantFiscalCode: aFiscalCode,
+      bonusId: aBonusId,
+      validBefore: aEligibilityCheckSuccessEligibleValid.validBefore
+    };
+    expect(enqueueBonusActivation).toHaveBeenCalledWith(input);
+
+    expect(mockBonusLeaseModel.deleteOneById).toHaveBeenCalledTimes(1);
+    expect(response.kind).toBe("IResponseErrorInternal");
+  });
 });
