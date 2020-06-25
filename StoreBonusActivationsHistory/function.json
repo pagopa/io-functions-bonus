@@ -9,7 +9,7 @@
       "connectionStringSetting": "COSMOSDB_CONNECTION_STRING",
       "databaseName": "%COSMOSDB_BONUS_DATABASE_NAME%",
       "collectionName": "bonus-activations",
-      "createLeaseCollectionIfNotExists": false,
+      "createLeaseCollectionIfNotExists": true,
       "startFromBeginning": false
     },
     {
