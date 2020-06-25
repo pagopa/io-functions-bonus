@@ -2,7 +2,7 @@ import { AzureFunction, Context } from "@azure/functions";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { BonusActivation } from "../generated/models/BonusActivation";
-import { CosmosDbDocumentCollection, toBaseDoc } from "../services/cosmosdb";
+import { CosmosDbDocumentCollection } from "../services/cosmosdb";
 import { generateFamilyUID } from "../utils/hash";
 
 const index: AzureFunction = async (_: Context, input: unknown) => {
