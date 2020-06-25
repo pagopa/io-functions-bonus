@@ -5,20 +5,13 @@
       "name": "documents",
       "direction": "in",
       "leaseCollectionName": "change-feed-leases",
-      "leaseCollectionPrefix": "ec",
+      "leaseCollectionPrefix": "fb",
       "connectionStringSetting": "COSMOSDB_CONNECTION_STRING",
       "databaseName": "%COSMOSDB_BONUS_DATABASE_NAME%",
-      "collectionName": "eligibility-checks",
+      "collectionName": "bonus-activations",
       "createLeaseCollectionIfNotExists": false,
       "startFromBeginning": false
-    },
-    {
-      "tableName": "eligibilitychecks",
-      "connection": "BONUS_STORAGE_CONNECTION_STRING",
-      "name": "eligibilityChecksLogs",
-      "type": "table",
-      "direction": "out"
-    }    
+    }
   ],
-  "scriptFile": "../dist/StoreEligibilityChecksHistory/index.js"
+  "scriptFile": "../dist/StoreFamilyUidBonusActivation/index.js"
 }
