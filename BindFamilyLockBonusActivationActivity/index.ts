@@ -28,23 +28,20 @@ const index: AzureFunction = async (_: Context, input: unknown) => {
           familyUID: generateFamilyUID(
             bonusActivation.dsuRequest.familyMembers
           ),
-          originalDocument: bonusActivation,
-          rawDocument
+          originalDocument: bonusActivation
         }
       ];
     },
     [] as ReadonlyArray<{
       familyUID: NonEmptyString;
       originalDocument: BonusActivation;
-      rawDocument: { readonly [x: string]: unknown };
     }>
   );
   return {
     bonusLeaseBindings: documents.map(d => ({
       BonusID: d.originalDocument.id,
-      PartitionKey: `${d.familyUID}`,
-      Payload: JSON.stringify(toBaseDoc(d.originalDocument)),
-      RowKey: d.rawDocument._ts,
+      PartitionKey: d.familyUID,
+      RowKey: d.familyUID,
       Status: d.originalDocument.status
     }))
   };

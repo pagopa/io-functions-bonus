@@ -5,7 +5,7 @@
       "name": "documents",
       "direction": "in",
       "leaseCollectionName": "change-feed-bonus",
-      "leaseCollectionPrefix": "ba",
+      "leaseCollectionPrefix": "babinding",
       "connectionStringSetting": "COSMOSDB_CONNECTION_STRING",
       "databaseName": "%COSMOSDB_BONUS_DATABASE_NAME%",
       "collectionName": "bonus-activations",
