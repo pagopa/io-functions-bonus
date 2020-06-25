@@ -18,12 +18,8 @@ const index: AzureFunction = async (_: Context, input: unknown) => {
   const documents = decoded.value.reduce(
     (prev, rawDocument) => {
       const errorOrBonusActivation = BonusActivation.decode(rawDocument);
-      // Skip invalid documents and BonusActivation with state not PROCESSING
-      if (
-        errorOrBonusActivation.isLeft() ||
-        errorOrBonusActivation.value.status !==
-          BonusActivationStatusEnum.PROCESSING
-      ) {
+      // Skip invalid documents
+      if (errorOrBonusActivation.isLeft()) {
         return prev;
       }
       const bonusActivation = errorOrBonusActivation.value;
@@ -33,14 +29,14 @@ const index: AzureFunction = async (_: Context, input: unknown) => {
           familyUID: generateFamilyUID(
             bonusActivation.dsuRequest.familyMembers
           ),
-          originalDocument: toBaseDoc(rawDocument),
+          originalDocument: bonusActivation,
           rawDocument
         }
       ];
     },
     [] as ReadonlyArray<{
       familyUID: NonEmptyString;
-      originalDocument: { readonly [x: string]: unknown };
+      originalDocument: BonusActivation;
       rawDocument: { readonly [x: string]: unknown };
     }>
   );
@@ -49,7 +45,8 @@ const index: AzureFunction = async (_: Context, input: unknown) => {
       BonusID: d.originalDocument.id,
       PartitionKey: `${d.familyUID}`,
       Payload: JSON.stringify(d.originalDocument),
-      RowKey: d.rawDocument._ts
+      RowKey: d.rawDocument._ts,
+      Status: d.originalDocument.status
     }))
   };
 };
