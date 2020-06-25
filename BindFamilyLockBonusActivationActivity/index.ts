@@ -2,7 +2,6 @@ import { AzureFunction, Context } from "@azure/functions";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { BonusActivation } from "../generated/models/BonusActivation";
-import { BonusActivationStatusEnum } from "../generated/models/BonusActivationStatus";
 import { CosmosDbDocumentCollection, toBaseDoc } from "../services/cosmosdb";
 import { generateFamilyUID } from "../utils/hash";
 
@@ -44,7 +43,7 @@ const index: AzureFunction = async (_: Context, input: unknown) => {
     bonusLeaseBindings: documents.map(d => ({
       BonusID: d.originalDocument.id,
       PartitionKey: `${d.familyUID}`,
-      Payload: JSON.stringify(d.originalDocument),
+      Payload: JSON.stringify(toBaseDoc(d.originalDocument)),
       RowKey: d.rawDocument._ts,
       Status: d.originalDocument.status
     }))
