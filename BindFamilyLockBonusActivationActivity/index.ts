@@ -1,9 +1,8 @@
 import { AzureFunction, Context } from "@azure/functions";
+import { isRight } from "fp-ts/lib/Either";
 import { readableReport } from "italia-ts-commons/lib/reporters";
-import { NonEmptyString } from "italia-ts-commons/lib/strings";
-import { BonusActivation } from "../generated/models/BonusActivation";
+import { RetrievedBonusActivation } from "../models/bonus_activation";
 import { CosmosDbDocumentCollection } from "../services/cosmosdb";
-import { generateFamilyUID } from "../utils/hash";
 
 const index: AzureFunction = async (_: Context, input: unknown) => {
   const decoded = CosmosDbDocumentCollection.decode(input);
@@ -14,35 +13,16 @@ const index: AzureFunction = async (_: Context, input: unknown) => {
       )}]`
     );
   }
-  const documents = decoded.value.reduce(
-    (prev, rawDocument) => {
-      const errorOrBonusActivation = BonusActivation.decode(rawDocument);
-      // Skip invalid documents
-      if (errorOrBonusActivation.isLeft()) {
-        return prev;
-      }
-      const bonusActivation = errorOrBonusActivation.value;
-      return [
-        ...prev,
-        {
-          familyUID: generateFamilyUID(
-            bonusActivation.dsuRequest.familyMembers
-          ),
-          originalDocument: bonusActivation
-        }
-      ];
-    },
-    [] as ReadonlyArray<{
-      familyUID: NonEmptyString;
-      originalDocument: BonusActivation;
-    }>
-  );
+  const documents = decoded.value
+    .map(RetrievedBonusActivation.decode)
+    .filter(isRight)
+    .map(rightDocument => rightDocument.value);
   return {
-    bonusLeaseBindings: documents.map(d => ({
-      BonusID: d.originalDocument.id,
-      PartitionKey: d.familyUID,
-      RowKey: d.familyUID,
-      Status: d.originalDocument.status
+    bonusLeaseBindings: documents.map(document => ({
+      BonusID: document.id,
+      PartitionKey: document.familyUID,
+      RowKey: document.familyUID,
+      Status: document.status
     }))
   };
 };
