@@ -1,12 +1,15 @@
 import { Context } from "@azure/functions";
 import { addMilliseconds } from "date-fns";
-import { fromEither } from "fp-ts/lib/TaskEither";
+import { fromEither, taskEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "io-functions-commons/dist/generated/definitions/FiscalCode";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { Hour, Millisecond } from "italia-ts-commons/lib/units";
 import { ISoapClientAsync } from "../clients/inpsSoapClient";
-import { ConsultazioneSogliaIndicatoreResponse } from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
+import {
+  ConsultazioneSogliaIndicatoreResponse,
+  EsitoEnum
+} from "../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
 import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
 import { Timestamp } from "../generated/definitions/Timestamp";
 import { trackException } from "../utils/appinsights";
@@ -72,6 +75,24 @@ export const getEligibilityCheckActivityHandler = (
             FornituraNucleo: SiNoTypeEnum.SI
           })
           .map(_ => ({ dsu: _, fiscalCode }));
+      })
+      .chain(data => {
+        if (
+          !data.dsu.DatiIndicatore?.Componenti?.some(
+            familyMember => familyMember.CodiceFiscale === data.fiscalCode
+          )
+        ) {
+          return taskEither.of({
+            dsu: {
+              ...data.dsu,
+              DescrizioneError:
+                "Missing requester fiscal code inside family members array",
+              Esito: EsitoEnum.ERRORE_INTERNO
+            },
+            fiscalCode: data.fiscalCode
+          });
+        }
+        return taskEither.of(data);
       })
       .fold(
         err => {

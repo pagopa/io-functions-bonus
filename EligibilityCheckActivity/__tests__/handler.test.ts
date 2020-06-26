@@ -1,16 +1,16 @@
 // tslint:disable: no-identical-functions
 
-import { right } from "fp-ts/lib/Either";
+import { isRight, right } from "fp-ts/lib/Either";
 import { fromEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { Hour, Millisecond } from "italia-ts-commons/lib/units";
 import { context } from "../../__mocks__/durable-functions";
+import { ISoapClientAsync } from "../../clients/inpsSoapClient";
 import {
   ConsultazioneSogliaIndicatoreResponse,
   EsitoEnum
 } from "../../generated/definitions/ConsultazioneSogliaIndicatoreResponse";
 import { SiNoTypeEnum } from "../../generated/definitions/SiNoType";
-import { ISoapClientAsync } from "../../clients/inpsSoapClient";
 import {
   ActivityResultSuccess,
   getEligibilityCheckActivityHandler
@@ -33,9 +33,26 @@ const aINPSDsu: ConsultazioneSogliaIndicatoreResponse = {
   }
 };
 
-const mockConsultazioneSogliaIndicatore = jest.fn(() =>
-  fromEither(right(aINPSDsu))
-);
+const anotherFiscalCode = "CCCDDD80A01C123D" as FiscalCode;
+
+const anInvalidINPSDsu: ConsultazioneSogliaIndicatoreResponse = {
+  Esito: EsitoEnum.OK,
+  IdRichiesta: 1,
+
+  DatiIndicatore: {
+    DataPresentazioneDSU: new Date(),
+    PresenzaDifformita: SiNoTypeEnum.NO,
+    ProtocolloDSU: "PROTOCOLLO-DSU",
+    SottoSoglia: SiNoTypeEnum.SI,
+    TipoIndicatore: "ISEE Semplice",
+
+    Componenti: [
+      { CodiceFiscale: anotherFiscalCode, Cognome: "AAA", Nome: "BBB" }
+    ]
+  }
+};
+
+const mockConsultazioneSogliaIndicatore = jest.fn();
 const mockINPSSoapClient = ({
   ConsultazioneSogliaIndicatore: mockConsultazioneSogliaIndicatore
 } as unknown) as ISoapClientAsync;
@@ -43,7 +60,13 @@ const mockINPSSoapClient = ({
 const aDsuDuration = 24 as Hour;
 
 describe("EligibilityCheckActivity", () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+  });
   it("should retrieve a DSU from INPS SOAP web service", async () => {
+    mockConsultazioneSogliaIndicatore.mockImplementation(() =>
+      fromEither(right(aINPSDsu))
+    );
     const handler = getEligibilityCheckActivityHandler(
       mockINPSSoapClient,
       aDsuDuration
@@ -63,6 +86,9 @@ describe("EligibilityCheckActivity", () => {
   });
 
   it("should calculate dsu duration from the provided value", async () => {
+    mockConsultazioneSogliaIndicatore.mockImplementation(() =>
+      fromEither(right(aINPSDsu))
+    );
     const dsuDuration = 24 as Hour;
 
     const handler = getEligibilityCheckActivityHandler(
@@ -98,6 +124,9 @@ describe("EligibilityCheckActivity", () => {
     );
   });
   it("should calculate dsu duration from the provided value with fractions of hour", async () => {
+    mockConsultazioneSogliaIndicatore.mockImplementation(() =>
+      fromEither(right(aINPSDsu))
+    );
     const dsuDuration = (1 / 3600) as Hour;
 
     const handler = getEligibilityCheckActivityHandler(
@@ -131,5 +160,30 @@ describe("EligibilityCheckActivity", () => {
         );
       }
     );
+  });
+
+  it("should consider a DSU invalid if the requester fiscal code is missing inside family members", async () => {
+    mockConsultazioneSogliaIndicatore.mockImplementation(() =>
+      fromEither(right(anInvalidINPSDsu))
+    );
+    const handler = getEligibilityCheckActivityHandler(
+      mockINPSSoapClient,
+      aDsuDuration
+    );
+
+    const response = await handler(context, aFiscalCode);
+
+    expect(mockConsultazioneSogliaIndicatore).toBeCalledWith({
+      CodiceFiscale: aFiscalCode,
+      CodiceSoglia: "BVAC01",
+      FornituraNucleo: SiNoTypeEnum.SI
+    });
+
+    const decodedReponse = ActivityResultSuccess.decode(response);
+    if (isRight(decodedReponse)) {
+      expect(decodedReponse.value.data.Esito).toEqual(EsitoEnum.ERRORE_INTERNO);
+    } else {
+      fail();
+    }
   });
 });
