@@ -23,7 +23,7 @@ export const internalRetryOptions: RetryOptions = new RetryOptions(
 internalRetryOptions.backoffCoefficient = RETRY_OPTIONS_BACKOFF_COEFFICIENT;
 
 //
-// Used for external calls (INPS / ADE) services
+// Used for external calls (INPS / ADE services)
 //
 const EXTERNAL_RETRY_OPTIONS_MAX_ATTEMPTS = IntegerFromString.decode(
   process.env.EXTERNAL_RETRY_OPTIONS_MAX_ATTEMPTS
