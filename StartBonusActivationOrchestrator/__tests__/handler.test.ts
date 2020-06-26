@@ -24,7 +24,7 @@ import {
 import { ActivityResult as SendMessageActivityResult } from "../../SendMessageActivity/handler";
 import { SuccessBonusActivationSuccess } from "../../SuccessBonusActivationActivity/handler";
 import { trackException } from "../../utils/appinsights";
-import { PermanentFailure } from "../../utils/errors";
+import { PermanentFailure, TransientFailure } from "../../utils/errors";
 import { getStartBonusActivationOrchestratorHandler } from "../handler";
 
 const aHmacSecret = Buffer.from("supersecret");
@@ -141,9 +141,34 @@ describe("getStartBonusActivationOrchestratorHandler", () => {
     expect(trackException).toHaveBeenCalled();
   });
 
-  it("should not release the lock when there's an error in reading the current bonus activation", () => {
+  it("should not release the lock when there's a permanent error in reading the current bonus activation", () => {
     mockGetBonusActivationActivityCall.mockReturnValueOnce(
       PermanentFailure.encode({ kind: "PERMANENT", reason: "a bug" })
+    );
+
+    mockOrchestratorGetInput.mockReturnValueOnce({
+      applicantFiscalCode: aFiscalCode,
+      bonusId: aBonusId,
+      validBefore: new Date()
+    });
+
+    const result = consumeOrchestrator(
+      getStartBonusActivationOrchestratorHandler(aHmacSecret)(context)
+    );
+
+    expect(result).toBe(true);
+    expect(mockGetBonusActivationActivityCall).toHaveBeenCalled();
+    expect(mockSendBonusActivationActivityCall).not.toHaveBeenCalled();
+    expect(mockSendMessageActivityCall).not.toHaveBeenCalled();
+    expect(mockSuccessBonusActivationActivityCall).not.toHaveBeenCalled();
+    expect(mockFailedBonusActivationActivityCall).not.toHaveBeenCalled();
+    expect(mockReleaseFamilyLockActivityCall).not.toHaveBeenCalled();
+    expect(trackException).toHaveBeenCalled();
+  });
+
+  it("should not release the lock when theres a transient error in reading the current bonus activation", () => {
+    mockGetBonusActivationActivityCall.mockReturnValueOnce(
+      TransientFailure.encode({ kind: "TRANSIENT", reason: "a bug" })
     );
 
     mockOrchestratorGetInput.mockReturnValueOnce({
