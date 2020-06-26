@@ -50,6 +50,7 @@ const getFatalErrorTracer = (
     exception: error,
     properties: {
       fatal: "true",
+      id: bonusId,
       // tslint:disable-next-line: no-duplicate-string
       name: "bonus.activation.error"
     }
