@@ -1,5 +1,4 @@
 import { Context } from "@azure/functions";
-import { isLeft } from "fp-ts/lib/Either";
 import { fromEither, tryCatch } from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
