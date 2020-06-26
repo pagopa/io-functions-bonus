@@ -1,10 +1,5 @@
 import { Context } from "@azure/functions";
-import {
-  fromEither,
-  fromLeft,
-  fromPredicate,
-  taskEither
-} from "fp-ts/lib/TaskEither";
+import { fromEither, fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { fromQueryEither } from "io-functions-commons/dist/src/utils/documentdb";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
