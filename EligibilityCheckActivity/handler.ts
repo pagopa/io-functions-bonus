@@ -85,7 +85,7 @@ export const getEligibilityCheckActivityHandler = (
           return taskEither.of({
             dsu: {
               ...data.dsu,
-              DescrizioneError:
+              DescrizioneErrore:
                 "Missing requester fiscal code inside family members array",
               Esito: EsitoEnum.ERRORE_INTERNO
             },
