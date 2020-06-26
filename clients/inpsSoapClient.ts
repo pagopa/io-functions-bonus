@@ -4,6 +4,7 @@ import {
   fromNullable as fromNullableEither,
   fromPredicate,
   left,
+  right,
   toError
 } from "fp-ts/lib/Either";
 import { fromNullable as fromNullableOption } from "fp-ts/lib/Option";
@@ -183,14 +184,31 @@ export function createClient(
           );
         }
 
-        return parseSoapResponse(responseBody).fold(
-          err => {
-            throw new Error(
-              `Cannot parse response from INPS|ERROR=${toString(err)}`
-            );
-          },
-          async parsedDsu => parsedDsu
-        );
+        return parseSoapResponse(responseBody)
+          .chain(data => {
+            if (
+              !data.DatiIndicatore?.Componenti?.some(
+                familyMember =>
+                  familyMember.CodiceFiscale === params.CodiceFiscale
+              )
+            ) {
+              return right({
+                ...data,
+                DescrizioneErrore:
+                  "Missing requester fiscal code inside family members array",
+                Esito: EsitoEnum.ERRORE_INTERNO
+              });
+            }
+            return right(data);
+          })
+          .fold(
+            err => {
+              throw new Error(
+                `Cannot parse response from INPS|ERROR=${toString(err)}`
+              );
+            },
+            async parsedDsu => parsedDsu
+          );
       }, toError);
     }
   };

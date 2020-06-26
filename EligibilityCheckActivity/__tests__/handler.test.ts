@@ -33,25 +33,6 @@ const aINPSDsu: ConsultazioneSogliaIndicatoreResponse = {
   }
 };
 
-const anotherFiscalCode = "CCCDDD80A01C123D" as FiscalCode;
-
-const anInvalidINPSDsu: ConsultazioneSogliaIndicatoreResponse = {
-  Esito: EsitoEnum.OK,
-  IdRichiesta: 1,
-
-  DatiIndicatore: {
-    DataPresentazioneDSU: new Date(),
-    PresenzaDifformita: SiNoTypeEnum.NO,
-    ProtocolloDSU: "PROTOCOLLO-DSU",
-    SottoSoglia: SiNoTypeEnum.SI,
-    TipoIndicatore: "ISEE Semplice",
-
-    Componenti: [
-      { CodiceFiscale: anotherFiscalCode, Cognome: "AAA", Nome: "BBB" }
-    ]
-  }
-};
-
 const mockConsultazioneSogliaIndicatore = jest.fn();
 const mockINPSSoapClient = ({
   ConsultazioneSogliaIndicatore: mockConsultazioneSogliaIndicatore
@@ -160,30 +141,5 @@ describe("EligibilityCheckActivity", () => {
         );
       }
     );
-  });
-
-  it("should consider a DSU invalid if the requester fiscal code is missing inside family members", async () => {
-    mockConsultazioneSogliaIndicatore.mockImplementation(() =>
-      fromEither(right(anInvalidINPSDsu))
-    );
-    const handler = getEligibilityCheckActivityHandler(
-      mockINPSSoapClient,
-      aDsuDuration
-    );
-
-    const response = await handler(context, aFiscalCode);
-
-    expect(mockConsultazioneSogliaIndicatore).toBeCalledWith({
-      CodiceFiscale: aFiscalCode,
-      CodiceSoglia: "BVAC01",
-      FornituraNucleo: SiNoTypeEnum.SI
-    });
-
-    const decodedReponse = ActivityResultSuccess.decode(response);
-    if (isRight(decodedReponse)) {
-      expect(decodedReponse.value.data.Esito).toEqual(EsitoEnum.ERRORE_INTERNO);
-    } else {
-      fail();
-    }
   });
 });
