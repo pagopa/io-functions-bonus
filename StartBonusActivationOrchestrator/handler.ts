@@ -26,7 +26,10 @@ import { toApiBonusVacanzaBase } from "../utils/conversions";
 import { Failure } from "../utils/errors";
 import { toHash } from "../utils/hash";
 import { MESSAGES } from "../utils/messages";
-import { retryOptions } from "../utils/retryPolicy";
+import {
+  externalRetryOptions,
+  internalRetryOptions
+} from "../utils/retry_policies";
 
 export const OrchestratorInput = t.interface({
   applicantFiscalCode: FiscalCode,
@@ -81,7 +84,7 @@ export const getStartBonusActivationOrchestratorHandler = (
       // Must have status = PROCESSING since we're going to make it ACTIVE
       const undecodedBonusActivation = yield context.df.callActivityWithRetry(
         "GetBonusActivationActivity",
-        retryOptions,
+        internalRetryOptions,
         GetBonusActivationActivityInput.encode({
           applicantFiscalCode,
           bonusId
@@ -141,7 +144,7 @@ export const getStartBonusActivationOrchestratorHandler = (
       try {
         undecodedSendBonusActivation = yield context.df.callActivityWithRetry(
           "SendBonusActivationActivity",
-          retryOptions,
+          externalRetryOptions,
           SendBonusActivationInput.encode(bonusVacanzaBase)
         );
         trackEvent({
@@ -176,7 +179,7 @@ export const getStartBonusActivationOrchestratorHandler = (
         // We should retry the whole orchestrator (using a sub-orchestrator)
         yield context.df.callActivityWithRetry(
           "SuccessBonusActivationActivity",
-          retryOptions,
+          internalRetryOptions,
           SuccessBonusActivationInput.encode({ bonusActivation })
         );
         trackEvent({
@@ -190,7 +193,7 @@ export const getStartBonusActivationOrchestratorHandler = (
         for (const familyMember of bonusActivation.dsuRequest.familyMembers) {
           yield context.df.callActivityWithRetry(
             "SendMessageActivity",
-            retryOptions,
+            internalRetryOptions,
             SendMessageActivityInput.encode({
               checkProfile:
                 bonusActivation.applicantFiscalCode !== familyMember.fiscalCode,
@@ -203,7 +206,7 @@ export const getStartBonusActivationOrchestratorHandler = (
         // release family lock in case the bonus activation fails
         yield context.df.callActivityWithRetry(
           "ReleaseFamilyLockActivity",
-          retryOptions,
+          internalRetryOptions,
           ReleaseFamilyLockActivityInput.encode({
             familyUID: bonusActivation.familyUID
           })
@@ -212,7 +215,7 @@ export const getStartBonusActivationOrchestratorHandler = (
         // update bonus to FAILED
         yield context.df.callActivityWithRetry(
           "FailedBonusActivationActivity",
-          retryOptions,
+          internalRetryOptions,
           FailedBonusActivationInput.encode({ bonusActivation })
         );
         trackEvent({
@@ -224,7 +227,7 @@ export const getStartBonusActivationOrchestratorHandler = (
         // In case of failures send the notification only to the applicant
         yield context.df.callActivityWithRetry(
           "SendMessageActivity",
-          retryOptions,
+          internalRetryOptions,
           SendMessageActivityInput.encode({
             checkProfile: false,
             content: MESSAGES.BonusActivationFailure(validBefore),
@@ -246,7 +249,7 @@ export const getStartBonusActivationOrchestratorHandler = (
       // release user's lock when the orchestrator ends
       yield context.df.callActivityWithRetry(
         "ReleaseUserLockActivity",
-        retryOptions,
+        internalRetryOptions,
         ReleaseUserLockActivityInput.encode({
           id: applicantFiscalCode
         })
