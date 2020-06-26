@@ -189,7 +189,7 @@ export function createClient(
             // When the request returned a valid DSU but the applicant fiscal code
             // is not found in the array of family members we return an error
             if (
-              data.Esito === "OK" &&
+              data.Esito === EsitoEnum.OK &&
               !data.DatiIndicatore?.Componenti?.some(
                 familyMember =>
                   familyMember.CodiceFiscale === params.CodiceFiscale
