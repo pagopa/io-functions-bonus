@@ -110,8 +110,7 @@ export const getStartBonusActivationOrchestratorHandler = (
       // For application insights logging / tracking
       const operationId = toHash(bonusId);
 
-      // Get the PROCESSING bonus activation relative to (bonusId, fiscalCode).
-      // Must have status = PROCESSING since we're going to make it ACTIVE.
+      // Try to get the bonus activation relative to (bonusId, fiscalCode)
       // tslint:disable-next-line: no-let
       let undecodedBonusActivation;
       try {
@@ -130,10 +129,9 @@ export const getStartBonusActivationOrchestratorHandler = (
           }
         });
       } catch (e) {
-        // We've reached max retry which means
-        // we could not retrieve a bonus for the provided bonusId.
+        // We could not retrieve a bonus for the provided bonusId.
         // We cannot release the family lock here since
-        // we could not have retrieved the familyUID.
+        // we haven't retrieved the familyUID.
         throw traceFatalError(
           `GetBonusActivationActivity failed|ERROR=${toString(e)}`
         );
@@ -231,7 +229,7 @@ export const getStartBonusActivationOrchestratorHandler = (
         // Update the bonus status to ACTIVE.
         // Currently, if this operation fails after max retries
         // we don't release the lock: the bonus is already sent to ADE
-        // and as user know its secret code, if we release the lock here,
+        // and as the user knows its secret code, if we release the lock here,
         // he will be able to spend more than one bonus for the same familyUID.
         try {
           yield context.df.callActivityWithRetry(
@@ -277,7 +275,7 @@ export const getStartBonusActivationOrchestratorHandler = (
           );
         } catch (e) {
           throw traceFatalError(
-            `Bonus activation failed but could not realease the family lock: ${toString(
+            `Bonus activation failed but could not release the family lock: ${toString(
               e
             )}`
           );

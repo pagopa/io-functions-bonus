@@ -294,7 +294,7 @@ describe("getStartBonusActivationOrchestratorHandler", () => {
     expect(trackException).not.toHaveBeenCalled();
   });
 
-  it("should throw a fatal error in case the retrived bonus has status != PROCESSING", () => {
+  it("should throw a fatal error in case the retrieved bonus has status != PROCESSING", () => {
     mockGetBonusActivationActivityCall.mockImplementationOnce(() =>
       GetBonusActivationActivityOutput.encode({
         bonusActivation: {
