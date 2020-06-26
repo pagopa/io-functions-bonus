@@ -1,10 +1,5 @@
 import { Context } from "@azure/functions";
-import {
-  fromEither,
-  fromLeft,
-  fromPredicate,
-  taskEither
-} from "fp-ts/lib/TaskEither";
+import { fromEither, fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { fromQueryEither } from "io-functions-commons/dist/src/utils/documentdb";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
@@ -83,28 +78,20 @@ export function getGetBonusActivationActivityHandler(
           bonusActivation => taskEither.of(bonusActivation)
         )
       )
-      .chain(
-        fromPredicate(
-          bonusActivation => bonusActivation.status === "PROCESSING",
-          __ =>
-            Failure.encode({
-              kind: "PERMANENT",
-              reason: "Bonus activation status is not PROCESSING"
-            })
-        )
-      )
       .fold<Failure | GetBonusActivationActivityOutput>(
         err => {
           const error = `${logPrefix}|${err.kind}_ERROR=${err.reason}`;
-          trackException({
-            exception: new Error(error),
-            properties: {
-              name: "bonus.activation.processing"
-            }
-          });
           if (TransientFailure.is(err)) {
-            throw err;
+            trackException({
+              exception: new Error(error),
+              properties: {
+                name: "bonus.activation.get.error"
+              }
+            });
+            // trigger a retry in case of transient failures
+            throw new Error(err.reason);
           }
+          // permament failures are traced by the orchestrator
           return err;
         },
         bonusActivation => ({
