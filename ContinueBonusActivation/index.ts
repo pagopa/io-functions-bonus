@@ -9,7 +9,7 @@ import { BonusCode } from "../generated/models/BonusCode";
 import { Timestamp } from "../generated/models/Timestamp";
 import { OrchestratorInput } from "../StartBonusActivationOrchestrator/handler";
 import { trackException } from "../utils/appinsights";
-import { Failure, TransientFailure } from "../utils/errors";
+import { Failure, PermanentFailure, TransientFailure } from "../utils/errors";
 import { makeStartBonusActivationOrchestratorId } from "../utils/orchestrators";
 
 export const ContinueBonusActivationInput = t.type({
@@ -57,19 +57,24 @@ export const index: AzureFunction = (
       )
     )
     .fold<Failure | string>(err => {
-      const error = `ContinueBonusActivation|${err.kind}_ERROR=${err.reason}`;
+      const error = TransientFailure.is(err)
+        ? `ContinueBonusActivation|TRANSIENT_ERROR=${err.reason}`
+        : `ContinueBonusActivation|FATAL|PERMANENT_ERROR=${
+            err.reason
+          }|INPUT=${JSON.stringify(message)}`;
       trackException({
         exception: new Error(error),
         properties: {
+          // In case the the input (message from queue) cannot be decoded
+          // we mark this as a FATAL error since the lock on user's family won't be relased
+          fatal: PermanentFailure.is(err).toString(),
           name: "bonus.activation.orchestrator.start"
         }
       });
-      context.log.error(
-        `ContinueBonusActivation|${err.kind}_ERROR=${err.reason}`
-      );
+      context.log.error(error);
       if (TransientFailure.is(err)) {
         // Trigger a retry in case of temporary failures
-        throw new Error(err.reason);
+        throw new Error(error);
       }
       return err;
     }, t.identity)

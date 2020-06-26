@@ -14,6 +14,7 @@ import {
   aRetrievedBonusActivation
 } from "../../__mocks__/mocks";
 import { FailedBonusActivationResult } from "../../FailedBonusActivationActivity/handler";
+import { BonusActivationStatusEnum } from "../../generated/models/BonusActivationStatus";
 import { GetBonusActivationActivityOutput } from "../../GetBonusActivationActivity/handler";
 import { ReleaseFamilyLockActivityResult } from "../../ReleaseFamilyLockActivity/handler";
 import {
@@ -23,7 +24,7 @@ import {
 import { ActivityResult as SendMessageActivityResult } from "../../SendMessageActivity/handler";
 import { SuccessBonusActivationSuccess } from "../../SuccessBonusActivationActivity/handler";
 import { trackException } from "../../utils/appinsights";
-import { PermanentFailure } from "../../utils/errors";
+import { PermanentFailure, TransientFailure } from "../../utils/errors";
 import { getStartBonusActivationOrchestratorHandler } from "../handler";
 
 const aHmacSecret = Buffer.from("supersecret");
@@ -32,7 +33,10 @@ jest.mock("../../utils/appinsights");
 
 const mockGetBonusActivationActivityCall = jest.fn().mockImplementation(() =>
   GetBonusActivationActivityOutput.encode({
-    bonusActivation: aRetrievedBonusActivation,
+    bonusActivation: {
+      ...aRetrievedBonusActivation,
+      status: BonusActivationStatusEnum.PROCESSING
+    },
     kind: "SUCCESS"
   })
 );
@@ -137,9 +141,34 @@ describe("getStartBonusActivationOrchestratorHandler", () => {
     expect(trackException).toHaveBeenCalled();
   });
 
-  it("should not release the lock when there's an error in reading the current bonus activation", () => {
+  it("should not release the lock when there's a permanent error in reading the current bonus activation", () => {
     mockGetBonusActivationActivityCall.mockReturnValueOnce(
       PermanentFailure.encode({ kind: "PERMANENT", reason: "a bug" })
+    );
+
+    mockOrchestratorGetInput.mockReturnValueOnce({
+      applicantFiscalCode: aFiscalCode,
+      bonusId: aBonusId,
+      validBefore: new Date()
+    });
+
+    const result = consumeOrchestrator(
+      getStartBonusActivationOrchestratorHandler(aHmacSecret)(context)
+    );
+
+    expect(result).toBe(true);
+    expect(mockGetBonusActivationActivityCall).toHaveBeenCalled();
+    expect(mockSendBonusActivationActivityCall).not.toHaveBeenCalled();
+    expect(mockSendMessageActivityCall).not.toHaveBeenCalled();
+    expect(mockSuccessBonusActivationActivityCall).not.toHaveBeenCalled();
+    expect(mockFailedBonusActivationActivityCall).not.toHaveBeenCalled();
+    expect(mockReleaseFamilyLockActivityCall).not.toHaveBeenCalled();
+    expect(trackException).toHaveBeenCalled();
+  });
+
+  it("should not release the lock when theres a transient error in reading the current bonus activation", () => {
+    mockGetBonusActivationActivityCall.mockReturnValueOnce(
+      TransientFailure.encode({ kind: "TRANSIENT", reason: "a bug" })
     );
 
     mockOrchestratorGetInput.mockReturnValueOnce({
@@ -263,5 +292,37 @@ describe("getStartBonusActivationOrchestratorHandler", () => {
     expect(mockFailedBonusActivationActivityCall).toHaveBeenCalled();
     expect(mockReleaseFamilyLockActivityCall).toHaveBeenCalled();
     expect(trackException).not.toHaveBeenCalled();
+  });
+
+  it("should throw a fatal error in case the retrieved bonus has status != PROCESSING", () => {
+    mockGetBonusActivationActivityCall.mockImplementationOnce(() =>
+      GetBonusActivationActivityOutput.encode({
+        bonusActivation: {
+          ...aRetrievedBonusActivation,
+          status: BonusActivationStatusEnum.ACTIVE
+        },
+        kind: "SUCCESS"
+      })
+    );
+
+    mockOrchestratorGetInput.mockReturnValueOnce({
+      applicantFiscalCode: aFiscalCode,
+      bonusId: aBonusId,
+      validBefore: new Date()
+    });
+
+    const result = consumeOrchestrator(
+      getStartBonusActivationOrchestratorHandler(aHmacSecret)(context)
+    );
+
+    expect(result).toBe(true);
+    expect(mockGetBonusActivationActivityCall).toHaveBeenCalled();
+    expect(mockSendBonusActivationActivityCall).not.toHaveBeenCalled();
+    expect(trackException).toHaveBeenCalledWith(
+      expect.objectContaining({
+        exception: expect.any(Error),
+        properties: { name: "bonus.activation.error" }
+      })
+    );
   });
 });
