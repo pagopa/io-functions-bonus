@@ -34,7 +34,7 @@ export const index: AzureFunction = (
     .mapLeft(errs =>
       Failure.encode({
         kind: "PERMANENT",
-        reason: `FATAL: Cannot decode input: ${readableReport(errs)}`
+        reason: `Cannot decode input: ${readableReport(errs)}`
       })
     )
     .chain(({ bonusId, applicantFiscalCode, validBefore }) =>
@@ -57,7 +57,11 @@ export const index: AzureFunction = (
       )
     )
     .fold<Failure | string>(err => {
-      const error = `ContinueBonusActivation|${err.kind}_ERROR=${err.reason}`;
+      const error = TransientFailure.is(err)
+        ? `ContinueBonusActivation|TRANSIENT_ERROR=${err.reason}`
+        : `ContinueBonusActivation|FATAL|PERMANENT_ERROR=${
+            err.reason
+          }|INPUT=${JSON.stringify(message)}`;
       trackException({
         exception: new Error(error),
         properties: {
@@ -67,9 +71,7 @@ export const index: AzureFunction = (
           name: "bonus.activation.orchestrator.start"
         }
       });
-      context.log.error(
-        `ContinueBonusActivation|${err.kind}_ERROR=${err.reason}`
-      );
+      context.log.error(error);
       if (TransientFailure.is(err)) {
         // Trigger a retry in case of temporary failures
         throw new Error(err.reason);
