@@ -4,6 +4,7 @@ import {
   fromEither,
   fromLeft,
   TaskEither,
+  taskEither,
   taskify,
   tryCatch
 } from "fp-ts/lib/TaskEither";
@@ -233,9 +234,14 @@ export const relaseLockForUserFamily = (
   bonusLeaseModel: BonusLeaseModel,
   familyUID: FamilyUID
 ): TaskEither<IResponseErrorInternal, FamilyUID> => {
-  return fromQueryEither(() => bonusLeaseModel.deleteOneById(familyUID)).bimap(
-    err => ResponseErrorInternal(`Error releasing lock: ${err.body}`),
-    _ => familyUID
+  return fromQueryEither(() =>
+    bonusLeaseModel.deleteOneById(familyUID)
+  ).foldTaskEither(
+    err =>
+      err.code === 404
+        ? taskEither.of(familyUID)
+        : fromLeft(ResponseErrorInternal(`Error releasing lock: ${err.body}`)),
+    _ => taskEither.of(familyUID)
   );
 };
 
