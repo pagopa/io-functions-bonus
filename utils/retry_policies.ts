@@ -1,17 +1,24 @@
 import { RetryOptions } from "durable-functions";
+import { IntegerFromString } from "italia-ts-commons/lib/numbers";
 
-export const internalRetryOptions: RetryOptions = {
-  backoffCoefficient: 1.5,
-  firstRetryIntervalInMilliseconds: 500,
-  maxNumberOfAttempts: 10,
-  maxRetryIntervalInMilliseconds: 3600 * 100,
-  retryTimeoutInMilliseconds: 3600 * 1000
-};
+const RETRY_OPTIONS_FIRST_RETRY_INTERVAL_MS = 500;
 
-export const externalRetryOptions: RetryOptions = {
-  backoffCoefficient: 1.5,
-  firstRetryIntervalInMilliseconds: 500,
-  maxNumberOfAttempts: 20,
-  maxRetryIntervalInMilliseconds: 3600 * 100,
-  retryTimeoutInMilliseconds: 3600 * 1000
-};
+const INTERNAL_RETRY_OPTIONS_MAX_ATTEMPTS = IntegerFromString.decode(
+  process.env.INTERNAL_RETRY_OPTIONS_MAX_ATTEMPTS
+).getOrElse(10);
+export const internalRetryOptions: RetryOptions = new RetryOptions(
+  RETRY_OPTIONS_FIRST_RETRY_INTERVAL_MS,
+  INTERNAL_RETRY_OPTIONS_MAX_ATTEMPTS
+);
+// tslint:disable-next-line: no-object-mutation
+internalRetryOptions.backoffCoefficient = 1.5;
+
+const EXTERNAL_RETRY_OPTIONS_MAX_ATTEMPTS = IntegerFromString.decode(
+  process.env.EXTERNAL_RETRY_OPTIONS_MAX_ATTEMPTS
+).getOrElse(10);
+export const externalRetryOptions: RetryOptions = new RetryOptions(
+  RETRY_OPTIONS_FIRST_RETRY_INTERVAL_MS,
+  EXTERNAL_RETRY_OPTIONS_MAX_ATTEMPTS
+);
+// tslint:disable-next-line: no-object-mutation
+internalRetryOptions.backoffCoefficient = 1.5;
