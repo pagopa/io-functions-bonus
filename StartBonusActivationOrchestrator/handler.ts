@@ -97,12 +97,20 @@ export const getStartBonusActivationOrchestratorHandler = (
 
     try {
       // track bonusId
-      context.df.setCustomStatus(bonusId);
+      try {
+        context.df.setCustomStatus(bonusId);
+      } catch (e) {
+        // this is just for troubleshooting, we don't want
+        // the whole orchestrator to fail here
+        context.log.error(
+          `${logPrefix}|ERROR=Cannot set customStatus: ${toString(e)}`
+        );
+      }
 
       // For application insights logging / tracking
       const operationId = toHash(bonusId);
 
-      // Get the bonus activation relative to the input (bonusId, applicantFiscalCode)
+      // Get the PROCESSING bonus activation relative to (bonusId, fiscalCode).
       // Must have status = PROCESSING since we're going to make it ACTIVE
       // tslint:disable-next-line: no-let
       let undecodedBonusActivation;
@@ -122,13 +130,14 @@ export const getStartBonusActivationOrchestratorHandler = (
           }
         });
       } catch (e) {
+        // No bonus in status PROCESSING found for the provided bonusId
         // TODO: should we release the family lock here ?
         throw traceFatalError(
           `GetBonusActivationActivity failed|ERROR=${toString(e)}`
         );
       }
 
-      // Try to decode the result of the activity that get the processing bonus
+      // Try to decode the result of the activity that get the PROCESSING bonus
       const errorOrGetBonusActivationActivityOutput = GetBonusActivationActivityOutput.decode(
         undecodedBonusActivation
       );
