@@ -9,7 +9,7 @@ import { BonusCode } from "../generated/models/BonusCode";
 import { Timestamp } from "../generated/models/Timestamp";
 import { OrchestratorInput } from "../StartBonusActivationOrchestrator/handler";
 import { trackException } from "../utils/appinsights";
-import { Failure, TransientFailure } from "../utils/errors";
+import { Failure, PermanentFailure, TransientFailure } from "../utils/errors";
 import { makeStartBonusActivationOrchestratorId } from "../utils/orchestrators";
 
 export const ContinueBonusActivationInput = t.type({
@@ -34,7 +34,7 @@ export const index: AzureFunction = (
     .mapLeft(errs =>
       Failure.encode({
         kind: "PERMANENT",
-        reason: `Cannot decode input: ${readableReport(errs)}`
+        reason: `FATAL: Cannot decode input: ${readableReport(errs)}`
       })
     )
     .chain(({ bonusId, applicantFiscalCode, validBefore }) =>
@@ -61,6 +61,9 @@ export const index: AzureFunction = (
       trackException({
         exception: new Error(error),
         properties: {
+          // In case the the input (message from queue) cannot be decoded
+          // we mark this as a FATAL error since the lock on user's family won't be relased
+          fatal: PermanentFailure.is(err).toString(),
           name: "bonus.activation.orchestrator.start"
         }
       });

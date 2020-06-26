@@ -38,6 +38,25 @@ export const OrchestratorInput = t.interface({
 });
 export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
 
+const getFatalErrorTracer = (
+  ctx: IOrchestrationFunctionContext,
+  prefix: string,
+  bonusId: string
+) => (msg: string) => {
+  const errormsg = `${prefix}|FATAL|BONUS_ID=${bonusId}|${msg}`;
+  ctx.log.error(errormsg);
+  const error = new Error(errormsg);
+  trackException({
+    exception: error,
+    properties: {
+      fatal: "true",
+      // tslint:disable-next-line: no-duplicate-string
+      name: "bonus.activation.error"
+    }
+  });
+  return error;
+};
+
 export const getStartBonusActivationOrchestratorHandler = (
   hmacSecret: NonEmptyString | Buffer
   // tslint:disable-next-line: no-big-function
@@ -51,19 +70,20 @@ export const getStartBonusActivationOrchestratorHandler = (
       context.df.getInput()
     );
     if (isLeft(errorOrStartBonusActivationOrchestratorInput)) {
-      context.log.verbose(
-        `${logPrefix}|Error decoding input|ERROR=${readableReport(
-          errorOrStartBonusActivationOrchestratorInput.value
-        )}`
-      );
+      const error = `Error decoding orchestrator input|ERROR=${readableReport(
+        errorOrStartBonusActivationOrchestratorInput.value
+      )}`;
+      context.log.error(error);
       trackException({
-        exception: new Error(`${logPrefix}|Cannot decode input`),
+        exception: new Error(error),
         properties: {
+          fatal: "true",
           // tslint:disable-next-line: no-duplicate-string
           name: "bonus.activation.error"
         }
       });
       // We cannot relase any lock here since the decoding failed
+      // so we don't throw but return
       return false;
     }
 
@@ -72,6 +92,8 @@ export const getStartBonusActivationOrchestratorHandler = (
       bonusId,
       validBefore
     } = errorOrStartBonusActivationOrchestratorInput.value;
+
+    const traceFatalError = getFatalErrorTracer(context, logPrefix, bonusId);
 
     try {
       // track bonusId
@@ -82,20 +104,29 @@ export const getStartBonusActivationOrchestratorHandler = (
 
       // Get the bonus activation relative to the input (bonusId, applicantFiscalCode)
       // Must have status = PROCESSING since we're going to make it ACTIVE
-      const undecodedBonusActivation = yield context.df.callActivityWithRetry(
-        "GetBonusActivationActivity",
-        internalRetryOptions,
-        GetBonusActivationActivityInput.encode({
-          applicantFiscalCode,
-          bonusId
-        })
-      );
-      trackEvent({
-        name: "bonus.activation.get",
-        properties: {
-          id: operationId
-        }
-      });
+      // tslint:disable-next-line: no-let
+      let undecodedBonusActivation;
+      try {
+        undecodedBonusActivation = yield context.df.callActivityWithRetry(
+          "GetBonusActivationActivity",
+          internalRetryOptions,
+          GetBonusActivationActivityInput.encode({
+            applicantFiscalCode,
+            bonusId
+          })
+        );
+        trackEvent({
+          name: "bonus.activation.get",
+          properties: {
+            id: operationId
+          }
+        });
+      } catch (e) {
+        // TODO: should we release the family lock here ?
+        throw traceFatalError(
+          `GetBonusActivationActivity failed|ERROR=${toString(e)}`
+        );
+      }
 
       // Try to decode the result of the activity that get the processing bonus
       const errorOrGetBonusActivationActivityOutput = GetBonusActivationActivityOutput.decode(
@@ -103,8 +134,8 @@ export const getStartBonusActivationOrchestratorHandler = (
       );
       if (isLeft(errorOrGetBonusActivationActivityOutput)) {
         // TODO: should we release the family lock here ?
-        throw new Error(
-          `${logPrefix}|Error decoding bonus activation activity output|ERROR=${readableReport(
+        throw traceFatalError(
+          `Error decoding GetBonusActivationActivity output|ERROR=${readableReport(
             errorOrGetBonusActivationActivityOutput.value
           )}`
         );
@@ -116,8 +147,8 @@ export const getStartBonusActivationOrchestratorHandler = (
       // so we cannot go on and make it ACTIVE
       if (Failure.is(bonusActivationActivityOutput)) {
         // TODO: should we relase the family lock here ?
-        throw new Error(
-          `${logPrefix}|Error retrieving processing bonus activation|ERROR=${bonusActivationActivityOutput.reason}`
+        throw traceFatalError(
+          `Error retrieving processing bonus activation|ERROR=${bonusActivationActivityOutput.reason}`
         );
       }
       const bonusActivation = bonusActivationActivityOutput.bonusActivation;
@@ -130,8 +161,8 @@ export const getStartBonusActivationOrchestratorHandler = (
       );
       if (isLeft(errorOrBonusVacanzaBase)) {
         // TODO: should we relase the lock here ?
-        throw new Error(
-          `${logPrefix}|Error decoding bonus activation request|ERROR=${readableReport(
+        throw traceFatalError(
+          `Error decoding bonus activation request|ERROR=${readableReport(
             errorOrBonusVacanzaBase.value
           )}`
         );
@@ -148,12 +179,14 @@ export const getStartBonusActivationOrchestratorHandler = (
           SendBonusActivationInput.encode(bonusVacanzaBase)
         );
         trackEvent({
-          name: "bonus.activation.sent",
+          name: "bonus.activation.ade.success",
           properties: {
             id: operationId
           }
         });
       } catch (e) {
+        // All retries failed, we are going to release the family lock
+        // (see the code below), so we avoid to throw here
         trackEvent({
           name: "bonus.activation.ade.failure",
           properties: {
@@ -173,21 +206,30 @@ export const getStartBonusActivationOrchestratorHandler = (
       );
 
       if (isSendBonusActivationSuccess) {
-        // Update bonus to ACTIVE
-        // TODO: If this operation fails after max retries
-        // we don't release the lock as the bonus is already sent to ADE.
+        // Update the bonus status to ACTIVE letting the family to spend it.
+        // TODO: Should we relase the lock here ?
+        // If this operation fails after max retries
+        // we don't release the lock (the bonus is already sent to ADE).
         // We should retry the whole orchestrator (using a sub-orchestrator)
-        yield context.df.callActivityWithRetry(
-          "SuccessBonusActivationActivity",
-          internalRetryOptions,
-          SuccessBonusActivationInput.encode({ bonusActivation })
-        );
-        trackEvent({
-          name: "bonus.activation.success",
-          properties: {
-            id: operationId
-          }
-        });
+        // or relase the lock instead (as the user does cannot spend
+        // a bonus which is not ACTIVE and will stuck in locked state)
+        try {
+          yield context.df.callActivityWithRetry(
+            "SuccessBonusActivationActivity",
+            internalRetryOptions,
+            SuccessBonusActivationInput.encode({ bonusActivation })
+          );
+          trackEvent({
+            name: "bonus.activation.success",
+            properties: {
+              id: operationId
+            }
+          });
+        } catch (e) {
+          throw traceFatalError(
+            `ADE call succeeded but could not set the bonus to ACTIVE|ERROR=${toString}`
+          );
+        }
         // Notify all family members and applicant
         // (family members array includes applicant fiscal code)
         for (const familyMember of bonusActivation.dsuRequest.familyMembers) {
@@ -204,13 +246,20 @@ export const getStartBonusActivationOrchestratorHandler = (
         }
       } else {
         // release family lock in case the bonus activation fails
-        yield context.df.callActivityWithRetry(
-          "ReleaseFamilyLockActivity",
-          internalRetryOptions,
-          ReleaseFamilyLockActivityInput.encode({
-            familyUID: bonusActivation.familyUID
-          })
-        );
+        // (read: the call to ADE returned an error or failed after max retries)
+        try {
+          yield context.df.callActivityWithRetry(
+            "ReleaseFamilyLockActivity",
+            internalRetryOptions,
+            ReleaseFamilyLockActivityInput.encode({
+              familyUID: bonusActivation.familyUID
+            })
+          );
+        } catch (e) {
+          throw traceFatalError(
+            `Could not realease the family lock: ${toString(e)}`
+          );
+        }
 
         // update bonus to FAILED
         yield context.df.callActivityWithRetry(
@@ -236,6 +285,9 @@ export const getStartBonusActivationOrchestratorHandler = (
         );
       }
     } catch (e) {
+      // We've reached this point in case
+      // 1) some FATAL error has occurred
+      // 2) some activity (ie. SendMessage) has failed with max retries
       context.log.error(
         `${logPrefix}|ID=${toHash(bonusId)}|ERROR=${toString(e)}`
       );
@@ -246,15 +298,18 @@ export const getStartBonusActivationOrchestratorHandler = (
         }
       });
     } finally {
-      // release user's lock when the orchestrator ends
-      yield context.df.callActivityWithRetry(
-        "ReleaseUserLockActivity",
-        internalRetryOptions,
-        ReleaseUserLockActivityInput.encode({
-          id: applicantFiscalCode
-        })
-      );
+      // anything goes: release user's lock when the orchestrator ends
+      try {
+        yield context.df.callActivityWithRetry(
+          "ReleaseUserLockActivity",
+          internalRetryOptions,
+          ReleaseUserLockActivityInput.encode({
+            id: applicantFiscalCode
+          })
+        );
+      } catch (e) {
+        traceFatalError(`Could not realease the user lock: ${toString(e)}`);
+      }
     }
-
     return true;
   };
