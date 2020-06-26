@@ -15,7 +15,7 @@ internalRetryOptions.backoffCoefficient = 1.5;
 
 const EXTERNAL_RETRY_OPTIONS_MAX_ATTEMPTS = IntegerFromString.decode(
   process.env.EXTERNAL_RETRY_OPTIONS_MAX_ATTEMPTS
-).getOrElse(10);
+).getOrElse(20);
 export const externalRetryOptions: RetryOptions = new RetryOptions(
   RETRY_OPTIONS_FIRST_RETRY_INTERVAL_MS,
   EXTERNAL_RETRY_OPTIONS_MAX_ATTEMPTS
