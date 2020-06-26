@@ -21,4 +21,4 @@ export const externalRetryOptions: RetryOptions = new RetryOptions(
   EXTERNAL_RETRY_OPTIONS_MAX_ATTEMPTS
 );
 // tslint:disable-next-line: no-object-mutation
-internalRetryOptions.backoffCoefficient = 1.5;
+externalRetryOptions.backoffCoefficient = 1.5;
