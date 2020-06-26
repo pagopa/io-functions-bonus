@@ -159,6 +159,15 @@ export const handler = function*(
         name: "bonus.eligibilitycheck.error"
       }
     });
+    yield context.df.callActivityWithRetry(
+      "SendMessageActivity",
+      internalRetryOptions,
+      SendMessageActivityInput.encode({
+        checkProfile: false,
+        content: MESSAGES.EligibilityCheckFailureINPSUnavailable(),
+        fiscalCode: orchestratorInput
+      })
+    );
     return false;
   } finally {
     context.df.setCustomStatus("COMPLETED");

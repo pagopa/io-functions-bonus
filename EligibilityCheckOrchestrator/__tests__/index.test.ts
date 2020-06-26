@@ -46,22 +46,13 @@ const eligibilityCheck = toApiEligibilityCheckFromDSU(
 
 const anInput = aFiscalCode;
 
+const mockCallActivityWithRetry = jest.fn();
+
 const contextMockWithDf = {
   ...contextMock,
   df: {
     callActivity: jest.fn(),
-    callActivityWithRetry: jest
-      .fn()
-      // 1 DeleteEligibilityCheckActivity
-      .mockReturnValueOnce(deleteEligibilityCheckActivityResult)
-      // 2 EligibilityCheckActivity
-      .mockReturnValueOnce(eligibilityCheckResponse)
-      // 3 ValidateEligibilityCheckActivity
-      .mockReturnValueOnce(eligibilityCheck.value)
-      // 4 UpsertEligibilityCheckActivity
-      .mockReturnValueOnce("UpsertEligibilityCheckActivity")
-      // 5 SendMessageActivity
-      .mockReturnValueOnce("SendMessageActivity"),
+    callActivityWithRetry: mockCallActivityWithRetry,
     getInput: jest.fn(() => anInput),
     setCustomStatus: jest.fn(),
     // 4 CreateTimer
@@ -71,6 +62,17 @@ const contextMockWithDf = {
 
 describe("EligibilityCheckOrchestrator", () => {
   it("should send the right message", async () => {
+    mockCallActivityWithRetry
+      // 1 DeleteEligibilityCheckActivity
+      .mockReturnValueOnce(deleteEligibilityCheckActivityResult)
+      // 2 EligibilityCheckActivity
+      .mockReturnValueOnce(eligibilityCheckResponse)
+      // 3 ValidateEligibilityCheckActivity
+      .mockReturnValueOnce(eligibilityCheck.value)
+      // 4 UpsertEligibilityCheckActivity
+      .mockReturnValueOnce("UpsertEligibilityCheckActivity")
+      // 5 SendMessageActivity
+      .mockReturnValueOnce("SendMessageActivity");
     // tslint:disable-next-line: no-any
     const orchestrator = handler(contextMockWithDf as any);
 
