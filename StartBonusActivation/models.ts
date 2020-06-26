@@ -4,9 +4,9 @@ import {
   fromEither,
   fromLeft,
   TaskEither,
+  taskEither,
   taskify,
-  tryCatch,
-  taskEither
+  tryCatch
 } from "fp-ts/lib/TaskEither";
 import {
   IResponseErrorConflict,
