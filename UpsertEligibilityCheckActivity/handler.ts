@@ -3,12 +3,11 @@ import { isLeft } from "fp-ts/lib/Either";
 import { fromEither, tryCatch } from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
-import { EligibilityCheck } from "../generated/definitions/EligibilityCheck";
+import { EligibilityCheck } from "../generated/models/EligibilityCheck";
 import {
   ELIGIBILITY_CHECK_MODEL_PK_FIELD,
   EligibilityCheckModel
 } from "../models/eligibility_check";
-import { toModelEligibilityCheck } from "../utils/conversions";
 
 export const UpsertEligibilityCheckActivityInput = EligibilityCheck;
 export type UpsertEligibilityCheckActivityInput = t.TypeOf<
@@ -37,7 +36,6 @@ type ISaveEligibilityCheckHandler = (
   input: unknown
 ) => Promise<ActivityResult>;
 
-// tslint:disable-next-line: cognitive-complexity
 export function getUpsertEligibilityCheckActivityHandler(
   eligibilityCheckModel: EligibilityCheckModel
 ): ISaveEligibilityCheckHandler {
@@ -50,20 +48,9 @@ export function getUpsertEligibilityCheckActivityHandler(
       .chain(eligibilityCheck =>
         tryCatch(
           () => {
-            const errorOrModelEligibilityCheck = toModelEligibilityCheck(
-              eligibilityCheck
-            );
-            if (isLeft(errorOrModelEligibilityCheck)) {
-              throw new Error(
-                `Eligibility check Conversion error: [${readableReport(
-                  errorOrModelEligibilityCheck.value
-                )}]`
-              );
-            }
-            const modelEligibilityCheck = errorOrModelEligibilityCheck.value;
             return eligibilityCheckModel.createOrUpdate(
-              { ...modelEligibilityCheck, kind: "INewEligibilityCheck" },
-              modelEligibilityCheck[ELIGIBILITY_CHECK_MODEL_PK_FIELD]
+              { ...eligibilityCheck, kind: "INewEligibilityCheck" },
+              eligibilityCheck[ELIGIBILITY_CHECK_MODEL_PK_FIELD]
             );
           },
           err => new Error(`Error upserting EligibilityCheck [${err}]`)
