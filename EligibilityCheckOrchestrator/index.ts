@@ -19,7 +19,10 @@ import { EligibilityCheckSuccessConflict } from "../generated/definitions/Eligib
 import { EligibilityCheckSuccessEligible } from "../generated/definitions/EligibilityCheckSuccessEligible";
 import { EligibilityCheckSuccessIneligible } from "../generated/definitions/EligibilityCheckSuccessIneligible";
 import { UpsertEligibilityCheckActivityInput } from "../UpsertEligibilityCheckActivity/handler";
-import { toApiEligibilityCheckFromDSU } from "../utils/conversions";
+import {
+  toApiEligibilityCheckFromDSU,
+  toModelEligibilityCheck
+} from "../utils/conversions";
 import { getMessage, MESSAGES } from "../utils/messages";
 import {
   externalRetryOptions,
@@ -132,6 +135,9 @@ export const handler = function*(
       );
     });
 
+    // Calculate a familyUID from an EligibilityCheck with status ELIGIBLE and
+    // verify doen't exists any Bonus with the same familyUID.
+    // If already exists a Bonus, the status of EligibilityCheck is changed from ELIGIBLE to CONFLICT.
     const undecodedValidatedEligibilityCheck = yield context.df.callActivityWithRetry(
       "ValidateEligibilityCheckActivity",
       internalRetryOptions,
@@ -145,10 +151,18 @@ export const handler = function*(
       );
     });
 
+    // Convert from API EligibilityCheck to Model EligibilityCheck
+    const modelEligibilityCheck = toModelEligibilityCheck(
+      validatedEligibilityCheck
+    ).getOrElseL(error => {
+      throw new Error(
+        `Eligibility check Conversion error: [${readableReport(error)}]`
+      );
+    });
     yield context.df.callActivityWithRetry(
       "UpsertEligibilityCheckActivity",
       internalRetryOptions,
-      UpsertEligibilityCheckActivityInput.encode(validatedEligibilityCheck)
+      UpsertEligibilityCheckActivityInput.encode(modelEligibilityCheck)
     );
   } catch (err) {
     context.log.error(`${logPrefix}|ERROR|${toString(err)}`);
