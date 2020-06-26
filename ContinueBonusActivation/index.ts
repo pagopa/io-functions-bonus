@@ -74,7 +74,7 @@ export const index: AzureFunction = (
       context.log.error(error);
       if (TransientFailure.is(err)) {
         // Trigger a retry in case of temporary failures
-        throw new Error(err.reason);
+        throw new Error(error);
       }
       return err;
     }, t.identity)

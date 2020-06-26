@@ -206,13 +206,11 @@ export const getStartBonusActivationOrchestratorHandler = (
       );
 
       if (isSendBonusActivationSuccess) {
-        // Update the bonus status to ACTIVE letting the family to spend it.
-        // TODO: Should we relase the lock here ?
-        // If this operation fails after max retries
-        // we don't release the lock (the bonus is already sent to ADE).
-        // We should retry the whole orchestrator (using a sub-orchestrator)
-        // or relase the lock instead (as the user does cannot spend
-        // a bonus which is not ACTIVE and will stuck in locked state)
+        // Update the bonus status to ACTIVE.
+        // Currently, if this operation fails after max retries
+        // we don't release the lock: the bonus is already sent to ADE
+        // and as user know its secret code, if we release the lock here,
+        // he will be able to spend more than one bonus for the same familyUID.
         try {
           yield context.df.callActivityWithRetry(
             "SuccessBonusActivationActivity",
