@@ -96,11 +96,11 @@ export const getStartBonusActivationOrchestratorHandler = (
     const traceFatalError = getFatalErrorTracer(context, logPrefix, bonusId);
 
     try {
-      // track bonusId
+      // Track bonusId
       try {
         context.df.setCustomStatus(bonusId);
       } catch (e) {
-        // this is just for troubleshooting, we don't want
+        // This is just for troubleshooting, we don't want
         // the whole orchestrator to fail here
         context.log.error(
           `${logPrefix}|ERROR=Cannot set customStatus: ${toString(e)}`
@@ -111,7 +111,7 @@ export const getStartBonusActivationOrchestratorHandler = (
       const operationId = toHash(bonusId);
 
       // Get the PROCESSING bonus activation relative to (bonusId, fiscalCode).
-      // Must have status = PROCESSING since we're going to make it ACTIVE
+      // Must have status = PROCESSING since we're going to make it ACTIVE.
       // tslint:disable-next-line: no-let
       let undecodedBonusActivation;
       try {
@@ -130,8 +130,10 @@ export const getStartBonusActivationOrchestratorHandler = (
           }
         });
       } catch (e) {
-        // No bonus in status PROCESSING found for the provided bonusId
-        // TODO: should we release the family lock here ?
+        // We've reached max retry which means
+        // we cannot retrieve a bonus for the provided bonusId.
+        // We cannot release the family lock here since
+        // we cannot retrieve the familyUID.
         throw traceFatalError(
           `GetBonusActivationActivity failed|ERROR=${toString(e)}`
         );
@@ -142,7 +144,8 @@ export const getStartBonusActivationOrchestratorHandler = (
         undecodedBonusActivation
       );
       if (isLeft(errorOrGetBonusActivationActivityOutput)) {
-        // TODO: should we release the family lock here ?
+        // We cannot release the family lock here since
+        // we cannot decode the bonus payload to get the familyUID
         throw traceFatalError(
           `Error decoding GetBonusActivationActivity output|ERROR=${readableReport(
             errorOrGetBonusActivationActivityOutput.value
@@ -152,15 +155,25 @@ export const getStartBonusActivationOrchestratorHandler = (
       const bonusActivationActivityOutput =
         errorOrGetBonusActivationActivityOutput.value;
 
-      // Is it possible that no PROCESSING bonus activation is found
-      // so we cannot go on and make it ACTIVE
       if (Failure.is(bonusActivationActivityOutput)) {
-        // TODO: should we relase the family lock here ?
+        // In case we could not retrieve a bonus activation
+        // we cannot go on and make it ACTIVE.
+        // We cannot release the family lock here since
+        // we cannot extract the familyUID from the retrieved bonus.
         throw traceFatalError(
           `Error retrieving processing bonus activation|ERROR=${bonusActivationActivityOutput.reason}`
         );
       }
       const bonusActivation = bonusActivationActivityOutput.bonusActivation;
+
+      // Here we have successfullly retrieved a bonus activation.
+      // In case the status is not PROCESSING we cannot go on and make it ACTIVE.
+      if (bonusActivation.status !== "PROCESSING") {
+        // TODO: should we release the family lock here ?
+        throw traceFatalError(
+          `Bonus activation status is not PROCESSING|STATUS=${bonusActivation.status}`
+        );
+      }
 
       // Try to convert the internal representation of a bonus activation
       // in the format needed by the ADE APIs
@@ -264,11 +277,13 @@ export const getStartBonusActivationOrchestratorHandler = (
           );
         } catch (e) {
           throw traceFatalError(
-            `Could not realease the family lock: ${toString(e)}`
+            `Bonus activation failed but could not realease the family lock: ${toString(
+              e
+            )}`
           );
         }
 
-        // update bonus to FAILED
+        // Update bonus status to FAILED
         yield context.df.callActivityWithRetry(
           "FailedBonusActivationActivity",
           internalRetryOptions,
