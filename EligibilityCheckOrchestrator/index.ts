@@ -135,9 +135,10 @@ export const handler = function*(
       );
     });
 
-    // Calculate a familyUID from an EligibilityCheck with status ELIGIBLE and
-    // verify doen't exists any Bonus with the same familyUID.
-    // If already exists a Bonus, the status of EligibilityCheck is changed from ELIGIBLE to CONFLICT.
+    // Compute familyUID from the EligibilityCheck (status = ELIGIBLE)
+    // and check there's no other bonus with the same familyUID.
+    // If a bonus with the same famiyUID already exists
+    // the status of EligibilityCheck is updated from ELIGIBLE to CONFLICT.
     const undecodedValidatedEligibilityCheck = yield context.df.callActivityWithRetry(
       "ValidateEligibilityCheckActivity",
       internalRetryOptions,
