@@ -21,7 +21,10 @@ import { EligibilityCheckSuccessIneligible } from "../generated/definitions/Elig
 import { UpsertEligibilityCheckActivityInput } from "../UpsertEligibilityCheckActivity/handler";
 import { toApiEligibilityCheckFromDSU } from "../utils/conversions";
 import { getMessage, MESSAGES } from "../utils/messages";
-import { retryOptions } from "../utils/retryPolicy";
+import {
+  externalRetryOptions,
+  internalRetryOptions
+} from "../utils/retry_policies";
 import { ValidateEligibilityCheckActivityInput } from "../ValidateEligibilityCheckActivity/handler";
 
 import { isLeft } from "fp-ts/lib/Either";
@@ -88,7 +91,7 @@ export const handler = function*(
   try {
     const deleteEligibilityCheckResponse = yield context.df.callActivityWithRetry(
       "DeleteEligibilityCheckActivity",
-      retryOptions,
+      internalRetryOptions,
       DeleteEligibilityCheckActivityInput.encode(orchestratorInput)
     );
 
@@ -102,7 +105,7 @@ export const handler = function*(
 
     const undecodedEligibilityCheckResponse = yield context.df.callActivityWithRetry(
       "EligibilityCheckActivity",
-      retryOptions,
+      externalRetryOptions,
       EligibilityCheckActivityInput.encode(orchestratorInput)
     );
     eligibilityCheckResponse = ActivityResult.decode(
@@ -131,7 +134,7 @@ export const handler = function*(
 
     const undecodedValidatedEligibilityCheck = yield context.df.callActivityWithRetry(
       "ValidateEligibilityCheckActivity",
-      retryOptions,
+      internalRetryOptions,
       ValidateEligibilityCheckActivityInput.encode(eligibilityCheck)
     );
     validatedEligibilityCheck = EligibilityCheck.decode(
@@ -144,7 +147,7 @@ export const handler = function*(
 
     yield context.df.callActivityWithRetry(
       "UpsertEligibilityCheckActivity",
-      retryOptions,
+      internalRetryOptions,
       UpsertEligibilityCheckActivityInput.encode(validatedEligibilityCheck)
     );
   } catch (err) {
@@ -189,7 +192,7 @@ export const handler = function*(
   if (isSome(maybeMessageType)) {
     yield context.df.callActivityWithRetry(
       "SendMessageActivity",
-      retryOptions,
+      internalRetryOptions,
       SendMessageActivityInput.encode({
         checkProfile: false,
         content: getMessage(
