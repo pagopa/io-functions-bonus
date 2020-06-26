@@ -22,12 +22,11 @@ describe("UpsertEligibilityCheckActivityHandler", () => {
     const handler = getUpsertEligibilityCheckActivityHandler(
       mockEligibilityCheckModel
     );
-    const eligibilityCheck = toApiEligibilityCheck(
+
+    const response = await handler(
+      context,
       aEligibilityCheckSuccessEligibleValid
     );
-    expect(eligibilityCheck.isRight()).toBeTruthy();
-
-    const response = await handler(context, eligibilityCheck.value);
 
     expect(mockCreateOrUpdate).toBeCalledWith(
       {
@@ -49,12 +48,11 @@ describe("UpsertEligibilityCheckActivityHandler", () => {
     const handler = getUpsertEligibilityCheckActivityHandler(
       mockEligibilityCheckModel
     );
-    const eligibilityCheck = toApiEligibilityCheck(
+
+    const response = await handler(
+      context,
       aEligibilityCheckSuccessEligibleValid
     );
-    expect(eligibilityCheck.isRight()).toBeTruthy();
-
-    const response = await handler(context, eligibilityCheck.value);
 
     const decodedReponse = ActivityResultFailure.decode(response);
 
