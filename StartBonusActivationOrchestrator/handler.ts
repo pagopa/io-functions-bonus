@@ -131,15 +131,15 @@ export const getStartBonusActivationOrchestratorHandler = (
         });
       } catch (e) {
         // We've reached max retry which means
-        // we cannot retrieve a bonus for the provided bonusId.
+        // we could not retrieve a bonus for the provided bonusId.
         // We cannot release the family lock here since
-        // we cannot retrieve the familyUID.
+        // we could not have retrieved the familyUID.
         throw traceFatalError(
           `GetBonusActivationActivity failed|ERROR=${toString(e)}`
         );
       }
 
-      // Try to decode the result of the activity that get the PROCESSING bonus
+      // Try to decode the result of the activity that get the bonus activation
       const errorOrGetBonusActivationActivityOutput = GetBonusActivationActivityOutput.decode(
         undecodedBonusActivation
       );
@@ -182,7 +182,7 @@ export const getStartBonusActivationOrchestratorHandler = (
         bonusActivation
       );
       if (isLeft(errorOrBonusVacanzaBase)) {
-        // TODO: should we relase the lock here ?
+        // TODO: should we relase the family lock here ?
         throw traceFatalError(
           `Error decoding bonus activation request|ERROR=${readableReport(
             errorOrBonusVacanzaBase.value
@@ -265,7 +265,7 @@ export const getStartBonusActivationOrchestratorHandler = (
           );
         }
       } else {
-        // release family lock in case the bonus activation fails
+        // Release the family lock in case the bonus activation fails
         // (read: the call to ADE returned an error or failed after max retries)
         try {
           yield context.df.callActivityWithRetry(
@@ -295,6 +295,7 @@ export const getStartBonusActivationOrchestratorHandler = (
             id: operationId
           }
         });
+
         // In case of failures send the notification only to the applicant
         yield context.df.callActivityWithRetry(
           "SendMessageActivity",
@@ -330,7 +331,7 @@ export const getStartBonusActivationOrchestratorHandler = (
           })
         );
       } catch (e) {
-        traceFatalError(`Could not realease the user lock: ${toString(e)}`);
+        traceFatalError(`Could not release the user lock: ${toString(e)}`);
       }
     }
     return true;
