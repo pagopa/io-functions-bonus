@@ -2,7 +2,7 @@
 
 import { addSeconds } from "date-fns";
 import * as df from "durable-functions";
-import { isSome, Option, some } from "fp-ts/lib/Option";
+import { isSome, none, Option, some } from "fp-ts/lib/Option";
 import * as t from "io-ts";
 import {
   ActivityResult as DeleteEligibilityCheckActivityResult,
@@ -53,7 +53,7 @@ export const getMessageType = (
     ? some("EligibilityCheckSuccessIneligible")
     : EligibilityCheckSuccessConflict.is(_)
     ? some("EligibilityCheckConflict")
-    : some("EligibilityCheckFailureINPSUnavailable");
+    : none;
 };
 
 export const handler = function*(
