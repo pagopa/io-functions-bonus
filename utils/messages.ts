@@ -77,6 +77,24 @@ Attenzione:il calcolo effettuato con la simulazione non ha valore certificativo 
 `
     } as MessageContent),
 
+  EligibilityCheckFailureINPSUnavailable: () =>
+    ({
+      subject: "Richiesta Bonus Vacanze non riuscita",
+      markdown: `---
+it:
+    cta_1: 
+        text: "Continua"
+        action: "ioit://BONUS_CTA_ELIGILITY_START"
+en:
+    cta_1: 
+        text: "Continue"
+        action: "ioit://BONUS_CTA_ELIGILITY_START"
+---
+Abbiamo riscontrato un problema nella comunicazione con INPS.
+
+Ti preghiamo di iniziare una nuova richiesta.`
+    } as MessageContent),
+
   EligibilityCheckConflict: () =>
     ({
       subject: "Abbiamo completato le verifiche sul tuo ISEE",
@@ -173,6 +191,7 @@ export const getMessage = (
       return MESSAGES[messageType](validBefore);
     case "EligibilityCheckSuccessIneligible":
     case "EligibilityCheckFailure":
+    case "EligibilityCheckFailureINPSUnavailable":
     case "EligibilityCheckConflict":
     case "BonusActivationSuccess":
       return MESSAGES[messageType]();

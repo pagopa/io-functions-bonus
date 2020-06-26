@@ -2,7 +2,7 @@
 
 import { addSeconds } from "date-fns";
 import * as df from "durable-functions";
-import { isSome, none, Option, some } from "fp-ts/lib/Option";
+import { isSome, Option, some } from "fp-ts/lib/Option";
 import * as t from "io-ts";
 import {
   ActivityResult as DeleteEligibilityCheckActivityResult,
@@ -53,7 +53,7 @@ export const getMessageType = (
     ? some("EligibilityCheckSuccessIneligible")
     : EligibilityCheckSuccessConflict.is(_)
     ? some("EligibilityCheckConflict")
-    : none;
+    : some("EligibilityCheckFailureINPSUnavailable");
 };
 
 export const handler = function*(
@@ -159,6 +159,15 @@ export const handler = function*(
         name: "bonus.eligibilitycheck.error"
       }
     });
+    yield context.df.callActivityWithRetry(
+      "SendMessageActivity",
+      internalRetryOptions,
+      SendMessageActivityInput.encode({
+        checkProfile: false,
+        content: MESSAGES.EligibilityCheckFailureINPSUnavailable(),
+        fiscalCode: orchestratorInput
+      })
+    );
     return false;
   } finally {
     context.df.setCustomStatus("COMPLETED");
