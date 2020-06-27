@@ -37,9 +37,9 @@ import { toString } from "fp-ts/lib/function";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import {
-  ActivityResult as CheckBonusProcessingActivityResult,
-  CheckBonusProcessingActivityInput
-} from "../CheckBonusProcessingActivity/handler";
+  ActivityResult as CheckBonusActiveActivityResult,
+  CheckBonusActiveActivityInput
+} from "../CheckBonusActiveActivity/handler";
 import { EligibilityCheck } from "../generated/models/EligibilityCheck";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
 import { trackEvent, trackException } from "../utils/appinsights";
@@ -236,23 +236,23 @@ export const handler = function*(
         );
 
         // Check if there's another bonus activation running for this family
-        const undecodedIsBonusProcessingRunning = yield context.df.callActivityWithRetry(
-          "CheckBonusProcessingActivity",
+        const undecodedIsBonusActive = yield context.df.callActivityWithRetry(
+          "CheckBonusActiveActivity",
           internalRetryOptions,
-          CheckBonusProcessingActivityInput.encode({
+          CheckBonusActiveActivityInput.encode({
             familyUID
           })
         );
-        const isBonusProcessingRunning = CheckBonusProcessingActivityResult.decode(
-          undecodedIsBonusProcessingRunning
+        const isBonusActive = CheckBonusActiveActivityResult.decode(
+          undecodedIsBonusActive
         ).getOrElse(false);
 
         // Send the right message
         // (bonus activated or processing)
         const content = getMessage(
-          isBonusProcessingRunning
-            ? maybeMessageType.value
-            : "EligibilityCheckConflictWithBonusActivated",
+          isBonusActive
+            ? "EligibilityCheckConflictWithBonusActivated"
+            : maybeMessageType.value,
           eligibilityCheckResponse.validBefore
         );
 
