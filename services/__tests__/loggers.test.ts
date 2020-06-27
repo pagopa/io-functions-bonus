@@ -1,5 +1,6 @@
+import { failure } from "fp-ts/lib/Validation";
 import mockFetch, { mockJsonBody } from "../../__mocks__/node-fetch";
-import { logHttpFetch } from "../loggers";
+import { extractFiscalCode, logHttpFetch } from "../loggers";
 
 describe("logHttpFetch", () => {
   beforeEach(() => {
@@ -64,5 +65,18 @@ describe("logHttpFetch", () => {
     } catch (ex) {
       expect(ex).toEqual(mockFetchException);
     }
+  });
+
+  it("should extract fiscal code from payload", () => {
+    const payload =
+      '"{"codiceBuono":"XXXXXXXXXX","codiceFiscaleDichiarante":"AAAAAA00A00A000D"}';
+    const res = extractFiscalCode(payload).getOrElseL(() => fail());
+    expect(res).toEqual("AAAAAA00A00A000D");
+  });
+  it("should not extract fiscal code from payload", () => {
+    const payload =
+      '"{"codiceBuono":"XXXXXXXXXX","codiceFiscaleDichiarante":"1234"}';
+    const res = extractFiscalCode(payload).getOrElseL(() => "foobar");
+    expect(res).toEqual("foobar");
   });
 });

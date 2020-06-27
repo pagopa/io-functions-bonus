@@ -5,6 +5,7 @@ import {
 } from "io-functions-commons/dist/src/utils/azure_storage";
 
 import { constVoid } from "fp-ts/lib/function";
+import { none, Option, some } from "fp-ts/lib/Option";
 import { getRequiredStringEnv } from "io-functions-commons/dist/src/utils/env";
 import * as t from "io-ts";
 import { UTCISODateFromString } from "italia-ts-commons/lib/dates";
@@ -13,13 +14,24 @@ const loggerService = new TableService(
   getRequiredStringEnv("BONUS_STORAGE_CONNECTION_STRING")
 );
 
+///////////
+
+const fiscalCodeRegex = /[A-Z]{6}[0-9LMNPQRSTUV]{2}[ABCDEHLMPRST][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]/;
+
+export const extractFiscalCode = (payload: string): Option<string> => {
+  const matches = payload.match(fiscalCodeRegex);
+  return matches ? some(matches[0]) : none;
+};
+
 // silently eat any exception
 const getTableLogger = <T>(
   tableService: TableService,
   tableName: string,
   toEntity: (payload: T) => ITableEntity
 ) => (payload: T) =>
-  insertTableEntity(tableService, tableName, toEntity(payload));
+  insertTableEntity(tableService, tableName, toEntity(payload)).catch(
+    constVoid
+  );
 
 /**
  * Bind to a specific tracing function to create a wrapper for a fetch function that allow tracing of request and response.
@@ -59,7 +71,9 @@ export const createBasicHttpRequestTracer = <T extends IBasicHttpTrace>(
   tableName: string
 ) =>
   getTableLogger<T>(loggerService, tableName, payload => ({
-    PartitionKey: payload.Timestamp.getTime().toString(),
+    PartitionKey: extractFiscalCode(payload.RequestPayload).getOrElse(
+      payload.Timestamp.getTime().toString()
+    ),
     RequestPayload: payload.RequestPayload,
     ResponsePayload: payload.ResponsePayload,
     ResponseStatus: payload.ResponseStatus,
