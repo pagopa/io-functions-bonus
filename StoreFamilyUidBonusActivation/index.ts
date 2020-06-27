@@ -12,7 +12,10 @@ import { readableReport } from "italia-ts-commons/lib/reporters";
 import { RetrievedBonusActivation } from "../models/bonus_activation";
 import { CosmosDbDocumentCollection } from "../services/cosmosdb";
 
-const BONUS_LEASE_BINDINGS_TABLE_NAME = "bonusleasebindings";
+// "bonusleasebindings"
+const BONUS_LEASE_BINDINGS_TABLE_NAME = getRequiredStringEnv(
+  "BONUS_LEASE_BINDINGS_TABLE_NAME"
+);
 
 const tableService = new TableService(
   getRequiredStringEnv("BONUS_STORAGE_CONNECTION_STRING")
