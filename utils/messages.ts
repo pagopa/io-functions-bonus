@@ -98,9 +98,18 @@ Ti preghiamo di iniziare una nuova richiesta.`
   EligibilityCheckConflict: () =>
     ({
       subject: "Abbiamo completato le verifiche sul tuo ISEE",
-      markdown: `INPS ha completato le verifiche sull’ISEE e risulta che qualcuno del tuo nucleo familiare abbia già richiesto il Bonus Vacanze.  
+      markdown: `INPS ha completato le verifiche sull’ISEE e risulta che qualcuno del tuo nucleo familiare ha già richiesto il Bonus Vacanze.  
 
 Il Bonus è in fase di attivazione. Ti manderemo un messaggio quando sarà attivo.
+`
+    } as MessageContent),
+
+  EligibilityCheckConflictWithBonusActivated: () =>
+    ({
+      subject: "Abbiamo completato le verifiche sul tuo ISEE",
+      markdown: `INPS ha completato le verifiche sull’ISEE e risulta che qualcuno del tuo nucleo familiare ha già richiesto il Bonus Vacanze.  
+
+Il Bonus Vacanze è attivo. Puoi visualizzarne i dettagli nella sezione Pagamenti.
 `
     } as MessageContent),
 
@@ -193,6 +202,7 @@ export const getMessage = (
     case "EligibilityCheckFailure":
     case "EligibilityCheckFailureINPSUnavailable":
     case "EligibilityCheckConflict":
+    case "EligibilityCheckConflictWithBonusActivated":
     case "BonusActivationSuccess":
       return MESSAGES[messageType]();
     default:
