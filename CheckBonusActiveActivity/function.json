@@ -15,5 +15,5 @@
       "partitionKey": "{familyUID}"
     }
   ],
-  "scriptFile": "../dist/CheckBonusProcessingActivity/index.js"
+  "scriptFile": "../dist/CheckBonusActiveActivity/index.js"
 }

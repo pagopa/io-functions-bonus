@@ -3,13 +3,12 @@ import { BonusActivationStatusEnum } from "../../generated/models/BonusActivatio
 import { FamilyUID } from "../../generated/models/FamilyUID";
 import {
   BonusLeaseToBonusActivation,
-  getCheckBonusProcessingActivityHandler
+  getCheckBonusActiveActivityHandler
 } from "../handler";
 
 const aFamilyUID = "AAABBB80A01C123D" as FamilyUID;
-const aProcessingBonusActivationStatus = BonusActivationStatusEnum.PROCESSING;
 
-describe("CheckBonusProcessingActivityHandler", () => {
+describe("CheckBonusActiveActivityHandler", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -18,13 +17,13 @@ describe("CheckBonusProcessingActivityHandler", () => {
     context.bindings = {};
   });
 
-  it("should returns true if a bonus activation is running", async () => {
+  it("should return true if a bonus activation is active", async () => {
     // tslint:disable-next-line: no-object-mutation
     context.bindings.bonusLeaseBinding = BonusLeaseToBonusActivation.encode({
-      Status: aProcessingBonusActivationStatus
+      Status: BonusActivationStatusEnum.ACTIVE
     });
 
-    const handler = getCheckBonusProcessingActivityHandler();
+    const handler = getCheckBonusActiveActivityHandler();
 
     const response = await handler(context, aFamilyUID);
 
@@ -34,20 +33,20 @@ describe("CheckBonusProcessingActivityHandler", () => {
     // tslint:disable-next-line: no-object-mutation
     context.bindings.bonusLeaseBinding = undefined;
 
-    const handler = getCheckBonusProcessingActivityHandler();
+    const handler = getCheckBonusActiveActivityHandler();
 
     const response = await handler(context, aFamilyUID);
 
     expect(response).toEqual(false);
   });
 
-  it("should returns false if a bonus activation is not running", async () => {
+  it("should returns false if a bonus activation is not active", async () => {
     // tslint:disable-next-line: no-object-mutation
     context.bindings.bonusLeaseBinding = BonusLeaseToBonusActivation.encode({
-      Status: BonusActivationStatusEnum.REDEEMED
+      Status: BonusActivationStatusEnum.PROCESSING
     });
 
-    const handler = getCheckBonusProcessingActivityHandler();
+    const handler = getCheckBonusActiveActivityHandler();
 
     const response = await handler(context, aFamilyUID);
 
