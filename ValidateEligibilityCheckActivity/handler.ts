@@ -4,22 +4,34 @@ import { isNone } from "fp-ts/lib/Option";
 import { fromEither, tryCatch } from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
-import { EligibilityCheck } from "../generated/definitions/EligibilityCheck";
+import { EligibilityCheck as ApiEligibilityCheck } from "../generated/definitions/EligibilityCheck";
 import { StatusEnum as ConflictStatusEnum } from "../generated/definitions/EligibilityCheckSuccessConflict";
 import { StatusEnum as EligibleStatusEnum } from "../generated/definitions/EligibilityCheckSuccessEligible";
 import { BonusLeaseModel } from "../models/bonus_lease";
 import { generateFamilyUID } from "../utils/hash";
 
-export const ValidateEligibilityCheckActivityInput = EligibilityCheck;
+export const ValidateEligibilityCheckActivityInput = ApiEligibilityCheck;
 export type ValidateEligibilityCheckActivityInput = t.TypeOf<
   typeof ValidateEligibilityCheckActivityInput
+>;
+
+export const ValidateEligibilityCheckActivityOutput = ApiEligibilityCheck;
+export type ValidateEligibilityCheckActivityOutput = t.TypeOf<
+  typeof ValidateEligibilityCheckActivityOutput
 >;
 
 type IValidateEligibilityCheckHandler = (
   context: Context,
   input: unknown
-) => Promise<EligibilityCheck>;
+) => Promise<ValidateEligibilityCheckActivityOutput>;
 
+/**
+ * Check if there's still an ACTIVE / PROCESSING bonus
+ * for the members of the family returned by the ISEE (DSU) request.
+ *
+ * In case it exists, the status of the ApiEligibilityCheck is updated to CONFLICT
+ * otherwise we return the unchanged object.
+ */
 export function getValidateEligibilityCheckActivityHandler(
   bonusLeaseModel: BonusLeaseModel
 ): IValidateEligibilityCheckHandler {
@@ -43,7 +55,7 @@ export function getValidateEligibilityCheckActivityHandler(
         return tryCatch(
           () => bonusLeaseModel.find(familyUID, familyUID),
           () => new Error("Error calling bonusLeaseModel.find")
-        ).foldTaskEither<Error, EligibilityCheck>(
+        ).foldTaskEither<Error, ValidateEligibilityCheckActivityOutput>(
           error => fromEither(left(error)),
           queryResult =>
             fromEither(

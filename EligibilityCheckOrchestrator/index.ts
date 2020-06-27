@@ -13,7 +13,6 @@ import {
   EligibilityCheckActivityInput
 } from "../EligibilityCheckActivity/handler";
 import { EligibilityCheck as ApiEligibilityCheck } from "../generated/definitions/EligibilityCheck";
-import { EligibilityCheck } from "../generated/definitions/EligibilityCheck";
 import { EligibilityCheckFailure } from "../generated/definitions/EligibilityCheckFailure";
 import { EligibilityCheckSuccessConflict } from "../generated/definitions/EligibilityCheckSuccessConflict";
 import { EligibilityCheckSuccessEligible } from "../generated/definitions/EligibilityCheckSuccessEligible";
@@ -28,15 +27,23 @@ import {
   externalRetryOptions,
   internalRetryOptions
 } from "../utils/retry_policies";
-import { ValidateEligibilityCheckActivityInput } from "../ValidateEligibilityCheckActivity/handler";
+import {
+  ValidateEligibilityCheckActivityInput,
+  ValidateEligibilityCheckActivityOutput
+} from "../ValidateEligibilityCheckActivity/handler";
 
 import { isLeft } from "fp-ts/lib/Either";
 import { toString } from "fp-ts/lib/function";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
+import {
+  ActivityResult as CheckBonusProcessingActivityResult,
+  CheckBonusProcessingActivityInput
+} from "../CheckBonusProcessingActivity/handler";
+import { EligibilityCheck } from "../generated/models/EligibilityCheck";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
 import { trackEvent, trackException } from "../utils/appinsights";
-import { toHash } from "../utils/hash";
+import { generateFamilyUID, toHash } from "../utils/hash";
 
 export const OrchestratorInput = FiscalCode;
 export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
@@ -59,16 +66,13 @@ export const getMessageType = (
     : none;
 };
 
+// tslint:disable-next-line: no-big-function
 export const handler = function*(
   context: IOrchestrationFunctionContext,
   logPrefix: string = "EligibilityCheckOrchestrator"
 ): Generator {
   context.df.setCustomStatus("RUNNING");
   const input = context.df.getInput();
-  // tslint:disable-next-line: no-let
-  let validatedEligibilityCheck: EligibilityCheck;
-  // tslint:disable-next-line: no-let
-  let eligibilityCheckResponse: ActivityResult;
   const errorOrEligibilityCheckOrchestratorInput = OrchestratorInput.decode(
     input
   );
@@ -90,6 +94,13 @@ export const handler = function*(
 
   const orchestratorInput = errorOrEligibilityCheckOrchestratorInput.value;
   const operationId = toHash(orchestratorInput);
+
+  // tslint:disable-next-line: no-let
+  let validatedEligibilityCheck: ApiEligibilityCheck;
+  // tslint:disable-next-line: no-let
+  let eligibilityCheckResponse: ActivityResult;
+  // tslint:disable-next-line: no-let
+  let modelEligibilityCheck: EligibilityCheck;
 
   try {
     const deleteEligibilityCheckResponse = yield context.df.callActivityWithRetry(
@@ -125,7 +136,7 @@ export const handler = function*(
       );
     }
 
-    const eligibilityCheck = toApiEligibilityCheckFromDSU(
+    const apiEligibilityCheck = toApiEligibilityCheckFromDSU(
       eligibilityCheckResponse.data,
       eligibilityCheckResponse.fiscalCode,
       eligibilityCheckResponse.validBefore
@@ -142,9 +153,9 @@ export const handler = function*(
     const undecodedValidatedEligibilityCheck = yield context.df.callActivityWithRetry(
       "ValidateEligibilityCheckActivity",
       internalRetryOptions,
-      ValidateEligibilityCheckActivityInput.encode(eligibilityCheck)
+      ValidateEligibilityCheckActivityInput.encode(apiEligibilityCheck)
     );
-    validatedEligibilityCheck = EligibilityCheck.decode(
+    validatedEligibilityCheck = ValidateEligibilityCheckActivityOutput.decode(
       undecodedValidatedEligibilityCheck
     ).getOrElseL(error => {
       throw new Error(
@@ -153,7 +164,7 @@ export const handler = function*(
     });
 
     // Convert from API EligibilityCheck to Model EligibilityCheck
-    const modelEligibilityCheck = toModelEligibilityCheck(
+    modelEligibilityCheck = toModelEligibilityCheck(
       validatedEligibilityCheck
     ).getOrElseL(error => {
       throw new Error(
@@ -210,33 +221,90 @@ export const handler = function*(
     }
   });
 
-  // send push notification with eligibility details
-  const maybeMessageType = getMessageType(validatedEligibilityCheck);
+  // Timer triggered, we now try to send the right message
+  // to the applicant containing the eligibility check details.
+  try {
+    const maybeMessageType = getMessageType(validatedEligibilityCheck);
 
-  if (isSome(maybeMessageType)) {
-    yield context.df.callActivityWithRetry(
-      "SendMessageActivity",
-      internalRetryOptions,
-      SendMessageActivityInput.encode({
-        checkProfile: false,
-        content: getMessage(
-          maybeMessageType.value,
+    if (isSome(maybeMessageType)) {
+      if (
+        modelEligibilityCheck.status === "CONFLICT" &&
+        maybeMessageType.value === "EligibilityCheckConflict"
+      ) {
+        const familyUID = generateFamilyUID(
+          modelEligibilityCheck.dsuRequest.familyMembers
+        );
+
+        // Check if there's another bonus activation running for this family
+        const undecodedIsBonusProcessingRunning = yield context.df.callActivityWithRetry(
+          "CheckBonusProcessingActivity",
+          internalRetryOptions,
+          CheckBonusProcessingActivityInput.encode({
+            familyUID
+          })
+        );
+        const isBonusProcessingRunning = CheckBonusProcessingActivityResult.decode(
+          undecodedIsBonusProcessingRunning
+        ).getOrElse(false);
+
+        // Send the right message
+        // (bonus activated or processing)
+        const content = getMessage(
+          isBonusProcessingRunning
+            ? maybeMessageType.value
+            : "EligibilityCheckConflictWithBonusActivated",
           eligibilityCheckResponse.validBefore
-        ),
-        fiscalCode: eligibilityCheckResponse.fiscalCode
-      })
-    );
-    trackEvent({
-      name: "bonus.eligibilitycheck.message",
-      properties: {
-        id: operationId,
-        type: maybeMessageType.value
+        );
+
+        yield context.df.callActivityWithRetry(
+          "SendMessageActivity",
+          internalRetryOptions,
+          SendMessageActivityInput.encode({
+            checkProfile: false,
+            content,
+            fiscalCode: eligibilityCheckResponse.fiscalCode
+          })
+        );
+      } else {
+        // Send the right message
+        // (no conflict found)
+        yield context.df.callActivityWithRetry(
+          "SendMessageActivity",
+          internalRetryOptions,
+          SendMessageActivityInput.encode({
+            checkProfile: false,
+            content: getMessage(
+              maybeMessageType.value,
+              eligibilityCheckResponse.validBefore
+            ),
+            fiscalCode: eligibilityCheckResponse.fiscalCode
+          })
+        );
       }
-    });
-  } else {
+      trackEvent({
+        name: "bonus.eligibilitycheck.message",
+        properties: {
+          id: operationId,
+          type: maybeMessageType.value
+        }
+      });
+    } else {
+      trackException({
+        exception: new Error(
+          `Cannot get message type for eligibility check: ${eligibilityCheckResponse.fiscalCode}`
+        ),
+        properties: {
+          id: operationId,
+          name: "bonus.eligibilitycheck.error"
+        }
+      });
+      return false;
+    }
+  } catch (e) {
+    // Cannot send message
     trackException({
       exception: new Error(
-        `Cannot get message type for eligibility check: ${eligibilityCheckResponse.fiscalCode}`
+        `Error sending message for eligibility check: ${eligibilityCheckResponse.fiscalCode}`
       ),
       properties: {
         id: operationId,
@@ -245,7 +313,6 @@ export const handler = function*(
     });
     return false;
   }
-
   return validatedEligibilityCheck;
 };
 

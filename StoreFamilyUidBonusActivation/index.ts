@@ -12,7 +12,10 @@ import { readableReport } from "italia-ts-commons/lib/reporters";
 import { RetrievedBonusActivation } from "../models/bonus_activation";
 import { CosmosDbDocumentCollection } from "../services/cosmosdb";
 
-const BONUS_LEASE_TO_BONUS_ACTIVATIONS_TABLE_NAME = "bonusleasebindings";
+// "bonusleasebindings"
+const BONUS_LEASE_BINDINGS_TABLE_NAME = getRequiredStringEnv(
+  "BONUS_LEASE_BINDINGS_TABLE_NAME"
+);
 
 const tableService = new TableService(
   getRequiredStringEnv("BONUS_STORAGE_CONNECTION_STRING")
@@ -47,7 +50,7 @@ const index: AzureFunction = async (context: Context, input: unknown) => {
           document =>
             // it looks like we must use the table storage SDK:
             // see https://docs.microsoft.com/it-it/azure/azure-functions/functions-bindings-storage-table?tabs=csharp#output
-            insertOrReplaceEntity(BONUS_LEASE_TO_BONUS_ACTIVATIONS_TABLE_NAME, {
+            insertOrReplaceEntity(BONUS_LEASE_BINDINGS_TABLE_NAME, {
               BonusID: document.id,
               PartitionKey: document.familyUID,
               RowKey: document.familyUID,

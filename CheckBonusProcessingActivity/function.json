@@ -1,0 +1,19 @@
+{
+  "bindings": [
+    {
+      "name": "name",
+      "type": "activityTrigger",
+      "direction": "in"
+    },
+    {
+      "type": "table",
+      "name": "bonusLeaseBinding",
+      "tableName": "%BONUS_LEASE_BINDINGS_TABLE_NAME%",
+      "connection": "BONUS_STORAGE_CONNECTION_STRING",
+      "direction": "in",
+      "rowKey": "{familyUID}",
+      "partitionKey": "{familyUID}"
+    }
+  ],
+  "scriptFile": "../dist/CheckBonusProcessingActivity/index.js"
+}
