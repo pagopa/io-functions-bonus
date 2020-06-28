@@ -6,5 +6,5 @@ describe("API specs", () => {
   it("should be valid", async () => {
     const api = await SwaggerParser.validate(specFilePath);
     expect(api).toBeDefined();
-  });
+  }, 10000);
 });

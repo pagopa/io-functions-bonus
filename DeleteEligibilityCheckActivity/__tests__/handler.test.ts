@@ -16,6 +16,14 @@ const mockEligibilityCheckModel = ({
 const aFiscalCode = "AAABBB80A01C123D" as NonEmptyString;
 
 describe("DeleteEligibilityCheckActivityHandler", () => {
+  it("should fail permanently on invalid input", async () => {
+    const handler = getDeleteEligibilityCheckActivityHandler(
+      mockEligibilityCheckModel
+    );
+    const result = handler(context, {});
+    return expect(result).rejects;
+  });
+
   it("should delete EligibilityCheck and return success ", async () => {
     mockDeleteOneById.mockImplementationOnce(async _ => right(_));
     const handler = getDeleteEligibilityCheckActivityHandler(
@@ -64,5 +72,22 @@ describe("DeleteEligibilityCheckActivityHandler", () => {
     } catch (error) {
       expect(error).toBeInstanceOf(Error);
     }
+  });
+  it("should fail if EligibilityCheck does not exist", async () => {
+    const expectedQueryError: QueryError = {
+      body: "not found",
+      code: 404
+    };
+    mockDeleteOneById.mockImplementationOnce(async _ =>
+      left(expectedQueryError)
+    );
+    const handler = getDeleteEligibilityCheckActivityHandler(
+      mockEligibilityCheckModel
+    );
+
+    const result = await handler(context, aFiscalCode);
+    expect(result).toMatchObject({
+      kind: "SUCCESS"
+    });
   });
 });

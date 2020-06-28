@@ -72,8 +72,9 @@ export interface IApiBonusActivationWithValidBefore {
   validBefore: Timestamp;
 }
 
-const eligibilityCheckToResponse = (
-  doc: RetrievedEligibilityCheck
+export const eligibilityCheckToResponse = (
+  doc: RetrievedEligibilityCheck,
+  now: () => Date = () => new Date()
 ): TaskEither<
   IResponseErrorForbiddenNotAuthorized | IResponseErrorGone,
   EligibilityCheckSuccessEligible
@@ -82,7 +83,7 @@ const eligibilityCheckToResponse = (
   !EligibilityCheckSuccessEligible.is(doc)
     ? fromLeft(ResponseErrorForbiddenNotAuthorized)
     : // the check is expired
-    isBefore(doc.validBefore, new Date())
+    isBefore(doc.validBefore, now())
     ? fromLeft(ResponseErrorGone("DSU expired"))
     : // the check is fine, I can extract the DSU data from it
       fromEither(right(doc));
@@ -198,8 +199,8 @@ export const createBonusActivation = (
 export const acquireLockForUserFamily = (
   bonusLeaseModel: BonusLeaseModel,
   familyUID: FamilyUID
-): TaskEither<IResponseErrorConflict | IResponseErrorInternal, unknown> => {
-  return fromQueryEither(() =>
+): TaskEither<IResponseErrorConflict | IResponseErrorInternal, unknown> =>
+  fromQueryEither(() =>
     bonusLeaseModel.create(
       {
         id: familyUID,
@@ -207,20 +208,15 @@ export const acquireLockForUserFamily = (
       },
       familyUID
     )
-  ).bimap(
-    err =>
-      err.code === 409
-        ? ResponseErrorConflict(
-            `There's already a lease for familyUID ${familyUID}`
-          )
-        : ResponseErrorInternal(
-            `Error while acquiring lease for familyUID ${familyUID}: ${err.body}`
-          ),
-    _ => {
-      return _;
-    }
+  ).mapLeft(err =>
+    err.code === 409
+      ? ResponseErrorConflict(
+          `There's already a lease for familyUID ${familyUID}`
+        )
+      : ResponseErrorInternal(
+          `Error while acquiring lease for familyUID ${familyUID}: ${err.body}`
+        )
   );
-};
 
 /**
  * Release the lock that was eventually acquired for this request. A release attempt on a lock that doesn't exist is considered successful.
