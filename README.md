@@ -1,6 +1,6 @@
 # IO Functions bonus
 
-[![codecov](https://codecov.io/gh/pagopa/io-functions-bonusapi/branch/master/graph/badge.svg)](https://codecov.io/gh/pagopa/io-functions-bonusapi)
+[![codecov](https://codecov.io/gh/pagopa/io-functions-bonus/branch/master/graph/badge.svg)](https://codecov.io/gh/pagopa/io-functions-bonus)
 
 ## Develop locally
 
