@@ -1,5 +1,7 @@
 # IO Functions bonus
 
+[![codecov](https://codecov.io/gh/pagopa/io-functions-bonusapi/branch/master/graph/badge.svg)](https://codecov.io/gh/pagopa/io-functions-bonusapi)
+
 ## Develop locally
 
 1. Install dotnet sdk: https://dotnet.microsoft.com/download
