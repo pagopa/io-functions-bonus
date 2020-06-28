@@ -22,6 +22,18 @@ export type ContinueBonusActivationInput = t.TypeOf<
   typeof ContinueBonusActivationInput
 >;
 
+const permanentDecodeFailure = (errs: t.Errors) =>
+  Failure.encode({
+    kind: "PERMANENT",
+    reason: `Cannot decode input: ${readableReport(errs)}`
+  });
+
+const transientOrchestratorError = (err: unknown) =>
+  Failure.encode({
+    kind: "TRANSIENT",
+    reason: `Error starting the orchestrator: ${toError(err).message}`
+  });
+
 /**
  * Reads from a queue the tuple (bonusId, fiscalCode)
  * then try to start the orchestrator to activate the bonus.
@@ -31,12 +43,7 @@ export const index: AzureFunction = (
   message: unknown
 ): Promise<Failure | string> => {
   return fromEither(ContinueBonusActivationInput.decode(message))
-    .mapLeft(errs =>
-      Failure.encode({
-        kind: "PERMANENT",
-        reason: `Cannot decode input: ${readableReport(errs)}`
-      })
-    )
+    .mapLeft(permanentDecodeFailure)
     .chain(({ bonusId, applicantFiscalCode, validBefore }) =>
       tryCatch(
         () =>
@@ -49,11 +56,7 @@ export const index: AzureFunction = (
               validBefore
             })
           ),
-        _ =>
-          Failure.encode({
-            kind: "TRANSIENT",
-            reason: `Error starting the orchestrator: ${toError(_).message}`
-          })
+        transientOrchestratorError
       )
     )
     .fold<Failure | string>(err => {

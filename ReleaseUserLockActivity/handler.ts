@@ -1,13 +1,16 @@
 import { toString } from "fp-ts/lib/function";
 import { fromEither } from "fp-ts/lib/TaskEither";
-import { fromQueryEither } from "io-functions-commons/dist/src/utils/documentdb";
+import {
+  fromQueryEither,
+  QueryError
+} from "io-functions-commons/dist/src/utils/documentdb";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { Context } from "vm";
 import { BonusProcessingModel } from "../models/bonus_processing";
 import { trackException } from "../utils/appinsights";
-import { Failure, TransientFailure } from "../utils/errors";
+import { Failure, PermanentFailure, TransientFailure } from "../utils/errors";
 
 export const ReleaseUserLockActivitySuccess = t.type({
   id: FiscalCode,
@@ -18,7 +21,7 @@ export type ReleaseUserLockActivitySuccess = t.TypeOf<
 >;
 
 export const ReleaseUserLockActivityResult = t.taggedUnion("kind", [
-  Failure,
+  PermanentFailure,
   ReleaseUserLockActivitySuccess
 ]);
 export type ReleaseUserLockActivityResult = t.TypeOf<
@@ -35,6 +38,31 @@ type IReleaseUserLockActivityHandler = (
   input: unknown
 ) => Promise<ReleaseUserLockActivityResult>;
 
+const invalidInputFailure = (err: t.Errors) =>
+  Failure.encode({
+    kind: "PERMANENT",
+    reason: `Invalid input: ${readableReport(err)}`
+  });
+
+const lockNotFoundFailure = Failure.encode({
+  kind: "PERMANENT",
+  reason: "Lock not found"
+});
+
+const queryErrorFailure = (err: QueryError) =>
+  Failure.encode({
+    kind: "TRANSIENT",
+    reason: `Query error: ${err.code}=${err.body}`
+  });
+
+const releaseUserLockActivitySuccess = (
+  id: ReleaseUserLockActivitySuccess["id"]
+) =>
+  ReleaseUserLockActivitySuccess.encode({
+    id,
+    kind: "SUCCESS"
+  });
+
 export function getReleaseUserLockActivityHandler(
   bonusProcessingModel: BonusProcessingModel,
   logPrefix = `ReleaseUserLockActivity`
@@ -44,49 +72,29 @@ export function getReleaseUserLockActivityHandler(
     input: unknown
   ): Promise<ReleaseUserLockActivityResult> => {
     return fromEither(ReleaseUserLockActivityInput.decode(input))
-      .mapLeft<Failure>(err =>
-        Failure.encode({
-          kind: "PERMANENT",
-          reason: `Invalid input: ${readableReport(err)}`
-        })
-      )
+      .mapLeft<Failure>(invalidInputFailure)
       .chain(({ id }) =>
         fromQueryEither(() => bonusProcessingModel.deleteOneById(id))
           .map(__ => id)
           .mapLeft<Failure>(err =>
-            err.code === 404
-              ? Failure.encode({
-                  kind: "PERMANENT",
-                  reason: "Lock not found"
-                })
-              : Failure.encode({
-                  kind: "TRANSIENT",
-                  reason: `Query error: ${err.code}=${err.body}`
-                })
+            err.code === 404 ? lockNotFoundFailure : queryErrorFailure(err)
           )
       )
-      .fold<ReleaseUserLockActivityResult>(
-        err => {
-          if (TransientFailure.is(err)) {
-            const ex = new Error(`${logPrefix}|${toString(err)}`);
-            trackException({
-              exception: ex,
-              properties: {
-                name: "bonus.activation.failure.unlock"
-              }
-            });
-            // trigger a retry in case of failures
-            throw ex;
-          }
-          // permanent failures are tracked into the orchestrator
-          return err;
-        },
-        id =>
-          ReleaseUserLockActivitySuccess.encode({
-            id,
-            kind: "SUCCESS"
-          })
-      )
+      .fold<ReleaseUserLockActivityResult>(err => {
+        if (TransientFailure.is(err)) {
+          const ex = new Error(`${logPrefix}|${toString(err)}`);
+          trackException({
+            exception: ex,
+            properties: {
+              name: "bonus.activation.failure.unlock"
+            }
+          });
+          // trigger a retry in case of failures
+          throw ex;
+        }
+        // permanent failures are tracked into the orchestrator
+        return err;
+      }, releaseUserLockActivitySuccess)
       .run();
   };
 }
