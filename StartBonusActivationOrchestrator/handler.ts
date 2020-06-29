@@ -109,7 +109,7 @@ export const getStartBonusActivationOrchestratorHandler = (
       }
 
       // For application insights logging / tracking
-      const operationId = toHash(bonusId);
+      const operationId = bonusId;
 
       // Try to get the bonus activation relative to (bonusId, fiscalCode)
       // tslint:disable-next-line: no-let
@@ -246,9 +246,12 @@ export const getStartBonusActivationOrchestratorHandler = (
           });
         } catch (e) {
           throw traceFatalError(
-            `ADE call succeeded but could not set the bonus to ACTIVE|ERROR=${toString}`
+            `ADE call succeeded but could not set the bonus to ACTIVE|ERROR=${toString(
+              e
+            )}`
           );
         }
+
         // Notify all family members and applicant
         // (family members array includes applicant fiscal code)
         for (const familyMember of bonusActivation.dsuRequest.familyMembers) {
@@ -275,6 +278,9 @@ export const getStartBonusActivationOrchestratorHandler = (
             })
           );
         } catch (e) {
+          // TODO: if we could not release the family lock here,
+          // the bonus status will stuck into PROCESSING state
+          // is this what we expect?
           throw traceFatalError(
             `Bonus activation failed but could not release the family lock: ${toString(
               e
@@ -283,17 +289,25 @@ export const getStartBonusActivationOrchestratorHandler = (
         }
 
         // Update bonus status to FAILED
-        yield context.df.callActivityWithRetry(
-          "FailedBonusActivationActivity",
-          internalRetryOptions,
-          FailedBonusActivationInput.encode({ bonusActivation })
-        );
-        trackEvent({
-          name: "bonus.activation.failure",
-          properties: {
-            id: operationId
-          }
-        });
+        try {
+          yield context.df.callActivityWithRetry(
+            "FailedBonusActivationActivity",
+            internalRetryOptions,
+            FailedBonusActivationInput.encode({ bonusActivation })
+          );
+          trackEvent({
+            name: "bonus.activation.failure",
+            properties: {
+              id: operationId
+            }
+          });
+        } catch (e) {
+          throw traceFatalError(
+            `ADE call failed but could not set the bonus to FAILED|ERROR=${toString(
+              e
+            )}`
+          );
+        }
 
         // In case of failures send the notification only to the applicant
         yield context.df.callActivityWithRetry(
@@ -310,15 +324,7 @@ export const getStartBonusActivationOrchestratorHandler = (
       // We've reached this point in case
       // 1) some FATAL error has occurred
       // 2) some activity (ie. SendMessage) has failed with max retries
-      context.log.error(
-        `${logPrefix}|ID=${toHash(bonusId)}|ERROR=${toString(e)}`
-      );
-      trackException({
-        exception: e,
-        properties: {
-          name: "bonus.activation.error"
-        }
-      });
+      context.log.error(`${logPrefix}|ID=${bonusId}|ERROR=${toString(e)}`);
     } finally {
       // anything goes: release user's lock when the orchestrator ends
       try {

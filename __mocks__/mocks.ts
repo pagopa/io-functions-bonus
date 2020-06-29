@@ -9,6 +9,10 @@ import {
   StatusEnum as EligibilityCheckFailureStatusEnum
 } from "../generated/models/EligibilityCheckFailure";
 import {
+  EligibilityCheckSuccessConflict,
+  StatusEnum as EligibilityCheckSuccessConflictStatus
+} from "../generated/models/EligibilityCheckSuccessConflict";
+import {
   EligibilityCheckSuccessEligible,
   StatusEnum as EligibilityCheckSuccessEligibleStatus
 } from "../generated/models/EligibilityCheckSuccessEligible";
@@ -82,6 +86,12 @@ export const aEligibilityCheckSuccessEligibleExpired: EligibilityCheckSuccessEli
   id: (aFiscalCode as unknown) as NonEmptyString,
   status: EligibilityCheckSuccessEligibleStatus.ELIGIBLE,
   validBefore: new Date(Date.now() - 1 * 60 * 60 * 1000 /* -1h */)
+};
+
+export const aEligibilityCheckSuccessConflict: EligibilityCheckSuccessConflict = {
+  dsuRequest: aDsu,
+  id: (aFiscalCode as unknown) as NonEmptyString,
+  status: EligibilityCheckSuccessConflictStatus.CONFLICT
 };
 
 export const aEligibilityCheckSuccessIneligible: EligibilityCheckSuccessIneligible = {

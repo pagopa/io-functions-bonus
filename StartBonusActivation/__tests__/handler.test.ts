@@ -17,7 +17,8 @@ import {
   aEligibilityCheckSuccessEligibleValid,
   aEligibilityCheckSuccessIneligible,
   aRetrievedBonusActivation,
-  aRetrievedBonusLease
+  aRetrievedBonusLease,
+  aEligibilityCheckSuccessConflict
 } from "../../__mocks__/mocks";
 import { BonusActivationModel } from "../../models/bonus_activation";
 import { BonusLeaseModel } from "../../models/bonus_lease";
@@ -165,9 +166,25 @@ describe("StartBonusActivationHandler", () => {
     expect(response.kind).toBe("IResponseErrorForbiddenNotAuthorized");
   });
 
+  it("should tell if the found eligibility check for the current user is conflict", async () => {
+    mockEligibilityCheckFind.mockImplementationOnce(async _ =>
+      right(some(aEligibilityCheckSuccessConflict))
+    );
+    const handler = StartBonusActivationHandler(
+      mockBonusActivationModel,
+      mockBonusLeaseModel,
+      mockEligibilityCheckModel,
+      enqueueBonusActivation
+    );
+
+    const response = await handler(context, aFiscalCode);
+
+    expect(response.kind).toBe("IResponseErrorForbiddenNotAuthorized");
+  });
+
   it("should return an error if the query for eligibility check fails", async () => {
     mockEligibilityCheckFind.mockImplementationOnce(async _ => {
-      throw new Error("quey failed");
+      throw new Error("query failed");
     });
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
@@ -181,23 +198,7 @@ describe("StartBonusActivationHandler", () => {
     expect(response.kind).toBe("IResponseErrorInternal");
   });
 
-  it("should return an error if the query for eligibility check fails", async () => {
-    mockEligibilityCheckFind.mockImplementationOnce(async _ => {
-      throw new Error("quey failed");
-    });
-    const handler = StartBonusActivationHandler(
-      mockBonusActivationModel,
-      mockBonusLeaseModel,
-      mockEligibilityCheckModel,
-      enqueueBonusActivation
-    );
-
-    const response = await handler(context, aFiscalCode);
-
-    expect(response.kind).toBe("IResponseErrorInternal");
-  });
-
-  it("should retry bonus code generation if theres already the same code on the db", async () => {
+  it("should retry bonus code generation if there's already the same code on the db", async () => {
     mockBonusActivationCreate.mockImplementationOnce(async _ =>
       left({
         code: 409
@@ -298,7 +299,7 @@ describe("StartBonusActivationHandler", () => {
     expect(response.kind).toBe("IResponseErrorInternal");
   });
 
-  it("should relase the lock if the bonus creation fails", async () => {
+  it("should release the lock if the bonus creation fails", async () => {
     mockBonusActivationCreate.mockImplementationOnce(async _ => {
       throw new Error("any error");
     });
