@@ -131,7 +131,7 @@ describe("EligibilityCheckOrchestrator", () => {
       .mockReturnValueOnce("UpsertEligibilityCheckActivity")
       // 5 SendMessageActivity
       .mockReturnValueOnce("SendMessageActivity");
-    // tslint:disable-next-line: no-any
+    // tslint:disable-next-line: no-any no-useless-cast
     const orchestrator = handler(contextMockWithDf as any);
 
     // 1 DeleteEligibilityCheckActivity
@@ -172,7 +172,7 @@ describe("EligibilityCheckOrchestrator", () => {
   });
 
   it("should send the right message on EligibilityCheckConflict when a Bonus Processing is running", async () => {
-    // tslint:disable-next-line: no-any
+    // tslint:disable-next-line: no-any no-useless-cast
     const orchestrator = handler(aContextMockWithActiveBonus as any);
 
     // 1 DeleteEligibilityCheckActivity
@@ -223,9 +223,8 @@ describe("EligibilityCheckOrchestrator", () => {
   });
 
   it("should send the right message on EligibilityCheckConflict when a Bonus Processing is not running", async () => {
-    // tslint:disable-next-line: no-any
     const orchestrator = handler(
-      // tslint:disable-next-line: no-any
+      // tslint:disable-next-line: no-any no-useless-cast
       aContextMockWithProcessingBonus as any
     );
 

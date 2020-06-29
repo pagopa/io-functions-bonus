@@ -2,7 +2,6 @@ import { left, right } from "fp-ts/lib/Either";
 import { context } from "../../__mocks__/durable-functions";
 import { aEligibilityCheckSuccessEligibleValid } from "../../__mocks__/mocks";
 import { EligibilityCheckModel } from "../../models/eligibility_check";
-import { toApiEligibilityCheck } from "../../utils/conversions";
 import {
   ActivityResultFailure,
   ActivityResultSuccess,

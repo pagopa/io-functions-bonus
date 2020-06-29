@@ -58,7 +58,7 @@ describe("ValidateEligibilityCheckActivityHandler", () => {
   });
 
   it("should return original input if no bonus lease was found", async () => {
-    mockFind.mockImplementation((id, _) => Promise.resolve(right(none)));
+    mockFind.mockImplementation((__, _) => Promise.resolve(right(none)));
 
     const handler = getValidateEligibilityCheckActivityHandler(bonusLeaseModel);
 

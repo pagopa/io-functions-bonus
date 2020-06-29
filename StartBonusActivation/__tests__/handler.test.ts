@@ -4,7 +4,7 @@ import { left, right } from "fp-ts/lib/Either";
 import { none, some } from "fp-ts/lib/Option";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { ResponseErrorInternal } from "italia-ts-commons/lib/responses";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import { FiscalCode } from "italia-ts-commons/lib/strings";
 import {
   context,
   mockGetStatus,
@@ -23,13 +23,10 @@ import { BonusActivationModel } from "../../models/bonus_activation";
 import { BonusLeaseModel } from "../../models/bonus_lease";
 import { BonusProcessing } from "../../models/bonus_processing";
 import { EligibilityCheckModel } from "../../models/eligibility_check";
-import { OrchestratorInput } from "../../StartBonusActivationOrchestrator/handler";
 import { makeStartEligibilityCheckOrchestratorId } from "../../utils/orchestrators";
 import { StartBonusActivationHandler } from "../handler";
 
 const enqueueBonusActivation = jest.fn().mockReturnValue(taskEither.of("foo"));
-
-const queueName = "somequeuename" as NonEmptyString;
 
 // implement temporary mockGetStatus
 const simulateOrchestratorIsRunning = (forOrchestratorId: string) => {

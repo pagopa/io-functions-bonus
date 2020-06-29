@@ -119,6 +119,7 @@ const consumeOrchestrator = (orch: any) => {
 // just a convenient cast, good for every test case
 const context = (mockOrchestratorContext as unknown) as IOrchestrationFunctionContext;
 
+// tslint:disable-next-line no-big-function
 describe("getStartBonusActivationOrchestratorHandler", () => {
   beforeEach(() => {
     jest.clearAllMocks();
