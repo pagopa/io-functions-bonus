@@ -27,6 +27,10 @@ import { trackException } from "../../utils/appinsights";
 import { PermanentFailure, TransientFailure } from "../../utils/errors";
 import { getStartBonusActivationOrchestratorHandler } from "../handler";
 
+import * as conversions from "../../utils/conversions";
+import { left } from "fp-ts/lib/Either";
+import { ReleaseUserLockActivityResult } from "../../ReleaseUserLockActivity/handler";
+
 const aHmacSecret = Buffer.from("supersecret");
 
 jest.mock("../../utils/appinsights");
@@ -50,6 +54,13 @@ const mockSendBonusActivationActivityCall = jest
 const mockReleaseFamilyLockActivityCall = jest.fn().mockImplementation(() =>
   ReleaseFamilyLockActivityResult.encode({
     familyUID: aFamilyUID,
+    kind: "SUCCESS"
+  })
+);
+
+const mockReleaseUserLockActivityCall = jest.fn().mockImplementation(() =>
+  ReleaseUserLockActivityResult.encode({
+    id: aFiscalCode,
     kind: "SUCCESS"
   })
 );
@@ -86,6 +97,8 @@ const switchMockImplementation = (name: string, ...args: readonly unknown[]) =>
     ? mockSuccessBonusActivationActivityCall
     : name === "FailedBonusActivationActivity"
     ? mockFailedBonusActivationActivityCall
+    : name === "ReleaseUserLockActivity"
+    ? mockReleaseUserLockActivityCall
     : name === "SendMessageActivity"
     ? mockSendMessageActivityCall
     : jest.fn())(name, ...args);
@@ -192,8 +205,33 @@ describe("getStartBonusActivationOrchestratorHandler", () => {
     expect(trackException).toHaveBeenCalled();
   });
 
-  it("should not release the lock when bonus activation returns an invalid output", () => {
+  it("should not release the lock when GetBonusActivationActivity returns an invalid output", () => {
     mockGetBonusActivationActivityCall.mockReturnValueOnce("invalid output");
+
+    mockOrchestratorGetInput.mockReturnValueOnce({
+      applicantFiscalCode: aFiscalCode,
+      bonusId: aBonusId,
+      validBefore: new Date()
+    });
+
+    const result = consumeOrchestrator(
+      getStartBonusActivationOrchestratorHandler(aHmacSecret)(context)
+    );
+
+    expect(result).toBe(true);
+    expect(mockGetBonusActivationActivityCall).toHaveBeenCalled();
+    expect(mockSendBonusActivationActivityCall).not.toHaveBeenCalled();
+    expect(mockReleaseFamilyLockActivityCall).not.toHaveBeenCalled();
+    expect(mockSuccessBonusActivationActivityCall).not.toHaveBeenCalled();
+    expect(mockFailedBonusActivationActivityCall).not.toHaveBeenCalled();
+    expect(mockReleaseFamilyLockActivityCall).not.toHaveBeenCalled();
+    expect(trackException).toHaveBeenCalled();
+  });
+
+  it("should not release the lock when GetBonusActivationActivity throws", () => {
+    mockGetBonusActivationActivityCall.mockImplementationOnce(() => {
+      throw new Error();
+    });
 
     mockOrchestratorGetInput.mockReturnValueOnce({
       applicantFiscalCode: aFiscalCode,
@@ -321,9 +359,137 @@ describe("getStartBonusActivationOrchestratorHandler", () => {
     expect(mockSendBonusActivationActivityCall).not.toHaveBeenCalled();
     expect(trackException).toHaveBeenCalledWith(
       expect.objectContaining({
-        exception: expect.any(Error),
-        properties: { name: "bonus.activation.error" }
+        properties: {
+          fatal: "true",
+          id: aBonusId,
+          name: "bonus.activation.error"
+        }
       })
     );
+  });
+
+  it("should throw a fatal error in case the conversion to API format fails", () => {
+    jest
+      .spyOn(conversions, "toApiBonusVacanzaBase")
+      .mockImplementationOnce(() => left([] as any));
+    mockGetBonusActivationActivityCall.mockImplementationOnce(() =>
+      GetBonusActivationActivityOutput.encode({
+        bonusActivation: {
+          ...aRetrievedBonusActivation,
+          status: BonusActivationStatusEnum.PROCESSING
+        },
+        kind: "SUCCESS"
+      })
+    );
+
+    mockOrchestratorGetInput.mockReturnValueOnce({
+      applicantFiscalCode: aFiscalCode,
+      bonusId: aBonusId,
+      validBefore: new Date()
+    });
+
+    const result = consumeOrchestrator(
+      getStartBonusActivationOrchestratorHandler(aHmacSecret)(context)
+    );
+
+    expect(result).toBe(true);
+    expect(mockGetBonusActivationActivityCall).toHaveBeenCalled();
+    expect(mockSendBonusActivationActivityCall).not.toHaveBeenCalled();
+    expect(trackException).toHaveBeenCalledWith(
+      expect.objectContaining({
+        exception: expect.any(Error),
+        properties: {
+          fatal: "true",
+          id: aBonusId,
+          name: "bonus.activation.error"
+        }
+      })
+    );
+  });
+
+  it("should not relase the family lock in case the bonus status fail to update to ACTIVE", () => {
+    mockSuccessBonusActivationActivityCall.mockImplementationOnce(() => {
+      throw new Error();
+    });
+
+    mockOrchestratorGetInput.mockReturnValueOnce({
+      applicantFiscalCode: aFiscalCode,
+      bonusId: aBonusId,
+      validBefore: new Date()
+    });
+
+    const result = consumeOrchestrator(
+      getStartBonusActivationOrchestratorHandler(aHmacSecret)(context)
+    );
+
+    expect(result).toBe(true);
+    expect(mockGetBonusActivationActivityCall).toHaveBeenCalled();
+    expect(mockSendBonusActivationActivityCall).toHaveBeenCalled();
+    expect(mockFailedBonusActivationActivityCall).not.toHaveBeenCalled();
+    expect(mockReleaseFamilyLockActivityCall).not.toHaveBeenCalled();
+
+    expect(trackException).toHaveBeenCalledWith(
+      expect.objectContaining({
+        exception: expect.any(Error),
+        properties: {
+          fatal: "true",
+          id: aBonusId,
+          name: "bonus.activation.error"
+        }
+      })
+    );
+  });
+});
+
+describe("getStartBonusActivationOrchestratorHandler", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should relase the user lock if everything goes well", () => {
+    mockOrchestratorGetInput.mockReturnValueOnce({
+      applicantFiscalCode: aFiscalCode,
+      bonusId: aBonusId,
+      validBefore: new Date()
+    });
+
+    const result = consumeOrchestrator(
+      getStartBonusActivationOrchestratorHandler(aHmacSecret)(context)
+    );
+
+    expect(result).toBe(true);
+    expect(mockGetBonusActivationActivityCall).toHaveBeenCalled();
+    expect(mockSendBonusActivationActivityCall).toHaveBeenCalled();
+    expect(mockSendMessageActivityCall).toHaveBeenCalled();
+    expect(mockSuccessBonusActivationActivityCall).toHaveBeenCalled();
+    expect(mockFailedBonusActivationActivityCall).not.toHaveBeenCalled();
+    expect(mockReleaseFamilyLockActivityCall).not.toHaveBeenCalled();
+    expect(mockReleaseUserLockActivityCall).toHaveBeenCalled();
+    expect(trackException).not.toHaveBeenCalled();
+  });
+
+  it("should relase the user lock if something goes wrong", () => {
+    mockSuccessBonusActivationActivityCall.mockImplementationOnce(() => {
+      throw new Error();
+    });
+    mockOrchestratorGetInput.mockReturnValueOnce({
+      applicantFiscalCode: aFiscalCode,
+      bonusId: aBonusId,
+      validBefore: new Date()
+    });
+
+    const result = consumeOrchestrator(
+      getStartBonusActivationOrchestratorHandler(aHmacSecret)(context)
+    );
+
+    expect(result).toBe(true);
+    expect(mockGetBonusActivationActivityCall).toHaveBeenCalled();
+    expect(mockSendBonusActivationActivityCall).toHaveBeenCalled();
+    expect(mockSendMessageActivityCall).not.toHaveBeenCalled();
+    expect(mockSuccessBonusActivationActivityCall).toHaveBeenCalled();
+    expect(mockFailedBonusActivationActivityCall).not.toHaveBeenCalled();
+    expect(mockReleaseFamilyLockActivityCall).not.toHaveBeenCalled();
+    expect(mockReleaseUserLockActivityCall).toHaveBeenCalled();
+    expect(trackException).toHaveBeenCalled();
   });
 });
