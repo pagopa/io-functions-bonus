@@ -18,7 +18,7 @@ en:
         text: "Continue"
         action: "ioit://BONUS_CTA_ELIGILITY_START"
 ---
-INPS ha completato le verifiche sull’ultimo ISEE presentato: il tuo nucleo familiare ha diritto al Bonus Vacanze!
+INPS ha completato le verifiche sull’ultimo ISEE presentato: **il tuo nucleo familiare ha diritto al Bonus Vacanze!**
 
 Prosegui con la richiesta **entro le ${format(
         validBefore,
@@ -45,10 +45,10 @@ en:
         text: "Request a new ISEE"
         action: "iohandledlink://https://www.inps.it/nuovoportaleinps/default.aspx?itemdir=50088"
 ---
-INPS ha completato le verifiche e risulta che l’ultimo ISEE del tuo nucleo familiare supera la soglia di 40.000€.
+INPS ha completato le verifiche e risulta che **l’ultimo ISEE del tuo nucleo familiare supera la soglia di 40.000€.**
 Di conseguenza non hai diritto al Bonus Vacanze.  
 
-Se la situazione patrimoniale del tuo nucleo familiare è cambiata rispetto all'ultima Dichiarazioni Sostitutiva Unica (DSU) presentata,
+Se la situazione patrimoniale del tuo nucleo familiare è cambiata rispetto all'ultima Dichiarazione Sostitutiva Unica (DSU) presentata,
 puoi presentarne una nuova attraverso i canali previsti da INPS.
 `
     } as MessageContent),
@@ -66,14 +66,14 @@ en:
         text: "Request ISEE"
         action: "iohandledlink://https://www.inps.it/nuovoportaleinps/default.aspx?itemdir=50088"
 ---
-INPS ha completato le verifiche e risulta che il tuo nucleo familiare non ha un ISEE valido.  
+INPS ha completato le verifiche e risulta che **il tuo nucleo familiare non ha un ISEE valido.**  
 
 E’ necessario presentare una Dichiarazione Sostitutiva Unica (DSU) per il calcolo dell’ISEE, prima di richiedere nuovamente il Bonus Vacanze.
 
-Puoi fare subito una [simulazione online](https://www.inps.it/nuovoportaleinps/default.aspx?itemdir=50088#h3heading4) sul sito dell'INPS 
+Puoi fare subito una [simulazione online](hthttps://servizi2.inps.it/servizi/Iseeriforma/FrmSimHome.aspx) sul sito dell'INPS 
 per verificare la tua idoneità, oppure richiedere l'ISEE sui canali previsti da INPS.
 
-Attenzione:il calcolo effettuato con la simulazione non ha valore certificativo e l’esito non sostituisce in alcun modo l’attestazione ISEE rilasciata dall’Inps
+Attenzione: il calcolo effettuato con la simulazione non ha valore certificativo e l’esito non sostituisce in alcun modo l’attestazione ISEE rilasciata dall’Inps.
 `
     } as MessageContent),
 
@@ -83,11 +83,11 @@ Attenzione:il calcolo effettuato con la simulazione non ha valore certificativo 
       markdown: `---
 it:
     cta_1: 
-        text: "Continua"
+        text: "Richiedi il Bonus Vacanze"
         action: "ioit://BONUS_CTA_ELIGILITY_START"
 en:
     cta_1: 
-        text: "Continue"
+        text: "Request Bonus"
         action: "ioit://BONUS_CTA_ELIGILITY_START"
 ---
 Abbiamo riscontrato un problema nella comunicazione con INPS.
@@ -98,18 +98,28 @@ Ti preghiamo di iniziare una nuova richiesta.`
   EligibilityCheckConflict: () =>
     ({
       subject: "Abbiamo completato le verifiche sul tuo ISEE",
-      markdown: `INPS ha completato le verifiche sull’ISEE e risulta che qualcuno del tuo nucleo familiare ha già richiesto il Bonus Vacanze.  
+      markdown: `INPS ha completato le verifiche sull’ISEE e risulta che **qualcuno del tuo nucleo familiare ha già richiesto il Bonus Vacanze.**  
 
-Il Bonus è in fase di attivazione. Ti manderemo un messaggio quando sarà attivo.
+**Il Bonus è in fase di attivazione.** Ti manderemo un messaggio quando sarà attivo.
 `
     } as MessageContent),
 
   EligibilityCheckConflictWithBonusActivated: () =>
     ({
       subject: "Abbiamo completato le verifiche sul tuo ISEE",
-      markdown: `INPS ha completato le verifiche sull’ISEE e risulta che qualcuno del tuo nucleo familiare ha già richiesto il Bonus Vacanze.  
+      markdown: `---
+it:
+    cta_1: 
+        text: "Visualizza il Bonus Vacanze"
+        action: "ioit://WALLET_HOME"
+en:
+    cta_1: 
+        text: "Check Bonus Vacanze"
+        action: "ioit://WALLET_HOME"
+---
+INPS ha completato le verifiche sull’ISEE e risulta che **qualcuno del tuo nucleo familiare ha già richiesto il Bonus Vacanze.**  
 
-Il Bonus Vacanze è attivo. Puoi visualizzarne i dettagli nella sezione Pagamenti.
+**Il Bonus Vacanze è attivo.** Puoi visualizzarne i dettagli nella sezione Pagamenti.
 `
     } as MessageContent),
 
@@ -126,9 +136,9 @@ en:
         text: "Continue"
         action: "ioit://BONUS_CTA_ELIGILITY_START"
 ---
-INPS ha completato le verifiche sull’ultimo ISEE presentato: il tuo nucleo familiare ha diritto al Bonus Vacanze!  
+INPS ha completato le verifiche sull’ultimo ISEE presentato: **il tuo nucleo familiare ha diritto al Bonus Vacanze!**  
 
-Ti avvisiamo, però, che risultano alcune omissioni o difformità nella relativa DSU (Dichiarazione Sostitutiva Unica).
+Ti avvisiamo, però, che **risultano alcune omissioni o difformità nella relativa DSU** (Dichiarazione Sostitutiva Unica).
 
 Puoi interrompere la richiesta del Bonus e presentare una nuova DSU completa per aggiornare il tuo ISEE, oppure puoi continuare con la richiesta attuale, 
 ma in futuro potrai essere chiamato a fornire la documentazione per provare la completezza e la veridicità dei dati indicati.
@@ -158,7 +168,7 @@ en:
         text: "Check Bonus Vacanze"
         action: "ioit://WALLET_HOME"
 ---
-Buone notizie! Il Bonus Vacanze per il tuo nucleo familiare è attivo e lo potrai trovare all’interno della sezione pagamenti.  
+Buone notizie! **Il Bonus Vacanze per il tuo nucleo familiare è attivo e lo potrai trovare all’interno della sezione Pagamenti.**  
 
 Ti ricordiamo che chiunque della tua famiglia potrà spenderlo presso le strutture ricettive aderenti dal 1 luglio al 31 dicembre 2020.`
     } as MessageContent),
