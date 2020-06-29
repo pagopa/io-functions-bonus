@@ -8,9 +8,9 @@ import {
 
 import * as DocumentDbUtils from "io-functions-commons/dist/src/utils/documentdb";
 import {
+  aBonusActivationWithFamilyUID,
   aNewBonusActivation,
-  aRetrievedBonusActivation,
-  aBonusActivationWithFamilyUID
+  aRetrievedBonusActivation
 } from "../../__mocks__/mocks";
 
 const aDatabaseUri = DocumentDbUtils.getDatabaseUri("mockdb" as NonEmptyString);

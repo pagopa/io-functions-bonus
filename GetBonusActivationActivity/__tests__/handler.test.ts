@@ -12,11 +12,7 @@ import {
   RetrievedBonusActivation
 } from "../../models/bonus_activation";
 import { trackException } from "../../utils/appinsights";
-import {
-  Failure,
-  PermanentFailure,
-  TransientFailure
-} from "../../utils/errors";
+import { Failure, PermanentFailure } from "../../utils/errors";
 import { getGetBonusActivationActivityHandler } from "../handler";
 
 jest.mock("../../utils/appinsights");
@@ -26,11 +22,6 @@ const aQueryError = { code: 123, body: "foobar" };
 const aRetrievedBonusActivationProcessing: RetrievedBonusActivation = {
   ...aRetrievedBonusActivation,
   status: BonusActivationStatusEnum.PROCESSING
-};
-
-const aRetrievedBonusActivationFailed: RetrievedBonusActivation = {
-  ...aRetrievedBonusActivation,
-  status: BonusActivationStatusEnum.FAILED
 };
 
 // mockBonusActivationModel

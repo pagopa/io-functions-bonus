@@ -3,18 +3,13 @@ import * as t from "io-ts";
 
 import * as fc from "fast-check";
 
-import {
-  eitherArb,
-  fiscalCodeArb,
-  getArbitrary,
-  nonEmptyStringArb
-} from "../../__tests__/fc-io.helper";
+import { getArbitrary } from "../../__tests__/fc-io.helper";
 
+import { left } from "fp-ts/lib/Either";
 import {
-  ReleaseUserLockActivityInput,
-  getReleaseUserLockActivityHandler
+  getReleaseUserLockActivityHandler,
+  ReleaseUserLockActivityInput
 } from "../handler";
-import { right, left } from "fp-ts/lib/Either";
 
 const QueryError = t.interface({
   body: t.string,
@@ -27,7 +22,6 @@ const QueryError = t.interface({
 });
 
 describe("ReleaseUserLockActivityHandler", () => {
-  const queryErrorArb = getArbitrary(QueryError);
   const releaseUserLockActivityInputArb = getArbitrary(
     ReleaseUserLockActivityInput
   );
@@ -35,7 +29,6 @@ describe("ReleaseUserLockActivityHandler", () => {
     body: "not found",
     code: 404
   });
-  // const deleteOneByIdResultArb = eitherArb(queryErrorArb, fc.constant(null));
   const context = {
     log: {}
   };
@@ -43,7 +36,7 @@ describe("ReleaseUserLockActivityHandler", () => {
     await fc.assert(
       fc.asyncProperty(releaseUserLockActivityInputArb, async input => {
         const model = {
-          deleteOneById: (id: unknown) => Promise.resolve(left(queryError404))
+          deleteOneById: (_: unknown) => Promise.resolve(left(queryError404))
         };
         const handler = getReleaseUserLockActivityHandler(model as any);
         const result = await handler(context as any, input);

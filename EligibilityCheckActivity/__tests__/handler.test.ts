@@ -1,6 +1,6 @@
 // tslint:disable: no-identical-functions
 
-import { isRight, right } from "fp-ts/lib/Either";
+import { right } from "fp-ts/lib/Either";
 import { fromEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { Hour, Millisecond } from "italia-ts-commons/lib/units";
