@@ -24,7 +24,6 @@ import { SuccessBonusActivationInput } from "../SuccessBonusActivationActivity/h
 import { trackEvent, trackException } from "../utils/appinsights";
 import { toApiBonusVacanzaBase } from "../utils/conversions";
 import { Failure } from "../utils/errors";
-import { toHash } from "../utils/hash";
 import { MESSAGES } from "../utils/messages";
 import {
   externalRetryOptions,
