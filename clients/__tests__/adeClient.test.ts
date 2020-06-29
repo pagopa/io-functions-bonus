@@ -47,7 +47,7 @@ describe("ADEClient#richiestaBonus", () => {
       };
     });
     const client = ADEClient("", (mockFetch as unknown) as typeof fetch);
-    const _ = await client.richiestaBonus({
+    await client.richiestaBonus({
       bonusVacanzaBase: aBonusVacanzaBase
     });
     expect(mockFetch).toHaveBeenCalledWith(

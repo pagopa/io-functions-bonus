@@ -14,8 +14,8 @@ import { Either, left, right } from "fp-ts/lib/Either";
 import { none, Option, some } from "fp-ts/lib/Option";
 import * as record from "fp-ts/lib/Record";
 
-import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { readableReport } from "italia-ts-commons/lib/reporters";
+import { FiscalCode } from "italia-ts-commons/lib/strings";
 
 interface ArrayType extends t.ArrayType<HasArbitrary> {}
 interface ReadonlyArrayType extends t.ReadonlyArrayType<HasArbitrary> {}
@@ -76,7 +76,7 @@ export const fiscalCodeArb = fc
     fc.stringOf(upAlphaNumArb, 3, 3), // [0-9LMNPQRSTUV]{3}
     upAlphaArb // [A-Z]
   )
-  .map(t => t.join(""))
+  .map(_ => _.join(""))
   .filter(FiscalCode.is)
   .noShrink();
 
@@ -127,6 +127,7 @@ function isObjectIntersection(type: IntersectionType | UnionType): boolean {
   return false;
 }
 
+// tslint:disable-next-line: cognitive-complexity
 export function getArbitrary<T extends HasArbitrary>(
   codec: T
 ): fc.Arbitrary<t.TypeOf<T>> {
@@ -165,7 +166,6 @@ export function getArbitrary<T extends HasArbitrary>(
       const props = getProps(type);
       log(`    PROPS: ${Object.keys(props).join(",")}`);
       const r = record.map(props, _ => getArbitrary(_ as any));
-      // log(`    MAPPED: ${JSON.stringify(r)}`);
       return fc.record(r as any) as any;
     case "ExactType":
       return getArbitrary(type.type) as any;
@@ -184,7 +184,8 @@ export function getArbitrary<T extends HasArbitrary>(
             const o = values.reduce((acc: any, v: any) => {
               Object.keys(v).forEach(k => {
                 if (acc[k] === undefined) {
-                  acc[k] = v[k] as any;
+                  // tslint:disable-next-line: no-object-mutation
+                  acc[k] = v[k];
                 }
               });
               return acc;
@@ -232,6 +233,7 @@ export function getArbitrary<T extends HasArbitrary>(
       }) as any;
 
     case undefined:
+      // tslint:disable-next-line: no-nested-switch
       switch (codec.name) {
         case "UTCISODateFromString":
         case "DateFromString":

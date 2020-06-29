@@ -1,4 +1,3 @@
-import { failure } from "fp-ts/lib/Validation";
 import mockFetch, { mockJsonBody } from "../../__mocks__/node-fetch";
 import { extractFiscalCode, logHttpFetch } from "../loggers";
 

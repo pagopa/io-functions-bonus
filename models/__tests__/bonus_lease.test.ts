@@ -11,7 +11,6 @@ import {
 } from "../bonus_lease";
 
 import * as DocumentDbUtils from "io-functions-commons/dist/src/utils/documentdb";
-import { BonusCode } from "../../generated/models/BonusCode";
 
 const aDatabaseUri = DocumentDbUtils.getDatabaseUri("mockdb" as NonEmptyString);
 const aCollectionUri = DocumentDbUtils.getCollectionUri(

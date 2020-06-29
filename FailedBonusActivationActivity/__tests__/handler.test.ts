@@ -1,13 +1,12 @@
 // tslint:disable: no-identical-functions
 
-import { left, right } from "fp-ts/lib/Either";
+import { right } from "fp-ts/lib/Either";
 import { context } from "../../__mocks__/durable-functions";
 import {
   aBonusActivationWithFamilyUID,
   aRetrievedBonusActivation
 } from "../../__mocks__/mocks";
 import { BonusActivationModel } from "../../models/bonus_activation";
-import { BonusLeaseModel } from "../../models/bonus_lease";
 import { EligibilityCheckModel } from "../../models/eligibility_check";
 import { TransientFailure } from "../../utils/errors";
 import {
@@ -31,14 +30,6 @@ const mockBonusActivationReplace = jest.fn().mockImplementation(async _ => {
 const mockBonusActivationModel = ({
   replace: mockBonusActivationReplace
 } as unknown) as BonusActivationModel;
-
-// mockBonusLeaseModel
-const mockBonusLeaseDeleteOneById = jest.fn().mockImplementation(async _ => {
-  return right("");
-});
-const mockBonusLeaseModel = ({
-  deleteOneById: mockBonusLeaseDeleteOneById
-} as unknown) as BonusLeaseModel;
 
 describe("FailedBonusActivationHandler", () => {
   beforeEach(() => {

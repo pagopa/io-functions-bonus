@@ -13,8 +13,6 @@ export const mockResponse: Response = getMockResponse();
 
 const mockFetch = jest
   .fn()
-  .mockImplementation(
-    async (input: RequestInfo, init?: RequestInit) => mockResponse
-  );
+  .mockImplementation(async (_: RequestInfo, __?: RequestInit) => mockResponse);
 
 export default mockFetch;

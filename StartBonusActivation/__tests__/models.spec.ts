@@ -17,7 +17,9 @@ import { EligibilityCheckSuccessEligible } from "../../generated/models/Eligibil
 import { createBonusActivation, eligibilityCheckToResponse } from "../models";
 
 import { Dsu } from "../../generated/models/Dsu";
-import { FamilyUID } from "../../generated/models/FamilyUID";
+
+import { NonEmptyString } from "italia-ts-commons/lib/strings";
+
 import { RetrievedBonusActivation } from "../../models/bonus_activation";
 
 describe("eligibilityCheckToResponse", () => {
@@ -45,6 +47,7 @@ describe("eligibilityCheckToResponse", () => {
         if (EligibilityCheckSuccessEligible.is(ec)) {
           const response = await eligibilityCheckToResponse(
             ec,
+            // tslint:disable-next-line restrict-plus-operands
             () => new Date(ec.validBefore.valueOf() + 1)
           ).run();
           expect(response.isLeft()).toBeTruthy();
@@ -81,7 +84,7 @@ describe("createBonusActivation", () => {
     await fc.assert(
       fc.asyncProperty(
         fiscalCodeArb,
-        nonEmptyStringArb as Arbitrary<FamilyUID>,
+        nonEmptyStringArb,
         dsuArb,
         retrievedBonusActivationArb,
         async (fiscalCode, familyUID, dsu, retrievedBonusActivation) => {
@@ -91,7 +94,7 @@ describe("createBonusActivation", () => {
           const result = await createBonusActivation(
             model as any,
             fiscalCode,
-            familyUID,
+            familyUID as NonEmptyString,
             dsu
           ).run();
           expect(result).toEqual(right(retrievedBonusActivation));
@@ -104,7 +107,7 @@ describe("createBonusActivation", () => {
     await fc.assert(
       fc.asyncProperty(
         fiscalCodeArb.noShrink(),
-        nonEmptyStringArb.noShrink() as Arbitrary<FamilyUID>,
+        nonEmptyStringArb.noShrink(),
         dsuArb.noShrink(),
         async (fiscalCode, familyUID, dsu) => {
           const model = {
@@ -120,7 +123,7 @@ describe("createBonusActivation", () => {
           const result = await createBonusActivation(
             model as any,
             fiscalCode,
-            familyUID,
+            familyUID as NonEmptyString,
             dsu
           ).run();
 
