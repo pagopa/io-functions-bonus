@@ -38,21 +38,21 @@ export const OrchestratorInput = t.interface({
 export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
 
 const getFatalErrorTracer = (
-  ctx: IOrchestrationFunctionContext,
   prefix: string,
-  bonusId: string
+  tagOverrides: Record<string, string>
 ) => (msg: string) => {
-  const errormsg = `${prefix}|FATAL|BONUS_ID=${bonusId}|${msg}`;
-  ctx.log.error(errormsg);
+  const id = tagOverrides["ai.operation.id"];
+  const errormsg = `${prefix}|FATAL|BONUS_ID=${id}|${msg}`;
   const error = new Error(errormsg);
   trackException({
     exception: error,
     properties: {
       fatal: "true",
-      id: bonusId,
+      id,
       // tslint:disable-next-line: no-duplicate-string
       name: "bonus.activation.error"
-    }
+    },
+    tagOverrides
   });
   return error;
 };
@@ -93,7 +93,12 @@ export const getStartBonusActivationOrchestratorHandler = (
       validBefore
     } = errorOrStartBonusActivationOrchestratorInput.value;
 
-    const traceFatalError = getFatalErrorTracer(context, logPrefix, bonusId);
+    const tagOverrides = {
+      "ai.operation.id": bonusId,
+      "ai.operation.parentId": bonusId
+    };
+
+    const traceFatalError = getFatalErrorTracer(logPrefix, tagOverrides);
 
     try {
       // Track bonusId
@@ -126,7 +131,8 @@ export const getStartBonusActivationOrchestratorHandler = (
           name: "bonus.activation.get",
           properties: {
             id: operationId
-          }
+          },
+          tagOverrides
         });
       } catch (e) {
         // We could not retrieve a bonus for the provided bonusId.
@@ -202,7 +208,8 @@ export const getStartBonusActivationOrchestratorHandler = (
           name: "bonus.activation.ade.success",
           properties: {
             id: operationId
-          }
+          },
+          tagOverrides
         });
       } catch (e) {
         // All retries failed, we are going to release the family lock
@@ -211,12 +218,14 @@ export const getStartBonusActivationOrchestratorHandler = (
           name: "bonus.activation.ade.failure",
           properties: {
             id: operationId
-          }
+          },
+          tagOverrides
         });
         trackException({
           exception: new Error(
             `${logPrefix}|Error sending bonus to ADE|ERROR=${toString(e)}`
-          )
+          ),
+          tagOverrides
         });
       }
 
@@ -241,7 +250,8 @@ export const getStartBonusActivationOrchestratorHandler = (
             name: "bonus.activation.success",
             properties: {
               id: operationId
-            }
+            },
+            tagOverrides
           });
         } catch (e) {
           throw traceFatalError(
@@ -298,7 +308,8 @@ export const getStartBonusActivationOrchestratorHandler = (
             name: "bonus.activation.failure",
             properties: {
               id: operationId
-            }
+            },
+            tagOverrides
           });
         } catch (e) {
           throw traceFatalError(

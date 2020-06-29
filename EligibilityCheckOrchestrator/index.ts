@@ -92,8 +92,12 @@ export const handler = function*(
     return false;
   }
 
-  const orchestratorInput = errorOrEligibilityCheckOrchestratorInput.value;
-  const operationId = toHash(orchestratorInput);
+  const fiscalCode = errorOrEligibilityCheckOrchestratorInput.value;
+
+  const tagOverrides = {
+    "ai.operation.id": fiscalCode,
+    "ai.operation.parentId": fiscalCode
+  };
 
   // tslint:disable-next-line: no-let
   let validatedEligibilityCheck: ApiEligibilityCheck;
@@ -106,7 +110,7 @@ export const handler = function*(
     const deleteEligibilityCheckResponse = yield context.df.callActivityWithRetry(
       "DeleteEligibilityCheckActivity",
       internalRetryOptions,
-      DeleteEligibilityCheckActivityInput.encode(orchestratorInput)
+      DeleteEligibilityCheckActivityInput.encode(fiscalCode)
     );
 
     DeleteEligibilityCheckActivityResult.decode(
@@ -120,7 +124,7 @@ export const handler = function*(
     const undecodedEligibilityCheckResponse = yield context.df.callActivityWithRetry(
       "EligibilityCheckActivity",
       externalRetryOptions,
-      EligibilityCheckActivityInput.encode(orchestratorInput)
+      EligibilityCheckActivityInput.encode(fiscalCode)
     );
     eligibilityCheckResponse = ActivityResult.decode(
       undecodedEligibilityCheckResponse
@@ -181,9 +185,10 @@ export const handler = function*(
     trackException({
       exception: err,
       properties: {
-        id: operationId,
+        id: fiscalCode,
         name: "bonus.eligibilitycheck.error"
-      }
+      },
+      tagOverrides
     });
     yield context.df.callActivityWithRetry(
       "SendMessageActivity",
@@ -191,7 +196,7 @@ export const handler = function*(
       SendMessageActivityInput.encode({
         checkProfile: false,
         content: MESSAGES.EligibilityCheckFailureINPSUnavailable(),
-        fiscalCode: orchestratorInput
+        fiscalCode: fiscalCode
       })
     );
     return false;
@@ -202,9 +207,10 @@ export const handler = function*(
   trackEvent({
     name: "bonus.eligibilitycheck.success",
     properties: {
-      id: operationId,
+      id: fiscalCode,
       status: `${validatedEligibilityCheck.status}`
-    }
+    },
+    tagOverrides
   });
 
   // sleep before sending push notification
@@ -216,9 +222,10 @@ export const handler = function*(
   trackEvent({
     name: "bonus.eligibilitycheck.timer",
     properties: {
-      id: operationId,
+      id: fiscalCode,
       status: `${validatedEligibilityCheck.status}`
-    }
+    },
+    tagOverrides
   });
 
   // Timer triggered, we now try to send the right message
@@ -284,9 +291,10 @@ export const handler = function*(
       trackEvent({
         name: "bonus.eligibilitycheck.message",
         properties: {
-          id: operationId,
+          id: fiscalCode,
           type: maybeMessageType.value
-        }
+        },
+        tagOverrides
       });
     } else {
       trackException({
@@ -294,9 +302,10 @@ export const handler = function*(
           `Cannot get message type for eligibility check: ${eligibilityCheckResponse.fiscalCode}`
         ),
         properties: {
-          id: operationId,
+          id: fiscalCode,
           name: "bonus.eligibilitycheck.error"
-        }
+        },
+        tagOverrides
       });
       return false;
     }
@@ -307,9 +316,10 @@ export const handler = function*(
         `Error sending message for eligibility check: ${eligibilityCheckResponse.fiscalCode}`
       ),
       properties: {
-        id: operationId,
+        id: fiscalCode,
         name: "bonus.eligibilitycheck.error"
-      }
+      },
+      tagOverrides
     });
     return false;
   }
