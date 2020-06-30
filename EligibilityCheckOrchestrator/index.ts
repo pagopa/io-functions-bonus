@@ -33,7 +33,7 @@ import {
 } from "../ValidateEligibilityCheckActivity/handler";
 
 import { isLeft } from "fp-ts/lib/Either";
-import { toString } from "fp-ts/lib/function";
+import { constVoid, toString } from "fp-ts/lib/function";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import {
@@ -43,7 +43,7 @@ import {
 import { EligibilityCheck } from "../generated/models/EligibilityCheck";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
 import { trackEvent, trackException } from "../utils/appinsights";
-import { generateFamilyUID, toHash } from "../utils/hash";
+import { generateFamilyUID } from "../utils/hash";
 
 export const OrchestratorInput = FiscalCode;
 export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
@@ -92,8 +92,18 @@ export const handler = function*(
     return false;
   }
 
-  const orchestratorInput = errorOrEligibilityCheckOrchestratorInput.value;
-  const operationId = toHash(orchestratorInput);
+  const fiscalCode = errorOrEligibilityCheckOrchestratorInput.value;
+
+  const tagOverrides = {
+    "ai.operation.id": fiscalCode,
+    "ai.operation.parentId": fiscalCode
+  };
+
+  const trackEventIfNotReplaying = ((ctx: IOrchestrationFunctionContext) =>
+    ctx.df.isReplaying ? constVoid : trackEvent)(context);
+
+  const trackExceptionIfNotReplaying = ((ctx: IOrchestrationFunctionContext) =>
+    ctx.df.isReplaying ? constVoid : trackException)(context);
 
   // tslint:disable-next-line: no-let
   let validatedEligibilityCheck: ApiEligibilityCheck;
@@ -106,7 +116,7 @@ export const handler = function*(
     const deleteEligibilityCheckResponse = yield context.df.callActivityWithRetry(
       "DeleteEligibilityCheckActivity",
       internalRetryOptions,
-      DeleteEligibilityCheckActivityInput.encode(orchestratorInput)
+      DeleteEligibilityCheckActivityInput.encode(fiscalCode)
     );
 
     DeleteEligibilityCheckActivityResult.decode(
@@ -120,7 +130,7 @@ export const handler = function*(
     const undecodedEligibilityCheckResponse = yield context.df.callActivityWithRetry(
       "EligibilityCheckActivity",
       externalRetryOptions,
-      EligibilityCheckActivityInput.encode(orchestratorInput)
+      EligibilityCheckActivityInput.encode(fiscalCode)
     );
     eligibilityCheckResponse = ActivityResult.decode(
       undecodedEligibilityCheckResponse
@@ -178,12 +188,13 @@ export const handler = function*(
     );
   } catch (err) {
     context.log.error(`${logPrefix}|ERROR|${toString(err)}`);
-    trackException({
+    trackExceptionIfNotReplaying({
       exception: err,
       properties: {
-        id: operationId,
+        id: fiscalCode,
         name: "bonus.eligibilitycheck.error"
-      }
+      },
+      tagOverrides
     });
     yield context.df.callActivityWithRetry(
       "SendMessageActivity",
@@ -191,7 +202,7 @@ export const handler = function*(
       SendMessageActivityInput.encode({
         checkProfile: false,
         content: MESSAGES.EligibilityCheckFailureINPSUnavailable(),
-        fiscalCode: orchestratorInput
+        fiscalCode
       })
     );
     return false;
@@ -199,12 +210,13 @@ export const handler = function*(
     context.df.setCustomStatus("COMPLETED");
   }
 
-  trackEvent({
+  trackEventIfNotReplaying({
     name: "bonus.eligibilitycheck.success",
     properties: {
-      id: operationId,
+      id: fiscalCode,
       status: `${validatedEligibilityCheck.status}`
-    }
+    },
+    tagOverrides
   });
 
   // sleep before sending push notification
@@ -213,12 +225,13 @@ export const handler = function*(
     addSeconds(context.df.currentUtcDateTime, NOTIFICATION_DELAY_SECONDS)
   );
 
-  trackEvent({
+  trackEventIfNotReplaying({
     name: "bonus.eligibilitycheck.timer",
     properties: {
-      id: operationId,
+      id: fiscalCode,
       status: `${validatedEligibilityCheck.status}`
-    }
+    },
+    tagOverrides
   });
 
   // Timer triggered, we now try to send the right message
@@ -281,35 +294,38 @@ export const handler = function*(
           })
         );
       }
-      trackEvent({
+      trackEventIfNotReplaying({
         name: "bonus.eligibilitycheck.message",
         properties: {
-          id: operationId,
+          id: fiscalCode,
           type: maybeMessageType.value
-        }
+        },
+        tagOverrides
       });
     } else {
-      trackException({
+      trackExceptionIfNotReplaying({
         exception: new Error(
           `Cannot get message type for eligibility check: ${eligibilityCheckResponse.fiscalCode}`
         ),
         properties: {
-          id: operationId,
+          id: fiscalCode,
           name: "bonus.eligibilitycheck.error"
-        }
+        },
+        tagOverrides
       });
       return false;
     }
   } catch (e) {
     // Cannot send message
-    trackException({
+    trackExceptionIfNotReplaying({
       exception: new Error(
         `Error sending message for eligibility check: ${eligibilityCheckResponse.fiscalCode}`
       ),
       properties: {
-        id: operationId,
+        id: fiscalCode,
         name: "bonus.eligibilitycheck.error"
-      }
+      },
+      tagOverrides
     });
     return false;
   }
