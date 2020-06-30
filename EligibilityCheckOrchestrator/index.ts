@@ -32,6 +32,10 @@ import {
   ValidateEligibilityCheckActivityOutput
 } from "../ValidateEligibilityCheckActivity/handler";
 
+import {
+  EventTelemetry,
+  ExceptionTelemetry
+} from "applicationinsights/out/Declarations/Contracts";
 import { isLeft } from "fp-ts/lib/Either";
 import { constVoid, toString } from "fp-ts/lib/function";
 import { readableReport } from "italia-ts-commons/lib/reporters";
@@ -99,11 +103,11 @@ export const handler = function*(
     "ai.operation.parentId": fiscalCode
   };
 
-  const trackEventIfNotReplaying = ((ctx: IOrchestrationFunctionContext) =>
-    ctx.df.isReplaying ? constVoid : trackEvent)(context);
+  const trackEventIfNotReplaying = (evt: EventTelemetry) =>
+    context.df.isReplaying ? constVoid : trackEvent(evt);
 
-  const trackExceptionIfNotReplaying = ((ctx: IOrchestrationFunctionContext) =>
-    ctx.df.isReplaying ? constVoid : trackException)(context);
+  const trackExceptionIfNotReplaying = (evt: ExceptionTelemetry) =>
+    context.df.isReplaying ? constVoid : trackException(evt);
 
   // tslint:disable-next-line: no-let
   let validatedEligibilityCheck: ApiEligibilityCheck;
