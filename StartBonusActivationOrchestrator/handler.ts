@@ -1,4 +1,7 @@
-import { ExceptionTelemetry } from "applicationinsights/out/Declarations/Contracts";
+import {
+  EventTelemetry,
+  ExceptionTelemetry
+} from "applicationinsights/out/Declarations/Contracts";
 import {
   IOrchestrationFunctionContext,
   Task,
@@ -100,12 +103,11 @@ export const getStartBonusActivationOrchestratorHandler = (
       "ai.operation.parentId": bonusId
     };
 
-    const trackEventIfNotReplaying = ((ctx: IOrchestrationFunctionContext) =>
-      ctx.df.isReplaying ? constVoid : trackEvent)(context);
+    const trackEventIfNotReplaying = (evt: EventTelemetry) =>
+      context.df.isReplaying ? constVoid : trackEvent(evt);
 
-    const trackExceptionIfNotReplaying = ((
-      ctx: IOrchestrationFunctionContext
-    ) => (ctx.df.isReplaying ? constVoid : trackException))(context);
+    const trackExceptionIfNotReplaying = (evt: ExceptionTelemetry) =>
+      context.df.isReplaying ? constVoid : trackException(evt);
 
     const traceFatalError = getFatalErrorTracer(
       logPrefix,
