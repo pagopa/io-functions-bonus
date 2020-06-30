@@ -33,7 +33,7 @@ import {
 } from "../ValidateEligibilityCheckActivity/handler";
 
 import { isLeft } from "fp-ts/lib/Either";
-import { toString } from "fp-ts/lib/function";
+import { constVoid, toString } from "fp-ts/lib/function";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import {
@@ -43,7 +43,7 @@ import {
 import { EligibilityCheck } from "../generated/models/EligibilityCheck";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
 import { trackEvent, trackException } from "../utils/appinsights";
-import { generateFamilyUID, toHash } from "../utils/hash";
+import { generateFamilyUID } from "../utils/hash";
 
 export const OrchestratorInput = FiscalCode;
 export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
@@ -98,6 +98,12 @@ export const handler = function*(
     "ai.operation.id": fiscalCode,
     "ai.operation.parentId": fiscalCode
   };
+
+  const trackEventIfNotReplaying = ((ctx: IOrchestrationFunctionContext) =>
+    ctx.df.isReplaying ? constVoid : trackEvent)(context);
+
+  const trackExceptionIfNotReplaying = ((ctx: IOrchestrationFunctionContext) =>
+    ctx.df.isReplaying ? constVoid : trackException)(context);
 
   // tslint:disable-next-line: no-let
   let validatedEligibilityCheck: ApiEligibilityCheck;
@@ -182,7 +188,7 @@ export const handler = function*(
     );
   } catch (err) {
     context.log.error(`${logPrefix}|ERROR|${toString(err)}`);
-    trackException({
+    trackExceptionIfNotReplaying({
       exception: err,
       properties: {
         id: fiscalCode,
@@ -196,7 +202,7 @@ export const handler = function*(
       SendMessageActivityInput.encode({
         checkProfile: false,
         content: MESSAGES.EligibilityCheckFailureINPSUnavailable(),
-        fiscalCode: fiscalCode
+        fiscalCode
       })
     );
     return false;
@@ -204,14 +210,16 @@ export const handler = function*(
     context.df.setCustomStatus("COMPLETED");
   }
 
-  trackEvent({
-    name: "bonus.eligibilitycheck.success",
-    properties: {
-      id: fiscalCode,
-      status: `${validatedEligibilityCheck.status}`
-    },
-    tagOverrides
-  });
+  if (!context.df.isReplaying) {
+    trackEventIfNotReplaying({
+      name: "bonus.eligibilitycheck.success",
+      properties: {
+        id: fiscalCode,
+        status: `${validatedEligibilityCheck.status}`
+      },
+      tagOverrides
+    });
+  }
 
   // sleep before sending push notification
   // so we can let the get operation stop the flow here
@@ -219,14 +227,16 @@ export const handler = function*(
     addSeconds(context.df.currentUtcDateTime, NOTIFICATION_DELAY_SECONDS)
   );
 
-  trackEvent({
-    name: "bonus.eligibilitycheck.timer",
-    properties: {
-      id: fiscalCode,
-      status: `${validatedEligibilityCheck.status}`
-    },
-    tagOverrides
-  });
+  if (!context.df.isReplaying) {
+    trackEventIfNotReplaying({
+      name: "bonus.eligibilitycheck.timer",
+      properties: {
+        id: fiscalCode,
+        status: `${validatedEligibilityCheck.status}`
+      },
+      tagOverrides
+    });
+  }
 
   // Timer triggered, we now try to send the right message
   // to the applicant containing the eligibility check details.
@@ -288,16 +298,18 @@ export const handler = function*(
           })
         );
       }
-      trackEvent({
-        name: "bonus.eligibilitycheck.message",
-        properties: {
-          id: fiscalCode,
-          type: maybeMessageType.value
-        },
-        tagOverrides
-      });
+      if (!context.df.isReplaying) {
+        trackEventIfNotReplaying({
+          name: "bonus.eligibilitycheck.message",
+          properties: {
+            id: fiscalCode,
+            type: maybeMessageType.value
+          },
+          tagOverrides
+        });
+      }
     } else {
-      trackException({
+      trackExceptionIfNotReplaying({
         exception: new Error(
           `Cannot get message type for eligibility check: ${eligibilityCheckResponse.fiscalCode}`
         ),
@@ -311,7 +323,7 @@ export const handler = function*(
     }
   } catch (e) {
     // Cannot send message
-    trackException({
+    trackExceptionIfNotReplaying({
       exception: new Error(
         `Error sending message for eligibility check: ${eligibilityCheckResponse.fiscalCode}`
       ),

@@ -1,10 +1,11 @@
+import { ExceptionTelemetry } from "applicationinsights/out/Declarations/Contracts";
 import {
   IOrchestrationFunctionContext,
   Task,
   TaskSet
 } from "durable-functions/lib/src/classes";
 import { isLeft } from "fp-ts/lib/Either";
-import { toString } from "fp-ts/lib/function";
+import { constVoid, toString } from "fp-ts/lib/function";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
@@ -39,12 +40,13 @@ export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
 
 const getFatalErrorTracer = (
   prefix: string,
-  tagOverrides: Record<string, string>
+  tagOverrides: Record<string, string>,
+  trackExceptionIfNotReplaying: (td: ExceptionTelemetry) => void
 ) => (msg: string) => {
   const id = tagOverrides["ai.operation.id"];
   const errormsg = `${prefix}|FATAL|BONUS_ID=${id}|${msg}`;
   const error = new Error(errormsg);
-  trackException({
+  trackExceptionIfNotReplaying({
     exception: error,
     properties: {
       fatal: "true",
@@ -98,7 +100,18 @@ export const getStartBonusActivationOrchestratorHandler = (
       "ai.operation.parentId": bonusId
     };
 
-    const traceFatalError = getFatalErrorTracer(logPrefix, tagOverrides);
+    const trackEventIfNotReplaying = ((ctx: IOrchestrationFunctionContext) =>
+      ctx.df.isReplaying ? constVoid : trackEvent)(context);
+
+    const trackExceptionIfNotReplaying = ((
+      ctx: IOrchestrationFunctionContext
+    ) => (ctx.df.isReplaying ? constVoid : trackException))(context);
+
+    const traceFatalError = getFatalErrorTracer(
+      logPrefix,
+      tagOverrides,
+      trackExceptionIfNotReplaying
+    );
 
     try {
       // Track bonusId
@@ -127,7 +140,7 @@ export const getStartBonusActivationOrchestratorHandler = (
             bonusId
           })
         );
-        trackEvent({
+        trackEventIfNotReplaying({
           name: "bonus.activation.get",
           properties: {
             id: operationId
@@ -204,7 +217,7 @@ export const getStartBonusActivationOrchestratorHandler = (
           externalRetryOptions,
           SendBonusActivationInput.encode(bonusVacanzaBase)
         );
-        trackEvent({
+        trackEventIfNotReplaying({
           name: "bonus.activation.ade.success",
           properties: {
             id: operationId
@@ -214,14 +227,14 @@ export const getStartBonusActivationOrchestratorHandler = (
       } catch (e) {
         // All retries failed, we are going to release the family lock
         // (see the code below), so we avoid to throw here
-        trackEvent({
+        trackEventIfNotReplaying({
           name: "bonus.activation.ade.failure",
           properties: {
             id: operationId
           },
           tagOverrides
         });
-        trackException({
+        trackExceptionIfNotReplaying({
           exception: new Error(
             `${logPrefix}|Error sending bonus to ADE|ERROR=${toString(e)}`
           ),
@@ -246,7 +259,7 @@ export const getStartBonusActivationOrchestratorHandler = (
             internalRetryOptions,
             SuccessBonusActivationInput.encode({ bonusActivation })
           );
-          trackEvent({
+          trackEventIfNotReplaying({
             name: "bonus.activation.success",
             properties: {
               id: operationId
@@ -304,7 +317,7 @@ export const getStartBonusActivationOrchestratorHandler = (
             internalRetryOptions,
             FailedBonusActivationInput.encode({ bonusActivation })
           );
-          trackEvent({
+          trackEventIfNotReplaying({
             name: "bonus.activation.failure",
             properties: {
               id: operationId
