@@ -210,16 +210,14 @@ export const handler = function*(
     context.df.setCustomStatus("COMPLETED");
   }
 
-  if (!context.df.isReplaying) {
-    trackEventIfNotReplaying({
-      name: "bonus.eligibilitycheck.success",
-      properties: {
-        id: fiscalCode,
-        status: `${validatedEligibilityCheck.status}`
-      },
-      tagOverrides
-    });
-  }
+  trackEventIfNotReplaying({
+    name: "bonus.eligibilitycheck.success",
+    properties: {
+      id: fiscalCode,
+      status: `${validatedEligibilityCheck.status}`
+    },
+    tagOverrides
+  });
 
   // sleep before sending push notification
   // so we can let the get operation stop the flow here
@@ -227,16 +225,14 @@ export const handler = function*(
     addSeconds(context.df.currentUtcDateTime, NOTIFICATION_DELAY_SECONDS)
   );
 
-  if (!context.df.isReplaying) {
-    trackEventIfNotReplaying({
-      name: "bonus.eligibilitycheck.timer",
-      properties: {
-        id: fiscalCode,
-        status: `${validatedEligibilityCheck.status}`
-      },
-      tagOverrides
-    });
-  }
+  trackEventIfNotReplaying({
+    name: "bonus.eligibilitycheck.timer",
+    properties: {
+      id: fiscalCode,
+      status: `${validatedEligibilityCheck.status}`
+    },
+    tagOverrides
+  });
 
   // Timer triggered, we now try to send the right message
   // to the applicant containing the eligibility check details.
@@ -298,16 +294,14 @@ export const handler = function*(
           })
         );
       }
-      if (!context.df.isReplaying) {
-        trackEventIfNotReplaying({
-          name: "bonus.eligibilitycheck.message",
-          properties: {
-            id: fiscalCode,
-            type: maybeMessageType.value
-          },
-          tagOverrides
-        });
-      }
+      trackEventIfNotReplaying({
+        name: "bonus.eligibilitycheck.message",
+        properties: {
+          id: fiscalCode,
+          type: maybeMessageType.value
+        },
+        tagOverrides
+      });
     } else {
       trackExceptionIfNotReplaying({
         exception: new Error(
