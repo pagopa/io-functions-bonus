@@ -27,6 +27,16 @@
       "direction": "in",
       "Id": "{fiscalcode}",
       "PartitionKey": "{fiscalcode}"
+    },
+    {
+      "type": "cosmosDB",
+      "name": "eligibilityCheck",
+      "databaseName": "%COSMOSDB_BONUS_DATABASE_NAME%",
+      "collectionName": "eligibility-checks",
+      "connectionStringSetting": "COSMOSDB_CONNECTION_STRING",
+      "direction": "in",
+      "Id": "{fiscalcode}",
+      "PartitionKey": "{fiscalcode}"
     }
   ],
   "scriptFile": "../dist/EligibilityCheck/index.js"
