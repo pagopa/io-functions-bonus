@@ -1,7 +1,8 @@
 import { Context } from "@azure/functions";
+import { isAfter } from "date-fns";
 import * as df from "durable-functions";
 import * as express from "express";
-import { isLeft } from "fp-ts/lib/Either";
+import { isLeft, isRight } from "fp-ts/lib/Either";
 import { toString } from "fp-ts/lib/function";
 import { isSome } from "fp-ts/lib/Option";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
@@ -20,6 +21,7 @@ import {
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { InstanceId } from "../generated/definitions/InstanceId";
+import { EligibilityCheckSuccessEligible } from "../generated/models/EligibilityCheckSuccessEligible";
 import { initTelemetryClient, trackException } from "../utils/appinsights";
 import { makeStartEligibilityCheckOrchestratorId } from "../utils/orchestrators";
 import { checkBonusActivationIsRunning } from "./locks";
@@ -42,7 +44,9 @@ initTelemetryClient();
  * API controller: start eligibility check
  * trying to get data from INPS webservice.
  */
-export function EligibilityCheckHandler(): IEligibilityCheckHandler {
+export function EligibilityCheckHandler(
+  now: () => Date = () => new Date()
+): IEligibilityCheckHandler {
   return async (context, fiscalCode) => {
     const client = df.getClient(context);
 
@@ -53,6 +57,27 @@ export function EligibilityCheckHandler(): IEligibilityCheckHandler {
     );
     if (isSome(maybeBonusActivationResponse)) {
       return maybeBonusActivationResponse.value;
+    }
+
+    const instanceId: InstanceId = {
+      id: (fiscalCode as unknown) as NonEmptyString
+    };
+
+    // If we already have a valid dsu for this user do not start the orchestrator
+    if (context.bindings.eligibilityCheck) {
+      const errorOrEligibilityCheck = EligibilityCheckSuccessEligible.decode(
+        context.bindings.eligibilityCheck
+      );
+      if (isRight(errorOrEligibilityCheck)) {
+        const eligibilityCheck = errorOrEligibilityCheck.value;
+        if (isAfter(eligibilityCheck.validBefore, now())) {
+          return ResponseSuccessRedirectToResource(
+            instanceId,
+            `/api/v1/bonus/vacanze/eligibility/${fiscalCode}`,
+            instanceId
+          );
+        }
+      }
     }
 
     // If another ElegibilityCheck operation is in progress for that user
@@ -83,9 +108,6 @@ export function EligibilityCheckHandler(): IEligibilityCheckHandler {
 
       return ResponseErrorInternal(`Orchestrator error=${toString(err)}`);
     }
-    const instanceId: InstanceId = {
-      id: (fiscalCode as unknown) as NonEmptyString
-    };
 
     return ResponseSuccessRedirectToResource(
       instanceId,
