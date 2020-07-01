@@ -139,8 +139,9 @@ export function parseSoapResponse(
           // Final states
           _.Esito === EsitoEnum.OK ||
           _.Esito === EsitoEnum.DATI_NON_TROVATI ||
+          _.Esito === EsitoEnum.ERRORE_INTERNO ||
           _.Esito === EsitoEnum.RICHIESTA_INVALIDA,
-        // Retry for DATABASE_OFFLINE, ERRORE_INTERNO
+        // Retry for DATABASE_OFFLINE
         err =>
           new Error(
             `INPS SOAP Error: [Esito:${err.Esito}|Message:${err.DescrizioneErrore}]`
