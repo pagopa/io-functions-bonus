@@ -88,11 +88,11 @@ describe("InpsSoapClient", () => {
     }
   });
 
-  it("should parse TEMPORARY ERROR response", () => {
+  it("should parse PERMANENT ERROR response", () => {
     const res = parseSoapResponse(aTemporaryErrorResponse);
-    expect(isLeft(res)).toBeTruthy();
-    if (isLeft(res)) {
-      expect(res.value.message).toContain("ERRORE_INTERNO");
+    expect(isRight(res)).toBeTruthy();
+    if (isRight(res)) {
+      expect(res.value.Esito).toContain("ERRORE_INTERNO");
     }
   });
 
