@@ -51,7 +51,10 @@ export function GetEligibilityCheckHandler(
     const status = await client.getStatus(
       makeStartEligibilityCheckOrchestratorId(fiscalCode)
     );
-    if (status.customStatus === "RUNNING") {
+    if (
+      status.runtimeStatus === df.OrchestrationRuntimeStatus.Pending ||
+      status.customStatus === "RUNNING"
+    ) {
       return ResponseSuccessAccepted("Still running");
     }
     const eligibilityCheckDocument = await eligibilityCheckModel.find(
