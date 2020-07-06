@@ -58,67 +58,15 @@ const contextMockWithDf = {
     getInput: jest.fn(() => anInput),
     setCustomStatus: jest.fn(),
     // 4 CreateTimer
-    createTimer: jest.fn().mockReturnValueOnce("CreateTimer")
+    createTimer: jest.fn().mockReturnValue("CreateTimer")
   }
 };
 
-const aContextMockWithActiveBonus = {
-  ...contextMock,
-  df: {
-    callActivity: jest.fn(),
-    callActivityWithRetry: jest
-      .fn()
-      // 1 DeleteEligibilityCheckActivity
-      .mockReturnValueOnce(deleteEligibilityCheckActivityResult)
-      // 2 EligibilityCheckActivity
-      .mockReturnValueOnce(eligibilityCheckResponse)
-      // 3 ValidateEligibilityCheckActivity
-      .mockReturnValueOnce({
-        ...eligibilityCheck.value,
-        status: StatusEnum.CONFLICT
-      })
-      // 4 UpsertEligibilityCheckActivity
-      .mockReturnValueOnce("UpsertEligibilityCheckActivity")
-      // 5 CheckBonusActiveActivity
-      .mockReturnValueOnce(true)
-      // 6 SendMessageActivity
-      .mockReturnValueOnce("SendMessageActivity"),
-    getInput: jest.fn(() => anInput),
-    setCustomStatus: jest.fn(),
-    // 4 CreateTimer
-    createTimer: jest.fn().mockReturnValueOnce("CreateTimer")
-  }
-};
-
-const aContextMockWithProcessingBonus = {
-  ...contextMock,
-  df: {
-    callActivity: jest.fn(),
-    callActivityWithRetry: jest
-      .fn()
-      // 1 DeleteEligibilityCheckActivity
-      .mockReturnValueOnce(deleteEligibilityCheckActivityResult)
-      // 2 EligibilityCheckActivity
-      .mockReturnValueOnce(eligibilityCheckResponse)
-      // 3 ValidateEligibilityCheckActivity
-      .mockReturnValueOnce({
-        ...eligibilityCheck.value,
-        status: StatusEnum.CONFLICT
-      })
-      // 4 UpsertEligibilityCheckActivity
-      .mockReturnValueOnce("UpsertEligibilityCheckActivity")
-      // 5 CheckBonusActiveActivity
-      .mockReturnValueOnce(false)
-      // 6 SendMessageActivity
-      .mockReturnValueOnce("SendMessageActivity"),
-    getInput: jest.fn(() => anInput),
-    setCustomStatus: jest.fn(),
-    // 4 CreateTimer
-    createTimer: jest.fn().mockReturnValueOnce("CreateTimer")
-  }
-};
-
+// tslint:disable-next-line: no-big-function
 describe("EligibilityCheckOrchestrator", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
   it("should send the right message", async () => {
     mockCallActivityWithRetry
       // 1 DeleteEligibilityCheckActivity
@@ -160,6 +108,9 @@ describe("EligibilityCheckOrchestrator", () => {
     const res6 = orchestrator.next(res5.value);
     expect(res6.value).toEqual("SendMessageActivity");
 
+    // Complete the orchestrator execution
+    orchestrator.next();
+
     expect(contextMockWithDf.df.createTimer).toHaveBeenCalledTimes(1);
     expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
       1,
@@ -172,8 +123,24 @@ describe("EligibilityCheckOrchestrator", () => {
   });
 
   it("should send the right message on EligibilityCheckConflict when a Bonus Processing is running", async () => {
+    mockCallActivityWithRetry
+      // 1 DeleteEligibilityCheckActivity
+      .mockReturnValueOnce(deleteEligibilityCheckActivityResult)
+      // 2 EligibilityCheckActivity
+      .mockReturnValueOnce(eligibilityCheckResponse)
+      // 3 ValidateEligibilityCheckActivity
+      .mockReturnValueOnce({
+        ...eligibilityCheck.value,
+        status: StatusEnum.CONFLICT
+      })
+      // 4 UpsertEligibilityCheckActivity
+      .mockReturnValueOnce("UpsertEligibilityCheckActivity")
+      // 5 CheckBonusActiveActivity
+      .mockReturnValueOnce(true)
+      // 6 SendMessageActivity
+      .mockReturnValueOnce("SendMessageActivity");
     // tslint:disable-next-line: no-any no-useless-cast
-    const orchestrator = handler(aContextMockWithActiveBonus as any);
+    const orchestrator = handler(contextMockWithDf as any);
 
     // 1 DeleteEligibilityCheckActivity
     const res1 = orchestrator.next();
@@ -208,24 +175,44 @@ describe("EligibilityCheckOrchestrator", () => {
     const res7 = orchestrator.next(res6.value);
     expect(res7.value).toEqual("SendMessageActivity");
 
+    // Complete the orchestrator execution
+    orchestrator.next();
+
     expect(
-      aContextMockWithActiveBonus.df.callActivityWithRetry.mock.calls[5][2]
-        .content
+      contextMockWithDf.df.callActivityWithRetry.mock.calls[5][2].content
     ).toEqual(MESSAGES.EligibilityCheckConflictWithBonusActivated());
 
-    expect(aContextMockWithActiveBonus.df.createTimer).toHaveBeenCalledTimes(1);
-    expect(
-      aContextMockWithActiveBonus.df.setCustomStatus
-    ).toHaveBeenNthCalledWith(1, "RUNNING");
-    expect(
-      aContextMockWithActiveBonus.df.setCustomStatus
-    ).toHaveBeenNthCalledWith(2, "COMPLETED");
+    expect(contextMockWithDf.df.createTimer).toHaveBeenCalledTimes(1);
+    expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
+      1,
+      "RUNNING"
+    );
+    expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
+      2,
+      "COMPLETED"
+    );
   });
 
   it("should send the right message on EligibilityCheckConflict when a Bonus Processing is not running", async () => {
+    mockCallActivityWithRetry
+      // 1 DeleteEligibilityCheckActivity
+      .mockReturnValueOnce(deleteEligibilityCheckActivityResult)
+      // 2 EligibilityCheckActivity
+      .mockReturnValueOnce(eligibilityCheckResponse)
+      // 3 ValidateEligibilityCheckActivity
+      .mockReturnValueOnce({
+        ...eligibilityCheck.value,
+        status: StatusEnum.CONFLICT
+      })
+      // 4 UpsertEligibilityCheckActivity
+      .mockReturnValueOnce("UpsertEligibilityCheckActivity")
+      // 5 CheckBonusActiveActivity
+      .mockReturnValueOnce(false)
+      // 6 SendMessageActivity
+      .mockReturnValueOnce("SendMessageActivity");
     const orchestrator = handler(
       // tslint:disable-next-line: no-any no-useless-cast
-      aContextMockWithProcessingBonus as any
+      contextMockWithDf as any
     );
 
     // 1 DeleteEligibilityCheckActivity
@@ -261,19 +248,65 @@ describe("EligibilityCheckOrchestrator", () => {
     const res7 = orchestrator.next(res6.value);
     expect(res7.value).toEqual("SendMessageActivity");
 
-    expect(
-      aContextMockWithProcessingBonus.df.callActivityWithRetry.mock.calls[5][2]
-        .content
-    ).toEqual(MESSAGES.EligibilityCheckConflict());
+    // Complete the orchestrator execution
+    orchestrator.next();
 
     expect(
-      aContextMockWithProcessingBonus.df.createTimer
-    ).toHaveBeenCalledTimes(1);
+      contextMockWithDf.df.callActivityWithRetry.mock.calls[5][2].content
+    ).toEqual(MESSAGES.EligibilityCheckConflict());
+
+    expect(contextMockWithDf.df.createTimer).toHaveBeenCalledTimes(1);
+    expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
+      1,
+      "RUNNING"
+    );
+    expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
+      2,
+      "COMPLETED"
+    );
+  });
+
+  it("should send the right message on EligibilityCheckFailureINPSUnavailable when EligibilityCheck fails permanently", async () => {
+    mockCallActivityWithRetry
+      // 1 DeleteEligibilityCheckActivity
+      .mockReturnValueOnce(deleteEligibilityCheckActivityResult)
+      // 2 EligibilityCheckActivity that will throws
+      .mockReturnValueOnce(null)
+      // 3 SendMessageActivity
+      .mockReturnValueOnce("SendMessageActivity");
+    const orchestrator = handler(
+      // tslint:disable-next-line: no-any no-useless-cast
+      contextMockWithDf as any
+    );
+
+    // 1 DeleteEligibilityCheckActivity
+    const res1 = orchestrator.next();
+    expect(res1.value).toEqual({
+      kind: "SUCCESS"
+    });
+
+    // 2 EligibilityCheckActivity
+    orchestrator.next(res1.value);
+    orchestrator.throw(new Error("Permanent failure EligibilityCheckActivity"));
+
+    // 3 SendMessageActivity
+    orchestrator.next();
+
+    // Complete the orchestrator execution
+    orchestrator.next();
+
     expect(
-      aContextMockWithProcessingBonus.df.setCustomStatus
-    ).toHaveBeenNthCalledWith(1, "RUNNING");
-    expect(
-      aContextMockWithProcessingBonus.df.setCustomStatus
-    ).toHaveBeenNthCalledWith(2, "COMPLETED");
+      contextMockWithDf.df.callActivityWithRetry.mock.calls[2][2].content
+    ).toEqual(MESSAGES.EligibilityCheckFailureINPSUnavailable());
+
+    expect(contextMockWithDf.df.createTimer).toHaveBeenCalledTimes(0);
+    expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
+      1,
+      "RUNNING"
+    );
+    expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
+      2,
+      "COMPLETED"
+    );
   });
 });
