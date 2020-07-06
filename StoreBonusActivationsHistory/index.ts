@@ -20,7 +20,7 @@ const index: AzureFunction = async (_: Context, input: unknown) => {
     bonusActivationsLogs: documents.map(d => ({
       PartitionKey: `${d.id}`,
       Payload: JSON.stringify(toBaseDoc(d)),
-      RowKey: d._ts
+      RowKey: Date.now().toString()
     }))
   };
 };
