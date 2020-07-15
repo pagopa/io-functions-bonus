@@ -1,6 +1,7 @@
 import { Context } from "@azure/functions";
 import * as df from "durable-functions";
 import * as express from "express";
+import { Option } from "fp-ts/lib/Option";
 import { fromEither, fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import { FiscalCodeMiddleware } from "io-functions-commons/dist/src/utils/middlewares/fiscalcode";
@@ -23,11 +24,15 @@ import { BonusActivationModel } from "../models/bonus_activation";
 import { EligibilityCheckModel } from "../models/eligibility_check";
 
 import { identity } from "fp-ts/lib/function";
+import { none } from "fp-ts/lib/Option";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { BonusActivation as ApiBonusActivation } from "../generated/definitions/BonusActivation";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { BonusLeaseModel } from "../models/bonus_lease";
-import { BonusProcessing } from "../models/bonus_processing";
+import {
+  BonusProcessing,
+  BonusProcessingModel
+} from "../models/bonus_processing";
 import { trackException } from "../utils/appinsights";
 import { toApiBonusActivation } from "../utils/conversions";
 import { generateFamilyUID } from "../utils/hash";
@@ -36,9 +41,11 @@ import {
   acquireLockForUserFamily,
   createBonusActivation,
   EnqueueBonusActivationT,
+  getBonusProcessing,
   getLatestValidDSU,
   IApiBonusActivationWithValidBefore,
-  relaseLockForUserFamily
+  relaseLockForUserFamily,
+  saveBonusProcessing
 } from "./models";
 import { checkEligibilityCheckIsRunning } from "./orchestrators";
 import { makeBonusActivationResourceUri } from "./utils";
@@ -62,6 +69,7 @@ type IStartBonusActivationHandler = (
 export function StartBonusActivationHandler(
   bonusActivationModel: BonusActivationModel,
   bonusLeaseModel: BonusLeaseModel,
+  bonusProcessingModel: BonusProcessingModel,
   eligibilityCheckModel: EligibilityCheckModel,
   enqueueBonusActivation: EnqueueBonusActivationT
 ): IStartBonusActivationHandler {
@@ -72,7 +80,25 @@ export function StartBonusActivationHandler(
       .of<StartBonusActivationResponse, void>(void 0)
       .chainSecond(checkEligibilityCheckIsRunning(dfClient, fiscalCode))
       .chainSecond(
-        checkBonusActivationIsRunning(context.bindings.processingBonusIdIn)
+        getBonusProcessing(bonusProcessingModel, fiscalCode)
+          .foldTaskEither<
+            IResponseErrorInternal | IResponseSuccessAccepted<InstanceId>,
+            Option<BonusProcessing>
+          >(
+            err => {
+              context.log.warn(
+                `StartBonusActivationHandler|WARN|Failed reading BonusProcessing for fiscalCode: ${fiscalCode}. Reason: ${JSON.stringify(
+                  err
+                )}`
+              );
+              // we consider failures as record not found
+              return taskEither.of(none);
+            },
+            _ => taskEither.of(_)
+          )
+          .chain(maybeBonusProcessing =>
+            checkBonusActivationIsRunning(maybeBonusProcessing)
+          )
       )
       .chainSecond(getLatestValidDSU(eligibilityCheckModel, fiscalCode))
       .map(eligibilityCheck => ({
@@ -139,23 +165,42 @@ export function StartBonusActivationHandler(
                 taskEither.of(bonusActivationWithValidBefore)
             )
       )
-      .fold(identity, ({ apiBonusActivation }) => {
+      .chain(({ apiBonusActivation }) => {
         // Add the tuple (fiscalCode, bonusId) to the processing bonus collection
         // this is used a s lock to avoid having more than one bonus in processing status
         // The lock is removed when the orchestrator terminate
-        // tslint:disable-next-line: no-object-mutation
-        context.bindings.processingBonusIdOut = BonusProcessing.encode({
-          bonusId: apiBonusActivation.id,
-          id: apiBonusActivation.applicant_fiscal_code
-        });
-        return ResponseSuccessRedirectToResource(
+        return (
+          saveBonusProcessing(
+            bonusProcessingModel,
+            BonusProcessing.encode({
+              bonusId: apiBonusActivation.id,
+              id: apiBonusActivation.applicant_fiscal_code
+            })
+          )
+            // Either case, we ignore eventual error on bonus processing
+            // and pass the activation object forward
+            .foldTaskEither(
+              err => {
+                context.log.warn(
+                  `StartBonusActivationHandler|WARN|Failed saving BonusProcessing for fiscalCode: ${fiscalCode}. Reason: ${JSON.stringify(
+                    err
+                  )}`
+                );
+                return taskEither.of(apiBonusActivation);
+              },
+              _ => taskEither.of(apiBonusActivation)
+            )
+        );
+      })
+      .fold(identity, apiBonusActivation =>
+        ResponseSuccessRedirectToResource(
           apiBonusActivation,
           makeBonusActivationResourceUri(fiscalCode, apiBonusActivation.id),
           InstanceId.encode({
             id: (apiBonusActivation.id as unknown) as NonEmptyString
           })
-        );
-      })
+        )
+      )
       .run();
   };
 }
@@ -163,12 +208,14 @@ export function StartBonusActivationHandler(
 export function StartBonusActivation(
   bonusActivationModel: BonusActivationModel,
   bonusLeaseModel: BonusLeaseModel,
+  bonusProcessingModel: BonusProcessingModel,
   eligibilityCheckModel: EligibilityCheckModel,
   enqueueBonusActivation: EnqueueBonusActivationT
 ): express.RequestHandler {
   const handler = StartBonusActivationHandler(
     bonusActivationModel,
     bonusLeaseModel,
+    bonusProcessingModel,
     eligibilityCheckModel,
     enqueueBonusActivation
   );
