@@ -14,10 +14,6 @@ import {
   BonusLeaseModel
 } from "../models/bonus_lease";
 import {
-  BONUS_PROCESSING_COLLECTION_NAME,
-  BonusProcessingModel
-} from "../models/bonus_processing";
-import {
   ELIGIBILITY_CHECK_COLLECTION_NAME,
   EligibilityCheckModel
 } from "../models/eligibility_check";
@@ -54,14 +50,6 @@ const bonusLeaseModel = new BonusLeaseModel(
   )
 );
 
-const bonusProcessingModel = new BonusProcessingModel(
-  documentClient,
-  documentDbUtils.getCollectionUri(
-    documentDbDatabaseUrl,
-    BONUS_PROCESSING_COLLECTION_NAME
-  )
-);
-
 // Setup Express
 const app = express();
 secureExpressApp(app);
@@ -72,7 +60,6 @@ app.post(
   StartBonusActivation(
     bonusActivationModel,
     bonusLeaseModel,
-    bonusProcessingModel,
     eligibilityCheckModel,
     getEnqueueBonusActivation(queueService, BONUS_ACTIVATIONS_QUEUE_NAME)
   )

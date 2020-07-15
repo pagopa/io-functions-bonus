@@ -41,10 +41,6 @@ import {
   RetrievedBonusLease
 } from "../models/bonus_lease";
 import { RetrievedUserBonus, UserBonus } from "../models/user_bonus";
-import {
-  BonusProcessing,
-  RetrievedBonusProcessing
-} from "../models/bonus_processing";
 
 export const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
 export const anotherFiscalCode = "CCCDDD80A01C123D" as FiscalCode;
@@ -233,24 +229,4 @@ export const aMessageContent = MessageContent.decode({
   subject: "a fake subject"
 }).getOrElseL(e => {
   throw new Error(readableReport(e));
-});
-
-export const aBonusProcessing = BonusProcessing.decode({
-  bonusId: aBonusId,
-  id: aFiscalCode
-}).getOrElseL(_ => {
-  throw new Error(
-    `Cannot create mock for BonusProcessing: ${readableReport(_)}`
-  );
-});
-
-export const aRetrievedBonusProcessing = RetrievedBonusProcessing.decode({
-  ...aBonusProcessing,
-  _self: "xyz",
-  _ts: 123,
-  kind: "IRetrievedBonusProcessing"
-}).getOrElseL(_ => {
-  throw new Error(
-    `Cannot create mock for RetrievedBonusProcessing: ${readableReport(_)}`
-  );
 });

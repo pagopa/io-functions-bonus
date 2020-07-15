@@ -1,5 +1,5 @@
-import { Either, fromOption, left, right } from "fp-ts/lib/Either";
-import { Option } from "fp-ts/lib/Option";
+import { Either, left, right } from "fp-ts/lib/Either";
+import { fromNullable } from "fp-ts/lib/Option";
 import { fromEither, TaskEither } from "fp-ts/lib/TaskEither";
 import {
   IResponseErrorInternal,
@@ -16,16 +16,16 @@ import { BonusProcessing } from "../models/bonus_processing";
  * If there's no pending requests right(false) is returned
  */
 export const checkBonusActivationIsRunning = (
-  maybeBonusProcessing: Option<BonusProcessing>
+  processingBonusIdIn: unknown
 ): TaskEither<
   IResponseErrorInternal | IResponseSuccessAccepted<InstanceId>,
   false
 > =>
   fromEither(
-    fromOption(undefined)(maybeBonusProcessing).fold(
+    fromNullable(processingBonusIdIn).fold(
       // no processing bonus found for this user fiscal code
       // bonus activation can go on
-      _ => right(false),
+      right(false),
       _ =>
         // processing bonus found for this user fiscal code
         // try to decode the result obtained from cosmosdb

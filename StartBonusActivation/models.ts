@@ -1,6 +1,5 @@
 import { isBefore } from "date-fns";
 import { right, toError } from "fp-ts/lib/Either";
-import { Option } from "fp-ts/lib/Option";
 import {
   fromEither,
   fromLeft,
@@ -55,11 +54,6 @@ import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivatio
 import { FamilyUID } from "../generated/models/FamilyUID";
 import { Timestamp } from "../generated/models/Timestamp";
 import { BonusLeaseModel } from "../models/bonus_lease";
-import {
-  BonusProcessing,
-  BonusProcessingModel,
-  NewBonusProcessing
-} from "../models/bonus_processing";
 import { errorToQueryError } from "./utils";
 
 const CREATION_MAX_RETRIES_ON_CONFLICT = 5;
@@ -269,38 +263,3 @@ export const getEnqueueBonusActivation = (
 export type EnqueueBonusActivationT = ReturnType<
   typeof getEnqueueBonusActivation
 >;
-
-/**
- * Read the BonusProcessing record related the current user, if any
- * @param context
- *
- */
-export const getBonusProcessing = (
-  bonusProcessingModel: BonusProcessingModel,
-  // tslint:disable-next-line: variable-name
-  fiscalCode: FiscalCode
-): TaskEither<QueryError, Option<BonusProcessing>> =>
-  fromQueryEither(() => bonusProcessingModel.find(fiscalCode, fiscalCode));
-
-const makeNewBonusProcessing = (
-  id: FiscalCode,
-  bonusId: BonusCode
-): NewBonusProcessing => ({
-  bonusId,
-  id: id as BonusCode & NonEmptyString,
-  kind: "INewBonusProcessing"
-});
-
-/**
- * Save a new BonusProcessing record related the current user
- * @param context
- *
- */
-export const saveBonusProcessing = (
-  bonusProcessingModel: BonusProcessingModel,
-  // tslint:disable-next-line: variable-name
-  { id, bonusId }: BonusProcessing
-): TaskEither<QueryError, BonusProcessing> =>
-  fromQueryEither(() =>
-    bonusProcessingModel.create(makeNewBonusProcessing(id, bonusId), id)
-  );
