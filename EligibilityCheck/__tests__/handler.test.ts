@@ -8,7 +8,10 @@ import {
   mockStatusCompleted,
   mockStatusRunning
 } from "../../__mocks__/durable-functions";
-import { aBonusId } from "../../__mocks__/mocks";
+import {
+  aBonusId,
+  aEligibilityCheckSuccessEligibleValid
+} from "../../__mocks__/mocks";
 import {
   BonusProcessing,
   BonusProcessingModel
@@ -81,6 +84,25 @@ describe("EligibilityCheckHandler", () => {
     const response = await handler(context, aFiscalCode);
 
     expect(response.kind).toBe("IResponseSuccessAccepted");
+  });
+  it("should returns ResponseSuccessRedirectToResource if exists a Valid EligibilityCheck", async () => {
+    mockEligibilityCheckFind.mockImplementationOnce(() =>
+      Promise.resolve(right(some(aEligibilityCheckSuccessEligibleValid)))
+    );
+    mockBonusProcessingFind.mockImplementation(() =>
+      Promise.resolve(right(none))
+    );
+
+    const handler = EligibilityCheckHandler(
+      mockEligibilityCheckModel,
+      mockBonusProcessingModel
+    );
+
+    const response = await handler(context, aFiscalCode);
+
+    expect(mockStartNew).toBeCalledTimes(0);
+
+    expect(response.kind).toBe("IResponseSuccessRedirectToResource");
   });
   it("should returns ResponseSuccessRedirectToResource if EligibilityCheckOrchestrator starts successfully", async () => {
     mockStartNew.mockImplementationOnce(async (_, __, ___) => {
