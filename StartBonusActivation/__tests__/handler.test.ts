@@ -18,11 +18,16 @@ import {
   aEligibilityCheckSuccessIneligible,
   aRetrievedBonusActivation,
   aRetrievedBonusLease,
-  aEligibilityCheckSuccessConflict
+  aEligibilityCheckSuccessConflict,
+  aFiscalCode,
+  aRetrievedBonusProcessing
 } from "../../__mocks__/mocks";
 import { BonusActivationModel } from "../../models/bonus_activation";
 import { BonusLeaseModel } from "../../models/bonus_lease";
-import { BonusProcessing } from "../../models/bonus_processing";
+import {
+  BonusProcessing,
+  BonusProcessingModel
+} from "../../models/bonus_processing";
 import { EligibilityCheckModel } from "../../models/eligibility_check";
 import { makeStartEligibilityCheckOrchestratorId } from "../../utils/orchestrators";
 import { StartBonusActivationHandler } from "../handler";
@@ -67,7 +72,17 @@ const mockBonusLeaseModel = ({
   deleteOneById: mockBonusLeaseDeleteOneById
 } as unknown) as BonusLeaseModel;
 
-const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
+const mockBonusProcessingCreate = jest.fn().mockImplementation(async _ => {
+  return right(aRetrievedBonusProcessing);
+});
+const mockBonusProcessingFind = jest.fn().mockImplementation(async () =>
+  // happy path: retrieve a valid eligible check
+  right(some(aRetrievedBonusProcessing))
+);
+const mockBonusProcessingModel = ({
+  create: mockBonusProcessingCreate,
+  find: mockBonusProcessingFind
+} as unknown) as BonusProcessingModel;
 
 // tslint:disable-next-line: no-big-function
 describe("StartBonusActivationHandler", () => {
@@ -83,13 +98,14 @@ describe("StartBonusActivationHandler", () => {
     mockGetStatus.mockImplementation(async () => mockStatusCompleted);
   });
 
-  it("should block the user if there's an eligibility check running", async () => {
+  it("should block the user if there is an eligibility check running", async () => {
     simulateOrchestratorIsRunning(
       makeStartEligibilityCheckOrchestratorId(aFiscalCode)
     );
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
+      mockBonusProcessingModel,
       mockEligibilityCheckModel,
       enqueueBonusActivation
     );
@@ -99,7 +115,7 @@ describe("StartBonusActivationHandler", () => {
     expect(response.kind).toBe("IResponseErrorForbiddenNotAuthorized");
   });
 
-  it("should notify the user if there's already a bonus activation running", async () => {
+  it("should notify the user if there is already a bonus activation running", async () => {
     // tslint:disable-next-line: no-object-mutation
     context.bindings.processingBonusIdIn = BonusProcessing.encode({
       bonusId: aBonusId,
@@ -108,6 +124,7 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
+      mockBonusProcessingModel,
       mockEligibilityCheckModel,
       enqueueBonusActivation
     );
@@ -127,6 +144,7 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
+      mockBonusProcessingModel,
       mockEligibilityCheckModel,
       enqueueBonusActivation
     );
@@ -136,11 +154,12 @@ describe("StartBonusActivationHandler", () => {
     expect(response.kind).toBe("IResponseErrorGone");
   });
 
-  it("should tell if there's no eligibility check for the current user", async () => {
+  it("should tell if there is no eligibility check for the current user", async () => {
     mockEligibilityCheckFind.mockImplementationOnce(async _ => right(none));
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
+      mockBonusProcessingModel,
       mockEligibilityCheckModel,
       enqueueBonusActivation
     );
@@ -157,6 +176,7 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
+      mockBonusProcessingModel,
       mockEligibilityCheckModel,
       enqueueBonusActivation
     );
@@ -173,6 +193,7 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
+      mockBonusProcessingModel,
       mockEligibilityCheckModel,
       enqueueBonusActivation
     );
@@ -189,6 +210,7 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
+      mockBonusProcessingModel,
       mockEligibilityCheckModel,
       enqueueBonusActivation
     );
@@ -198,7 +220,7 @@ describe("StartBonusActivationHandler", () => {
     expect(response.kind).toBe("IResponseErrorInternal");
   });
 
-  it("should retry bonus code generation if there's already the same code on the db", async () => {
+  it("should retry bonus code generation if there is already the same code on the db", async () => {
     mockBonusActivationCreate.mockImplementationOnce(async _ =>
       left({
         code: 409
@@ -208,6 +230,7 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
+      mockBonusProcessingModel,
       mockEligibilityCheckModel,
       enqueueBonusActivation
     );
@@ -238,6 +261,7 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
+      mockBonusProcessingModel,
       mockEligibilityCheckModel,
       enqueueBonusActivation
     );
@@ -255,6 +279,7 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
+      mockBonusProcessingModel,
       mockEligibilityCheckModel,
       enqueueBonusActivation
     );
@@ -265,7 +290,7 @@ describe("StartBonusActivationHandler", () => {
     expect(response.kind).toBe("IResponseErrorInternal");
   });
 
-  it("should return a conflict if there's a lock already for this family", async () => {
+  it("should return a conflict if there is a lock already for this family", async () => {
     mockBonusLeaseCreate.mockImplementationOnce(async _ => {
       return left({
         code: 409
@@ -274,6 +299,7 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
+      mockBonusProcessingModel,
       mockEligibilityCheckModel,
       enqueueBonusActivation
     );
@@ -283,13 +309,14 @@ describe("StartBonusActivationHandler", () => {
     expect(response.kind).toBe("IResponseErrorConflict");
   });
 
-  it("should return an internal error if there's a problem while acquiring the lock", async () => {
+  it("should return an internal error if there is a problem while acquiring the lock", async () => {
     mockBonusLeaseCreate.mockImplementationOnce(async _ => {
       throw new Error("any error");
     });
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
+      mockBonusProcessingModel,
       mockEligibilityCheckModel,
       enqueueBonusActivation
     );
@@ -307,6 +334,7 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
+      mockBonusProcessingModel,
       mockEligibilityCheckModel,
       enqueueBonusActivation
     );
@@ -324,6 +352,7 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
+      mockBonusProcessingModel,
       mockEligibilityCheckModel,
       enqueueBonusActivation
     );
@@ -337,6 +366,7 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
+      mockBonusProcessingModel,
       mockEligibilityCheckModel,
       enqueueBonusActivation
     );
@@ -361,6 +391,7 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
+      mockBonusProcessingModel,
       mockEligibilityCheckModel,
       enqueueBonusActivation
     );
@@ -389,6 +420,7 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
+      mockBonusProcessingModel,
       mockEligibilityCheckModel,
       enqueueBonusActivation
     );
@@ -417,6 +449,7 @@ describe("StartBonusActivationHandler", () => {
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
+      mockBonusProcessingModel,
       mockEligibilityCheckModel,
       enqueueBonusActivation
     );
