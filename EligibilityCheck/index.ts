@@ -6,6 +6,10 @@ import { secureExpressApp } from "io-functions-commons/dist/src/utils/express";
 import { setAppContext } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import createAzureFunctionHandler from "io-functions-express/dist/src/createAzureFunctionsHandler";
 import {
+  BONUS_PROCESSING_COLLECTION_NAME,
+  BonusProcessingModel
+} from "../models/bonus_processing";
+import {
   ELIGIBILITY_CHECK_COLLECTION_NAME,
   EligibilityCheckModel
 } from "../models/eligibility_check";
@@ -24,6 +28,14 @@ const eligibilityCheckModel = new EligibilityCheckModel(
   documentClient,
   eligibilityCheckCollectionUrl
 );
+const bonusProcessingCollectionUri = documentDbUtils.getCollectionUri(
+  documentDbDatabaseUrl,
+  BONUS_PROCESSING_COLLECTION_NAME
+);
+const bonusProcessingModel = new BonusProcessingModel(
+  documentClient,
+  bonusProcessingCollectionUri
+);
 // Setup Express
 const app = express();
 secureExpressApp(app);
@@ -31,7 +43,7 @@ secureExpressApp(app);
 // Add express route
 app.post(
   "/api/v1/bonus/vacanze/eligibility/:fiscalcode",
-  EligibilityCheck(eligibilityCheckModel)
+  EligibilityCheck(eligibilityCheckModel, bonusProcessingModel)
 );
 
 const azureFunctionHandler = createAzureFunctionHandler(app);
