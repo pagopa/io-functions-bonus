@@ -77,7 +77,7 @@ const mockBonusProcessingCreate = jest.fn().mockImplementation(async _ => {
 });
 const mockBonusProcessingFind = jest.fn().mockImplementation(async () =>
   // happy path: retrieve a valid eligible check
-  right(some(aRetrievedBonusProcessing))
+  right(none)
 );
 const mockBonusProcessingModel = ({
   create: mockBonusProcessingCreate,
@@ -88,8 +88,6 @@ const mockBonusProcessingModel = ({
 describe("StartBonusActivationHandler", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // tslint:disable-next-line: no-object-mutation
-    context.bindings = {};
   });
 
   afterEach(() => {
@@ -116,11 +114,16 @@ describe("StartBonusActivationHandler", () => {
   });
 
   it("should notify the user if there is already a bonus activation running", async () => {
-    // tslint:disable-next-line: no-object-mutation
-    context.bindings.processingBonusIdIn = BonusProcessing.encode({
-      bonusId: aBonusId,
-      id: aFiscalCode
-    });
+    mockBonusProcessingFind.mockImplementationOnce(async () =>
+      right(
+        some(
+          BonusProcessing.encode({
+            bonusId: aBonusId,
+            id: aFiscalCode
+          })
+        )
+      )
+    );
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
