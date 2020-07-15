@@ -4,7 +4,6 @@ import { left, right } from "fp-ts/lib/Either";
 import { none, some } from "fp-ts/lib/Option";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { ResponseErrorInternal } from "italia-ts-commons/lib/responses";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
 import {
   context,
   mockGetStatus,
@@ -13,13 +12,13 @@ import {
 } from "../../__mocks__/durable-functions";
 import {
   aBonusId,
+  aEligibilityCheckSuccessConflict,
   aEligibilityCheckSuccessEligibleExpired,
   aEligibilityCheckSuccessEligibleValid,
   aEligibilityCheckSuccessIneligible,
+  aFiscalCode,
   aRetrievedBonusActivation,
   aRetrievedBonusLease,
-  aEligibilityCheckSuccessConflict,
-  aFiscalCode,
   aRetrievedBonusProcessing
 } from "../../__mocks__/mocks";
 import { BonusActivationModel } from "../../models/bonus_activation";
@@ -111,6 +110,9 @@ describe("StartBonusActivationHandler", () => {
     const response = await handler(context, aFiscalCode);
 
     expect(response.kind).toBe("IResponseErrorForbiddenNotAuthorized");
+
+    // no bonus processing must be recorded
+    expect(mockBonusProcessingCreate).not.toHaveBeenCalled();
   });
 
   it("should notify the user if there is already a bonus activation running", async () => {
@@ -136,8 +138,13 @@ describe("StartBonusActivationHandler", () => {
 
     expect(response.kind).toBe("IResponseSuccessAccepted");
     if (response.kind === "IResponseSuccessAccepted") {
-      expect(response.payload).toEqual({ id: aBonusId });
+      expect(response.payload).toEqual({
+        id: aBonusId
+      });
     }
+
+    // no bonus processing must be recorded
+    expect(mockBonusProcessingCreate).not.toHaveBeenCalled();
   });
 
   it("should tell if the eligibility check is too old", async () => {
@@ -155,6 +162,9 @@ describe("StartBonusActivationHandler", () => {
     const response = await handler(context, aFiscalCode);
 
     expect(response.kind).toBe("IResponseErrorGone");
+
+    // no bonus processing must be recorded
+    expect(mockBonusProcessingCreate).not.toHaveBeenCalled();
   });
 
   it("should tell if there is no eligibility check for the current user", async () => {
@@ -170,6 +180,9 @@ describe("StartBonusActivationHandler", () => {
     const response = await handler(context, aFiscalCode);
 
     expect(response.kind).toBe("IResponseErrorForbiddenNotAuthorized");
+
+    // no bonus processing must be recorded
+    expect(mockBonusProcessingCreate).not.toHaveBeenCalled();
   });
 
   it("should tell if the found eligibility check for the current user is not of type eligible", async () => {
@@ -187,6 +200,9 @@ describe("StartBonusActivationHandler", () => {
     const response = await handler(context, aFiscalCode);
 
     expect(response.kind).toBe("IResponseErrorForbiddenNotAuthorized");
+
+    // no bonus processing must be recorded
+    expect(mockBonusProcessingCreate).not.toHaveBeenCalled();
   });
 
   it("should tell if the found eligibility check for the current user is conflict", async () => {
@@ -221,6 +237,9 @@ describe("StartBonusActivationHandler", () => {
     const response = await handler(context, aFiscalCode);
 
     expect(response.kind).toBe("IResponseErrorInternal");
+
+    // no bonus processing must be recorded
+    expect(mockBonusProcessingCreate).not.toHaveBeenCalled();
   });
 
   it("should retry bonus code generation if there is already the same code on the db", async () => {
@@ -273,6 +292,9 @@ describe("StartBonusActivationHandler", () => {
 
     expect(mockBonusActivationCreate).toHaveBeenCalledTimes(1);
     expect(response.kind).toBe("IResponseErrorInternal");
+
+    // no bonus processing must be recorded
+    expect(mockBonusProcessingCreate).not.toHaveBeenCalled();
   });
 
   it("should not retry bonus code generation on a generic query error", async () => {
@@ -291,6 +313,9 @@ describe("StartBonusActivationHandler", () => {
 
     expect(mockBonusActivationCreate).toHaveBeenCalledTimes(1);
     expect(response.kind).toBe("IResponseErrorInternal");
+
+    // no bonus processing must be recorded
+    expect(mockBonusProcessingCreate).not.toHaveBeenCalled();
   });
 
   it("should return a conflict if there is a lock already for this family", async () => {
@@ -310,6 +335,9 @@ describe("StartBonusActivationHandler", () => {
     const response = await handler(context, aFiscalCode);
 
     expect(response.kind).toBe("IResponseErrorConflict");
+
+    // no bonus processing must be recorded
+    expect(mockBonusProcessingCreate).not.toHaveBeenCalled();
   });
 
   it("should return an internal error if there is a problem while acquiring the lock", async () => {
@@ -327,6 +355,9 @@ describe("StartBonusActivationHandler", () => {
     const response = await handler(context, aFiscalCode);
 
     expect(response.kind).toBe("IResponseErrorInternal");
+
+    // no bonus processing must be recorded
+    expect(mockBonusProcessingCreate).not.toHaveBeenCalled();
   });
 
   it("should release the lock if the bonus creation fails", async () => {
@@ -345,6 +376,9 @@ describe("StartBonusActivationHandler", () => {
     const response = await handler(context, aFiscalCode);
     expect(mockBonusLeaseDeleteOneById).toHaveBeenCalledTimes(1);
     expect(response.kind).toBe("IResponseErrorInternal");
+
+    // no bonus processing must be recorded
+    expect(mockBonusProcessingCreate).not.toHaveBeenCalled();
   });
 
   it("should not relase the lock when fails to acquire the lock", async () => {
@@ -363,6 +397,9 @@ describe("StartBonusActivationHandler", () => {
     await handler(context, aFiscalCode);
 
     expect(mockBonusLeaseDeleteOneById).not.toHaveBeenCalled();
+
+    // no bonus processing must be recorded
+    expect(mockBonusProcessingCreate).not.toHaveBeenCalled();
   });
 
   it("should enqueue bonusid in case bonus creation succeed", async () => {
@@ -383,6 +420,49 @@ describe("StartBonusActivationHandler", () => {
     };
 
     expect(enqueueBonusActivation).toHaveBeenCalledWith(input);
+    expect(response.kind).toBe("IResponseSuccessRedirectToResource");
+
+    // bonus processing must be recorded in case of success
+    expect(mockBonusProcessingCreate).toHaveBeenCalled();
+  });
+
+  it("should ignore failures on saving bonus processing", async () => {
+    mockBonusProcessingCreate.mockImplementationOnce(async () => {
+      throw new Error("any failure");
+    });
+
+    const handler = StartBonusActivationHandler(
+      mockBonusActivationModel,
+      mockBonusLeaseModel,
+      mockBonusProcessingModel,
+      mockEligibilityCheckModel,
+      enqueueBonusActivation
+    );
+
+    // just a success case
+    const response = await handler(context, aFiscalCode);
+
+    expect(mockBonusProcessingCreate).toHaveBeenCalled();
+    expect(response.kind).toBe("IResponseSuccessRedirectToResource");
+  });
+
+  it("should ignore failures on reading bonus processing", async () => {
+    mockBonusProcessingFind.mockImplementationOnce(async () => {
+      throw new Error("any failure");
+    });
+
+    const handler = StartBonusActivationHandler(
+      mockBonusActivationModel,
+      mockBonusLeaseModel,
+      mockBonusProcessingModel,
+      mockEligibilityCheckModel,
+      enqueueBonusActivation
+    );
+
+    // just a success case
+    const response = await handler(context, aFiscalCode);
+
+    // just a success result
     expect(response.kind).toBe("IResponseSuccessRedirectToResource");
   });
 
@@ -410,6 +490,9 @@ describe("StartBonusActivationHandler", () => {
 
     expect(mockBonusLeaseModel.deleteOneById).toHaveBeenCalledTimes(1);
     expect(response.kind).toBe("IResponseErrorInternal");
+
+    // no bonus processing must be recorded
+    expect(mockBonusProcessingCreate).not.toHaveBeenCalled();
   });
 
   it("should ignore if lock release fails because no lock is found", async () => {
@@ -439,6 +522,9 @@ describe("StartBonusActivationHandler", () => {
 
     expect(mockBonusLeaseModel.deleteOneById).toHaveBeenCalledTimes(1);
     expect(response.kind).toBe("IResponseErrorInternal");
+
+    // no bonus processing must be recorded
+    expect(mockBonusProcessingCreate).not.toHaveBeenCalled();
   });
 
   it("should ignore if lock release fails for any reason", async () => {
@@ -468,5 +554,8 @@ describe("StartBonusActivationHandler", () => {
 
     expect(mockBonusLeaseModel.deleteOneById).toHaveBeenCalledTimes(1);
     expect(response.kind).toBe("IResponseErrorInternal");
+
+    // no bonus processing must be recorded
+    expect(mockBonusProcessingCreate).not.toHaveBeenCalled();
   });
 });
