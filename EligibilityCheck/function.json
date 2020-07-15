@@ -17,16 +17,6 @@
       "name": "starter",
       "type": "durableClient",
       "direction": "in"
-    },
-    {
-      "type": "cosmosDB",
-      "name": "processingBonusIdIn",
-      "databaseName": "%COSMOSDB_BONUS_DATABASE_NAME%",
-      "collectionName": "bonus-processing",
-      "connectionStringSetting": "COSMOSDB_CONNECTION_STRING",
-      "direction": "in",
-      "Id": "{fiscalcode}",
-      "PartitionKey": "{fiscalcode}"
     }
   ],
   "scriptFile": "../dist/EligibilityCheck/index.js"

@@ -2,7 +2,7 @@ import { Context } from "@azure/functions";
 import { isAfter } from "date-fns";
 import * as df from "durable-functions";
 import * as express from "express";
-import { fromOption, isLeft } from "fp-ts/lib/Either";
+import { fromOption, isLeft, isRight } from "fp-ts/lib/Either";
 import { toString } from "fp-ts/lib/function";
 import { isSome } from "fp-ts/lib/Option";
 import { fromEither, fromPredicate, tryCatch } from "fp-ts/lib/TaskEither";
@@ -17,16 +17,17 @@ import {
   IResponseErrorInternal,
   IResponseSuccessAccepted,
   IResponseSuccessRedirectToResource,
+  ResponseErrorForbiddenNotAuthorized,
   ResponseErrorInternal,
   ResponseSuccessRedirectToResource
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { EligibilityCheckSuccessEligible } from "../generated/models/EligibilityCheckSuccessEligible";
+import { BonusProcessingModel } from "../models/bonus_processing";
 import { EligibilityCheckModel } from "../models/eligibility_check";
 import { initTelemetryClient, trackException } from "../utils/appinsights";
 import { makeStartEligibilityCheckOrchestratorId } from "../utils/orchestrators";
-import { checkBonusActivationIsRunning } from "./locks";
 import { checkEligibilityCheckIsRunning } from "./orchestrators";
 
 type IEligibilityCheckHandler = (
@@ -48,6 +49,7 @@ initTelemetryClient();
  */
 export function EligibilityCheckHandler(
   eligibilityCheckModel: EligibilityCheckModel,
+  bonusProcessingModel: BonusProcessingModel,
   now: () => Date = () => new Date()
 ): IEligibilityCheckHandler {
   return async (context, fiscalCode) => {
@@ -55,11 +57,18 @@ export function EligibilityCheckHandler(
 
     // If a bonus activation for that user is in progress
     // returns 403 status response
-    const maybeBonusActivationResponse = checkBonusActivationIsRunning(
-      context.bindings.processingBonusIdIn
+    const bonusProcessingFindResponse = await bonusProcessingModel.find(
+      fiscalCode,
+      fiscalCode
     );
-    if (isSome(maybeBonusActivationResponse)) {
-      return maybeBonusActivationResponse.value;
+    if (isRight(bonusProcessingFindResponse)) {
+      const maybeBonusActivationResponse = bonusProcessingFindResponse.value;
+      if (isSome(maybeBonusActivationResponse)) {
+        return ResponseErrorForbiddenNotAuthorized;
+      }
+    } else {
+      context.log.error("EligibilityCheck|ERROR|Error reading BonusProcessing");
+      return ResponseErrorInternal("Error reading the bonus processing");
     }
 
     const instanceId: InstanceId = {
@@ -94,7 +103,7 @@ export function EligibilityCheckHandler(
         )
       )
       .fold(
-        () => false,
+        () => false, // TODO: Logs errors?
         () => true
       )
       .run();
@@ -144,9 +153,13 @@ export function EligibilityCheckHandler(
 }
 
 export function EligibilityCheck(
-  eligibilityCheckModel: EligibilityCheckModel
+  eligibilityCheckModel: EligibilityCheckModel,
+  bonusProcessingModel: BonusProcessingModel
 ): express.RequestHandler {
-  const handler = EligibilityCheckHandler(eligibilityCheckModel);
+  const handler = EligibilityCheckHandler(
+    eligibilityCheckModel,
+    bonusProcessingModel
+  );
 
   const middlewaresWrap = withRequestMiddlewares(
     // Extract Azure Functions bindings
