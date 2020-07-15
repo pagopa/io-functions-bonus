@@ -2,7 +2,7 @@ import { Context } from "@azure/functions";
 import { isAfter } from "date-fns";
 import * as df from "durable-functions";
 import * as express from "express";
-import { fromOption, isLeft, isRight } from "fp-ts/lib/Either";
+import { fromOption, isLeft } from "fp-ts/lib/Either";
 import { toString } from "fp-ts/lib/function";
 import { isSome } from "fp-ts/lib/Option";
 import { fromEither, fromPredicate, tryCatch } from "fp-ts/lib/TaskEither";
@@ -83,7 +83,7 @@ export function EligibilityCheckHandler(
       .chain(_ =>
         fromEither(
           EligibilityCheckSuccessEligible.decode(_).mapLeft(
-            err => new Error("Eligibility check in not Success Eligible")
+            _1 => new Error("Eligibility check in not Success Eligible")
           )
         )
       )
