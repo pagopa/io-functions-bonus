@@ -1,16 +1,16 @@
-import { GetBonusActivationHandler } from "../handler";
-import { right, left } from "fp-ts/lib/Either";
-import {
-  aRetrievedBonusProcessing,
-  aRetrievedBonusActivation,
-  aFiscalCode,
-  aBonusId
-} from "../../__mocks__/mocks";
+import { left, right } from "fp-ts/lib/Either";
 import { none, some } from "fp-ts/lib/Option";
-import { BonusProcessingModel } from "../../models/bonus_processing";
-import { BonusActivationModel } from "../../models/bonus_activation";
-import { context } from "../../__mocks__/durable-functions";
 import { response as MockResponse } from "jest-mock-express";
+import { context } from "../../__mocks__/durable-functions";
+import {
+  aBonusId,
+  aFiscalCode,
+  aRetrievedBonusActivation,
+  aRetrievedBonusProcessing
+} from "../../__mocks__/mocks";
+import { BonusActivationModel } from "../../models/bonus_activation";
+import { BonusProcessingModel } from "../../models/bonus_processing";
+import { GetBonusActivationHandler } from "../handler";
 
 const mockBonusProcessingCreate = jest.fn().mockImplementation(async _ => {
   return right(aRetrievedBonusProcessing);

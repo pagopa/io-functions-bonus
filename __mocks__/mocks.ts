@@ -40,6 +40,10 @@ import {
   NewBonusLease,
   RetrievedBonusLease
 } from "../models/bonus_lease";
+import {
+  BonusProcessing,
+  RetrievedBonusProcessing
+} from "../models/bonus_processing";
 import { RetrievedUserBonus, UserBonus } from "../models/user_bonus";
 
 export const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
@@ -133,6 +137,26 @@ export const aRetrievedBonusActivation: RetrievedBonusActivation = {
   id: aBonusActivationId,
   kind: "IRetrievedBonusActivation"
 };
+
+export const aBonusProcessing = BonusProcessing.decode({
+  bonusId: aBonusId,
+  id: aFiscalCode
+}).getOrElseL(_ => {
+  throw new Error(
+    `Cannot create mock for BonusProcessing: ${readableReport(_)}`
+  );
+});
+
+export const aRetrievedBonusProcessing = RetrievedBonusProcessing.decode({
+  ...aBonusProcessing,
+  _self: "xyz",
+  _ts: 123,
+  kind: "IRetrievedBonusProcessing"
+}).getOrElseL(_ => {
+  throw new Error(
+    `Cannot create mock for RetrievedBonusProcessing: ${readableReport(_)}`
+  );
+});
 
 export const aNewBonusActivation: NewBonusActivation = {
   ...aBonusActivationWithFamilyUID,
