@@ -25,18 +25,8 @@
       "collectionName": "bonus-processing",
       "connectionStringSetting": "COSMOSDB_CONNECTION_STRING",
       "direction": "in",
-      "id": "{fiscalcode}",
-      "partitionKey": "{fiscalcode}"
-    },
-    {
-      "type": "cosmosDB",
-      "name": "eligibilityCheck",
-      "databaseName": "%COSMOSDB_BONUS_DATABASE_NAME%",
-      "collectionName": "eligibility-checks",
-      "connectionStringSetting": "COSMOSDB_CONNECTION_STRING",
-      "direction": "in",
-      "id": "{fiscalcode}",
-      "partitionKey": "{fiscalcode}"
+      "Id": "{fiscalcode}",
+      "PartitionKey": "{fiscalcode}"
     }
   ],
   "scriptFile": "../dist/EligibilityCheck/index.js"

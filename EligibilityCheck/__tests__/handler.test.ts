@@ -1,3 +1,5 @@
+import { right } from "fp-ts/lib/Either";
+import { none } from "fp-ts/lib/Option";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import {
   context,
@@ -8,6 +10,7 @@ import {
 } from "../../__mocks__/durable-functions";
 import { aBonusId } from "../../__mocks__/mocks";
 import { BonusProcessing } from "../../models/bonus_processing";
+import { EligibilityCheckModel } from "../../models/eligibility_check";
 import { makeStartEligibilityCheckOrchestratorId } from "../../utils/orchestrators";
 import { EligibilityCheckHandler } from "../handler";
 
@@ -20,6 +23,13 @@ const simulateOrchestratorIsRunning = (forOrchestratorId: string) => {
   );
 };
 const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
+
+const mockFind = jest
+  .fn()
+  .mockImplementation(() => Promise.resolve(right(none)));
+const mockEligibilityCheckModel = ({
+  find: mockFind
+} as unknown) as EligibilityCheckModel;
 
 describe("EligibilityCheckHandler", () => {
   beforeEach(() => {
@@ -40,7 +50,7 @@ describe("EligibilityCheckHandler", () => {
       id: aFiscalCode
     });
 
-    const handler = EligibilityCheckHandler();
+    const handler = EligibilityCheckHandler(mockEligibilityCheckModel);
 
     const response = await handler(context, aFiscalCode);
 
@@ -51,7 +61,7 @@ describe("EligibilityCheckHandler", () => {
       makeStartEligibilityCheckOrchestratorId(aFiscalCode)
     );
 
-    const handler = EligibilityCheckHandler();
+    const handler = EligibilityCheckHandler(mockEligibilityCheckModel);
 
     const response = await handler(context, aFiscalCode);
 
@@ -62,7 +72,7 @@ describe("EligibilityCheckHandler", () => {
       return "instanceId";
     });
 
-    const handler = EligibilityCheckHandler();
+    const handler = EligibilityCheckHandler(mockEligibilityCheckModel);
 
     const response = await handler(context, aFiscalCode);
 
@@ -79,7 +89,7 @@ describe("EligibilityCheckHandler", () => {
       throw new Error("Error starting the orchestrator");
     });
 
-    const handler = EligibilityCheckHandler();
+    const handler = EligibilityCheckHandler(mockEligibilityCheckModel);
 
     const response = await handler(context, aFiscalCode);
 

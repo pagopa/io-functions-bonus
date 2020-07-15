@@ -2,9 +2,10 @@ import { Context } from "@azure/functions";
 import { isAfter } from "date-fns";
 import * as df from "durable-functions";
 import * as express from "express";
-import { isLeft, isRight } from "fp-ts/lib/Either";
+import { fromOption, isLeft, isRight } from "fp-ts/lib/Either";
 import { toString } from "fp-ts/lib/function";
 import { isSome } from "fp-ts/lib/Option";
+import { fromEither, fromPredicate, tryCatch } from "fp-ts/lib/TaskEither";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import { FiscalCodeMiddleware } from "io-functions-commons/dist/src/utils/middlewares/fiscalcode";
 import {
@@ -22,6 +23,7 @@ import {
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { EligibilityCheckSuccessEligible } from "../generated/models/EligibilityCheckSuccessEligible";
+import { EligibilityCheckModel } from "../models/eligibility_check";
 import { initTelemetryClient, trackException } from "../utils/appinsights";
 import { makeStartEligibilityCheckOrchestratorId } from "../utils/orchestrators";
 import { checkBonusActivationIsRunning } from "./locks";
@@ -45,6 +47,7 @@ initTelemetryClient();
  * trying to get data from INPS webservice.
  */
 export function EligibilityCheckHandler(
+  eligibilityCheckModel: EligibilityCheckModel,
   now: () => Date = () => new Date()
 ): IEligibilityCheckHandler {
   return async (context, fiscalCode) => {
@@ -64,22 +67,45 @@ export function EligibilityCheckHandler(
     const instanceId: InstanceId = {
       id: (fiscalCode as unknown) as NonEmptyString
     };
-
-    // If we already have a valid dsu for this user do not start the orchestrator
-    if (context.bindings.eligibilityCheck) {
-      const errorOrEligibilityCheck = EligibilityCheckSuccessEligible.decode(
-        context.bindings.eligibilityCheck
+    const hasEligibilityCheckValid = await tryCatch(
+      () => eligibilityCheckModel.find(fiscalCode, fiscalCode),
+      _ => new Error("Error reading Eligibility Check from database")
+    )
+      .chain(_ =>
+        fromEither(_).mapLeft(
+          queryError =>
+            new Error(
+              `Query error [body:${queryError.body}|code: ${queryError.code}]`
+            )
+        )
+      )
+      .chain(_ =>
+        fromEither(fromOption(new Error("Eligibility Check not found"))(_))
+      )
+      .chain(_ =>
+        fromEither(
+          EligibilityCheckSuccessEligible.decode(_).mapLeft(
+            err => new Error("Eligibility check in not Success Eligible")
+          )
+        )
+      )
+      .chain(
+        fromPredicate(
+          eligibilityCheck => isAfter(eligibilityCheck.validBefore, now()),
+          () => new Error("Eligibility Check Expired")
+        )
+      )
+      .fold(
+        () => false,
+        () => true
+      )
+      .run();
+    if (hasEligibilityCheckValid) {
+      return ResponseSuccessRedirectToResource(
+        instanceId,
+        `/api/v1/bonus/vacanze/eligibility/${fiscalCode}`,
+        instanceId
       );
-      if (isRight(errorOrEligibilityCheck)) {
-        const eligibilityCheck = errorOrEligibilityCheck.value;
-        if (isAfter(eligibilityCheck.validBefore, now())) {
-          return ResponseSuccessRedirectToResource(
-            instanceId,
-            `/api/v1/bonus/vacanze/eligibility/${fiscalCode}`,
-            instanceId
-          );
-        }
-      }
     }
 
     // If another ElegibilityCheck operation is in progress for that user
@@ -119,8 +145,10 @@ export function EligibilityCheckHandler(
   };
 }
 
-export function EligibilityCheck(): express.RequestHandler {
-  const handler = EligibilityCheckHandler();
+export function EligibilityCheck(
+  eligibilityCheckModel: EligibilityCheckModel
+): express.RequestHandler {
+  const handler = EligibilityCheckHandler(eligibilityCheckModel);
 
   const middlewaresWrap = withRequestMiddlewares(
     // Extract Azure Functions bindings
