@@ -43,11 +43,6 @@ export function GetBonusActivationHandler(
   bonusActivationModel: BonusActivationModel
 ): IGetBonusActivationHandler {
   return async (context, fiscalCode, bonusId) => {
-    context.log.info(
-      `GetBonusActivationHandler|
-      ${JSON.stringify(fiscalCode)}|
-      ${JSON.stringify(bonusId)}`
-    );
     return await tryCatch(
       () =>
         bonusActivationModel.findBonusActivationForUser(bonusId, fiscalCode),
@@ -80,9 +75,9 @@ export function GetBonusActivationHandler(
               bonusActivation => ResponseSuccessJson(bonusActivation)
             );
           }
-          return checkBonusActivationIsRunning(null).fold<
-            IGetBonusActivationHandlerOutput
-          >(
+          return checkBonusActivationIsRunning(
+            context.bindings.processingBonusIdIn
+          ).fold<IGetBonusActivationHandlerOutput>(
             // Return  not found in case no running bonus activation is found
             ResponseErrorNotFound("Not Found", "Bonus activation not found"),
             // When the bonus is not found into the database but a bonus activation
