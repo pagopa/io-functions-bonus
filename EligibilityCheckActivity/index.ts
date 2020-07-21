@@ -1,8 +1,11 @@
-﻿import { getRequiredStringEnv } from "io-functions-commons/dist/src/utils/env";
+﻿import { fromNullable } from "fp-ts/lib/Option";
+import { getRequiredStringEnv } from "io-functions-commons/dist/src/utils/env";
+import { agent } from "italia-ts-commons";
 import {
   IntegerFromString,
   NumberFromString
 } from "italia-ts-commons/lib/numbers";
+import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { Hour, Millisecond } from "italia-ts-commons/lib/units";
 import { createClient } from "../clients/inpsSoapClient";
 import { withInpsTracer } from "../services/loggers";
@@ -29,10 +32,21 @@ const fetchApi = withInpsTracer(
 );
 
 const soapClientAsync = createClient(inpsServiceEndpoint, fetchApi);
+const testSoapClientAsync = fromNullable(process.env.TEST_INPS_SERVICE_ENDPOINT)
+  .map(testInpsServiceEndpoint =>
+    createClient(
+      testInpsServiceEndpoint as NonEmptyString,
+      withInpsTracer(
+        withTimeout(inpsServiceTimeout)(agent.getHttpFetch(process.env))
+      )
+    )
+  )
+  .toUndefined();
 
 const eligibilityCheckActivityHandler = getEligibilityCheckActivityHandler(
   soapClientAsync,
-  dsuDuration
+  dsuDuration,
+  testSoapClientAsync
 );
 
 export default eligibilityCheckActivityHandler;

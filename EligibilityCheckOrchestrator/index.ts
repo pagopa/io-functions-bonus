@@ -2,7 +2,7 @@
 
 import { addSeconds } from "date-fns";
 import * as df from "durable-functions";
-import { isSome, none, Option, some } from "fp-ts/lib/Option";
+import { fromNullable, isSome, none, Option, some } from "fp-ts/lib/Option";
 import * as t from "io-ts";
 import {
   ActivityResult as DeleteEligibilityCheckActivityResult,
@@ -15,7 +15,10 @@ import {
 import { EligibilityCheck as ApiEligibilityCheck } from "../generated/definitions/EligibilityCheck";
 import { EligibilityCheckFailure } from "../generated/definitions/EligibilityCheckFailure";
 import { EligibilityCheckSuccessConflict } from "../generated/definitions/EligibilityCheckSuccessConflict";
-import { EligibilityCheckSuccessEligible } from "../generated/definitions/EligibilityCheckSuccessEligible";
+import {
+  EligibilityCheckSuccessEligible,
+  StatusEnum
+} from "../generated/definitions/EligibilityCheckSuccessEligible";
 import { EligibilityCheckSuccessIneligible } from "../generated/definitions/EligibilityCheckSuccessIneligible";
 import { UpsertEligibilityCheckActivityInput } from "../UpsertEligibilityCheckActivity/handler";
 import {
@@ -159,6 +162,17 @@ export const handler = function*(
         `Cannot decode ApiEligibilityCheckFromDSU: [${readableReport(error)}]`
       );
     });
+
+    // If the provided fiscalCode is a testing one and the DSU is ELIGIBLE,
+    // the process is aborted.
+    fromNullable(process.env.TEST_FISCAL_CODES)
+      .map(_ => _.split(","))
+      .filter(_ => _.includes(fiscalCode))
+      .map(_ => {
+        if (apiEligibilityCheck.status === StatusEnum.ELIGIBLE) {
+          throw new Error("Testing fiscalCodes cannot have ELIGIBLE DSU");
+        }
+      });
 
     // Compute familyUID from the EligibilityCheck (status = ELIGIBLE)
     // and check there's no other bonus with the same familyUID.

@@ -1,5 +1,6 @@
 import { Context } from "@azure/functions";
 import { addMilliseconds } from "date-fns";
+import { fromNullable } from "fp-ts/lib/Option";
 import { fromEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "io-functions-commons/dist/generated/definitions/FiscalCode";
 import * as t from "io-ts";
@@ -56,6 +57,7 @@ const toMillisecond = (h: Hour): Millisecond =>
 export const getEligibilityCheckActivityHandler = (
   soapClientAsync: ISoapClientAsync,
   dsuDuration: Hour,
+  testSoapClientAsync?: ISoapClientAsync,
   thresholdCode = "BVAC01"
 ) => {
   return async (context: Context, input: unknown): Promise<ActivityResult> => {
@@ -64,15 +66,21 @@ export const getEligibilityCheckActivityHandler = (
         err => new Error(`Error: [${readableReport(err)}]`)
       )
     )
-      .chain(fiscalCode => {
-        return soapClientAsync
+      .chain(fiscalCode =>
+        // If the Fiscal Code is a testing one and is defined the test SOAP client,
+        // this is used instead the production SOAP client
+        fromNullable(process.env.TEST_FISCAL_CODES)
+          .map(_ => _.split(","))
+          .filter(_ => _.includes(fiscalCode))
+          .mapNullable(() => testSoapClientAsync)
+          .getOrElse(soapClientAsync)
           .ConsultazioneSogliaIndicatore({
             CodiceFiscale: fiscalCode,
             CodiceSoglia: thresholdCode,
             FornituraNucleo: SiNoTypeEnum.SI
           })
-          .map(_ => ({ dsu: _, fiscalCode }));
-      })
+          .map(_ => ({ dsu: _, fiscalCode }))
+      )
       .fold(
         err => {
           context.log.error(`EligibilityCheckActivity|ERROR|${err.message}`);
