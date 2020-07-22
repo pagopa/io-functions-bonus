@@ -1,6 +1,5 @@
 import { Context } from "@azure/functions";
 import { addMilliseconds } from "date-fns";
-import { fromNullable } from "fp-ts/lib/Option";
 import { fromEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "io-functions-commons/dist/generated/definitions/FiscalCode";
 import * as t from "io-ts";

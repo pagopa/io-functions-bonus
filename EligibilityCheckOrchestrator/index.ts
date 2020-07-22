@@ -2,7 +2,7 @@
 
 import { addSeconds } from "date-fns";
 import * as df from "durable-functions";
-import { fromNullable, isSome, none, Option, some } from "fp-ts/lib/Option";
+import { isSome, none, Option, some } from "fp-ts/lib/Option";
 import * as t from "io-ts";
 import {
   ActivityResult as DeleteEligibilityCheckActivityResult,
