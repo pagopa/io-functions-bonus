@@ -51,6 +51,7 @@ import { EligibilityCheck } from "../generated/models/EligibilityCheck";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
 import { trackEvent, trackException } from "../utils/appinsights";
 import { generateFamilyUID } from "../utils/hash";
+import { isTestFiscalCode } from "../utils/testing";
 
 export const OrchestratorInput = FiscalCode;
 export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
@@ -165,14 +166,11 @@ export const handler = function*(
 
     // If the provided fiscalCode is a testing one and the DSU is ELIGIBLE,
     // the process is aborted.
-    fromNullable(process.env.TEST_FISCAL_CODES)
-      .map(_ => _.split(","))
-      .filter(_ => _.includes(fiscalCode))
-      .map(_ => {
-        if (apiEligibilityCheck.status === StatusEnum.ELIGIBLE) {
-          throw new Error("Testing fiscalCodes cannot have ELIGIBLE DSU");
-        }
-      });
+    isTestFiscalCode(fiscalCode).map(_ => {
+      if (apiEligibilityCheck.status === StatusEnum.ELIGIBLE) {
+        throw new Error("Testing fiscalCodes cannot have ELIGIBLE DSU");
+      }
+    });
 
     // Compute familyUID from the EligibilityCheck (status = ELIGIBLE)
     // and check there's no other bonus with the same familyUID.

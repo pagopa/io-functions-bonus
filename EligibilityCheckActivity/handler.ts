@@ -11,6 +11,7 @@ import { ConsultazioneSogliaIndicatoreResponse } from "../generated/definitions/
 import { SiNoTypeEnum } from "../generated/definitions/SiNoType";
 import { Timestamp } from "../generated/definitions/Timestamp";
 import { trackException } from "../utils/appinsights";
+import { isTestFiscalCode } from "../utils/testing";
 
 export const EligibilityCheckActivityInput = FiscalCode;
 export type EligibilityCheckActivityInput = t.TypeOf<
@@ -69,9 +70,7 @@ export const getEligibilityCheckActivityHandler = (
       .chain(fiscalCode =>
         // If the Fiscal Code is a testing one and is defined the test SOAP client,
         // this is used instead the production SOAP client
-        fromNullable(process.env.TEST_FISCAL_CODES)
-          .map(_ => _.split(","))
-          .filter(_ => _.includes(fiscalCode))
+        isTestFiscalCode(fiscalCode)
           .mapNullable(() => testSoapClientAsync)
           .getOrElse(soapClientAsync)
           .ConsultazioneSogliaIndicatore({
