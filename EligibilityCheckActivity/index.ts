@@ -36,12 +36,7 @@ const prodSoapClientAsync = createClient(inpsServiceEndpoint, fetchApi);
 const testSoapClientAsync = NonEmptyString.decode(
   process.env.TEST_INPS_SERVICE_ENDPOINT
 ).fold(constUndefined, testInpsServiceEndpoint =>
-  createClient(
-    testInpsServiceEndpoint,
-    withInpsTracer(
-      withTimeout(inpsServiceTimeout)(agent.getHttpFetch(process.env))
-    )
-  )
+  createClient(testInpsServiceEndpoint, fetchApi)
 );
 
 // If the user fiscal code is included in the testing set
