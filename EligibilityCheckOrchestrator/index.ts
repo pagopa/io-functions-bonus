@@ -15,10 +15,7 @@ import {
 import { EligibilityCheck as ApiEligibilityCheck } from "../generated/definitions/EligibilityCheck";
 import { EligibilityCheckFailure } from "../generated/definitions/EligibilityCheckFailure";
 import { EligibilityCheckSuccessConflict } from "../generated/definitions/EligibilityCheckSuccessConflict";
-import {
-  EligibilityCheckSuccessEligible,
-  StatusEnum
-} from "../generated/definitions/EligibilityCheckSuccessEligible";
+import { EligibilityCheckSuccessEligible } from "../generated/definitions/EligibilityCheckSuccessEligible";
 import { EligibilityCheckSuccessIneligible } from "../generated/definitions/EligibilityCheckSuccessIneligible";
 import { UpsertEligibilityCheckActivityInput } from "../UpsertEligibilityCheckActivity/handler";
 import {
@@ -51,7 +48,6 @@ import { EligibilityCheck } from "../generated/models/EligibilityCheck";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
 import { trackEvent, trackException } from "../utils/appinsights";
 import { generateFamilyUID } from "../utils/hash";
-import { isTestFiscalCode } from "../utils/testing";
 
 export const OrchestratorInput = FiscalCode;
 export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
