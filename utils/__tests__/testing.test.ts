@@ -7,15 +7,14 @@ const testFiscalCodes = "CCCBBB10C04D123Z,EEEDDD11C04D222A";
 
 describe("isTestFiscalCode", () => {
   it("should return none if the provided fiscal code is missing", () => {
-    const result = isTestFiscalCode(fiscalCode, {
-      TEST_FISCAL_CODES: testFiscalCodes
-    });
+    const result = isTestFiscalCode(fiscalCode, testFiscalCodes);
     expect(isNone(result)).toBeTruthy();
   });
   it("should return some if the provided fiscal code is present", () => {
-    const result = isTestFiscalCode(fiscalCode, {
-      TEST_FISCAL_CODES: testFiscalCodes.concat(`,${fiscalCode}`)
-    });
+    const result = isTestFiscalCode(
+      fiscalCode,
+      testFiscalCodes.concat(`,${fiscalCode}`)
+    );
     expect(isSome(result)).toBeTruthy();
   });
 });

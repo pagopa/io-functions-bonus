@@ -164,14 +164,6 @@ export const handler = function*(
       );
     });
 
-    // If the provided fiscalCode is a testing one and the DSU is ELIGIBLE,
-    // the process is aborted.
-    isTestFiscalCode(fiscalCode).map(_ => {
-      if (apiEligibilityCheck.status === StatusEnum.ELIGIBLE) {
-        throw new Error("Testing fiscalCodes cannot have ELIGIBLE DSU");
-      }
-    });
-
     // Compute familyUID from the EligibilityCheck (status = ELIGIBLE)
     // and check there's no other bonus with the same familyUID.
     // If a bonus with the same famiyUID already exists

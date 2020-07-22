@@ -1,4 +1,4 @@
-﻿import { fromNullable } from "fp-ts/lib/Option";
+﻿import { constUndefined } from "fp-ts/lib/function";
 import { getRequiredStringEnv } from "io-functions-commons/dist/src/utils/env";
 import { agent } from "italia-ts-commons";
 import {
@@ -33,19 +33,20 @@ const fetchApi = withInpsTracer(
 );
 
 const prodSoapClientAsync = createClient(inpsServiceEndpoint, fetchApi);
-const testSoapClientAsync = fromNullable(process.env.TEST_INPS_SERVICE_ENDPOINT)
-  .map(testInpsServiceEndpoint =>
-    createClient(
-      testInpsServiceEndpoint as NonEmptyString,
-      withInpsTracer(
-        withTimeout(inpsServiceTimeout)(agent.getHttpFetch(process.env))
-      )
+const testSoapClientAsync = NonEmptyString.decode(
+  process.env.TEST_INPS_SERVICE_ENDPOINT
+).fold(constUndefined, testInpsServiceEndpoint =>
+  createClient(
+    testInpsServiceEndpoint,
+    withInpsTracer(
+      withTimeout(inpsServiceTimeout)(agent.getHttpFetch(process.env))
     )
   )
-  .toUndefined();
+);
 
-// If the Fiscal Code is a testing one and is defined the test SOAP client,
-// this is used instead the production SOAP client
+// If the user fiscal code is included in the testing set
+// and the test SOAP client is defined,
+// use the latter instead of the production one
 const soapClientAsync: ISoapClientAsync = {
   ConsultazioneSogliaIndicatore: ({ CodiceFiscale, ...others }) =>
     isTestFiscalCode(CodiceFiscale)
