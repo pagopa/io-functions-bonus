@@ -7,9 +7,10 @@ import {
 } from "italia-ts-commons/lib/numbers";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { Hour, Millisecond } from "italia-ts-commons/lib/units";
-import { createClient } from "../clients/inpsSoapClient";
+import { createClient, ISoapClientAsync } from "../clients/inpsSoapClient";
 import { withInpsTracer } from "../services/loggers";
 import { getProtocol, withCertificate, withTimeout } from "../utils/fetch";
+import { isTestFiscalCode } from "../utils/testing";
 import { getEligibilityCheckActivityHandler } from "./handler";
 
 const inpsServiceEndpoint = getRequiredStringEnv("INPS_SERVICE_ENDPOINT");
@@ -31,7 +32,7 @@ const fetchApi = withInpsTracer(
   )
 );
 
-const soapClientAsync = createClient(inpsServiceEndpoint, fetchApi);
+const prodSoapClientAsync = createClient(inpsServiceEndpoint, fetchApi);
 const testSoapClientAsync = fromNullable(process.env.TEST_INPS_SERVICE_ENDPOINT)
   .map(testInpsServiceEndpoint =>
     createClient(
@@ -43,10 +44,19 @@ const testSoapClientAsync = fromNullable(process.env.TEST_INPS_SERVICE_ENDPOINT)
   )
   .toUndefined();
 
+// If the Fiscal Code is a testing one and is defined the test SOAP client,
+// this is used instead the production SOAP client
+const soapClientAsync: ISoapClientAsync = {
+  ConsultazioneSogliaIndicatore: ({ CodiceFiscale, ...others }) =>
+    isTestFiscalCode(CodiceFiscale)
+      .mapNullable(_ => testSoapClientAsync)
+      .getOrElse(prodSoapClientAsync)
+      .ConsultazioneSogliaIndicatore({ CodiceFiscale, ...others })
+};
+
 const eligibilityCheckActivityHandler = getEligibilityCheckActivityHandler(
   soapClientAsync,
-  dsuDuration,
-  testSoapClientAsync
+  dsuDuration
 );
 
 export default eligibilityCheckActivityHandler;
