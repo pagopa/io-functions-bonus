@@ -64,15 +64,15 @@ export const getEligibilityCheckActivityHandler = (
         err => new Error(`Error: [${readableReport(err)}]`)
       )
     )
-      .chain(fiscalCode => {
-        return soapClientAsync
+      .chain(fiscalCode =>
+        soapClientAsync
           .ConsultazioneSogliaIndicatore({
             CodiceFiscale: fiscalCode,
             CodiceSoglia: thresholdCode,
             FornituraNucleo: SiNoTypeEnum.SI
           })
-          .map(_ => ({ dsu: _, fiscalCode }));
-      })
+          .map(_ => ({ dsu: _, fiscalCode }))
+      )
       .fold(
         err => {
           context.log.error(`EligibilityCheckActivity|ERROR|${err.message}`);
