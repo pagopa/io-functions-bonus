@@ -1,12 +1,16 @@
-﻿import { getRequiredStringEnv } from "io-functions-commons/dist/src/utils/env";
+﻿import { constUndefined } from "fp-ts/lib/function";
+import { getRequiredStringEnv } from "io-functions-commons/dist/src/utils/env";
+import { agent } from "italia-ts-commons";
 import {
   IntegerFromString,
   NumberFromString
 } from "italia-ts-commons/lib/numbers";
+import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { Hour, Millisecond } from "italia-ts-commons/lib/units";
-import { createClient } from "../clients/inpsSoapClient";
+import { createClient, ISoapClientAsync } from "../clients/inpsSoapClient";
 import { withInpsTracer } from "../services/loggers";
 import { getProtocol, withCertificate, withTimeout } from "../utils/fetch";
+import { isTestFiscalCode } from "../utils/testing";
 import { getEligibilityCheckActivityHandler } from "./handler";
 
 const inpsServiceEndpoint = getRequiredStringEnv("INPS_SERVICE_ENDPOINT");
@@ -28,7 +32,28 @@ const fetchApi = withInpsTracer(
   )
 );
 
-const soapClientAsync = createClient(inpsServiceEndpoint, fetchApi);
+const prodSoapClientAsync = createClient(inpsServiceEndpoint, fetchApi);
+const testSoapClientAsync = NonEmptyString.decode(
+  process.env.TEST_INPS_SERVICE_ENDPOINT
+).fold(constUndefined, testInpsServiceEndpoint =>
+  createClient(
+    testInpsServiceEndpoint,
+    withInpsTracer(
+      withTimeout(inpsServiceTimeout)(agent.getHttpFetch(process.env))
+    )
+  )
+);
+
+// If the user fiscal code is included in the testing set
+// and the test SOAP client is defined,
+// use the latter instead of the production one
+const soapClientAsync: ISoapClientAsync = {
+  ConsultazioneSogliaIndicatore: ({ CodiceFiscale, ...others }) =>
+    isTestFiscalCode(CodiceFiscale)
+      .mapNullable(_ => testSoapClientAsync)
+      .getOrElse(prodSoapClientAsync)
+      .ConsultazioneSogliaIndicatore({ CodiceFiscale, ...others })
+};
 
 const eligibilityCheckActivityHandler = getEligibilityCheckActivityHandler(
   soapClientAsync,
