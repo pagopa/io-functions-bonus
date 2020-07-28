@@ -1,10 +1,15 @@
-import * as DocumentDb from "documentdb";
-import { DocumentDbModel } from "io-functions-commons/dist/src//utils/documentdb_model";
-import * as DocumentDbUtils from "io-functions-commons/dist/src/utils/documentdb";
+import { Container } from "@azure/cosmos";
+import { tryCatch2v } from "fp-ts/lib/Either";
+import { fromEither, TaskEither } from "fp-ts/lib/TaskEither";
+import {
+  BaseModel,
+  CosmosdbModel,
+  CosmosErrors,
+  toCosmosErrorResponse
+} from "io-functions-commons/dist/src/utils/cosmosdb_model";
+import { wrapWithKind } from "io-functions-commons/dist/src/utils/types";
 import * as t from "io-ts";
-import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { tag } from "italia-ts-commons/lib/types";
 import { BonusCode } from "../generated/models/BonusCode";
 
 export const USER_BONUS_COLLECTION_NAME = "user-bonuses";
@@ -20,35 +25,19 @@ const UserBonus = t.interface({
 });
 export type UserBonus = t.TypeOf<typeof UserBonus>;
 
-interface IRetrievedUserBonus {
-  readonly kind: "IRetrievedUserBonus";
-}
-export const RetrievedUserBonus = tag<IRetrievedUserBonus>()(
-  t.intersection([UserBonus, DocumentDbUtils.RetrievedDocument])
+export const RetrievedUserBonus = wrapWithKind(
+  t.intersection([UserBonus, BaseModel]),
+  "IRetrievedUserBonus" as const
 );
 export type RetrievedUserBonus = t.TypeOf<typeof RetrievedUserBonus>;
 
-interface INewUserBonusTag {
-  readonly kind: "INewUserBonus";
-}
-export const NewUserBonus = tag<INewUserBonusTag>()(
-  t.intersection([UserBonus, DocumentDbUtils.NewDocument])
+export const NewUserBonus = wrapWithKind(
+  t.intersection([UserBonus, BaseModel]),
+  "INewUserBonus" as const
 );
 export type NewUserBonus = t.TypeOf<typeof NewUserBonus>;
 
-function toRetrieved(result: DocumentDb.RetrievedDocument): RetrievedUserBonus {
-  return RetrievedUserBonus.decode(result).getOrElseL(err => {
-    throw new Error(
-      `Failed decoding RetrievedUserBonus object: ${readableReport(err)}`
-    );
-  });
-}
-
-function toBaseType(o: RetrievedUserBonus): UserBonus {
-  return t.exact(UserBonus).encode(o);
-}
-
-export class UserBonusModel extends DocumentDbModel<
+export class UserBonusModel extends CosmosdbModel<
   UserBonus,
   NewUserBonus,
   RetrievedUserBonus
@@ -59,30 +48,25 @@ export class UserBonusModel extends DocumentDbModel<
    * @param dbClient the DocumentDB client
    * @param collectionUrl the collection URL
    */
-  constructor(
-    dbClient: DocumentDb.DocumentClient,
-    collectionUrl: DocumentDbUtils.IDocumentDbCollectionUri
-  ) {
-    super(dbClient, collectionUrl, toBaseType, toRetrieved);
+  constructor(container: Container) {
+    super(container, NewUserBonus, RetrievedUserBonus);
   }
 
   public findBonusActivations(
     fiscalCode: FiscalCode
-  ): DocumentDbUtils.IResultIterator<RetrievedUserBonus> {
-    const iterator = DocumentDbUtils.queryDocuments(
-      this.dbClient,
-      this.collectionUri,
-      {
-        parameters: [
-          {
-            name: "@fiscalCode",
-            value: fiscalCode
-          }
-        ],
-        query: `SELECT * FROM m WHERE m.${USER_BONUS_MODEL_PK_FIELD} = @fiscalCode`
-      },
-      fiscalCode
-    );
-    return DocumentDbUtils.mapResultIterator(iterator, this.toRetrieved);
+  ): TaskEither<
+    CosmosErrors,
+    AsyncIterator<ReadonlyArray<t.Validation<RetrievedUserBonus>>>
+  > {
+    const iterator = this.getQueryIterator({
+      parameters: [
+        {
+          name: "@fiscalCode",
+          value: fiscalCode
+        }
+      ],
+      query: `SELECT * FROM m WHERE m.${USER_BONUS_MODEL_PK_FIELD} = @fiscalCode`
+    })[Symbol.asyncIterator]();
+    return fromEither(tryCatch2v(() => iterator, toCosmosErrorResponse));
   }
 }

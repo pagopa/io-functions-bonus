@@ -27,6 +27,7 @@ import { EligibilityCheckSuccessEligible } from "../generated/definitions/Eligib
 import { EligibilityCheckModel } from "../models/eligibility_check";
 import { initTelemetryClient } from "../utils/appinsights";
 import { toApiEligibilityCheck } from "../utils/conversions";
+import { cosmosErrorsToReadableMessage } from "../utils/errors";
 import { makeStartEligibilityCheckOrchestratorId } from "../utils/orchestrators";
 
 type IGetEligibilityCheckHandler = (
@@ -57,61 +58,63 @@ export function GetEligibilityCheckHandler(
     ) {
       return ResponseSuccessAccepted("Still running");
     }
-    const eligibilityCheckDocument = await eligibilityCheckModel.find(
-      fiscalCode,
-      fiscalCode
-    );
-    return eligibilityCheckDocument.fold<
-      Promise<
-        // tslint:disable-next-line: max-union-size
-        | IResponseErrorInternal
-        | IResponseSuccessAccepted
-        | IResponseSuccessJson<EligibilityCheck>
-        | IResponseErrorNotFound
-        | IResponseErrorGone
-      >
-    >(
-      async queryError => {
-        context.log.error("GetEligibilityCheck|ERROR|%s", queryError);
-        return ResponseErrorInternal("Query error retrieving DSU");
-      },
-      async maybeModelEligibilityCheck => {
-        if (maybeModelEligibilityCheck.isNone()) {
-          return ResponseErrorNotFound("Not Found", "DSU not found");
-        }
+    return eligibilityCheckModel
+      .find(fiscalCode, fiscalCode)
+      .fold<
+        Promise<
+          // tslint:disable-next-line: max-union-size
+          | IResponseErrorInternal
+          | IResponseSuccessAccepted
+          | IResponseSuccessJson<EligibilityCheck>
+          | IResponseErrorNotFound
+          | IResponseErrorGone
+        >
+      >(
+        async queryError => {
+          context.log.error(
+            "GetEligibilityCheck|ERROR|%s",
+            cosmosErrorsToReadableMessage(queryError)
+          );
+          return ResponseErrorInternal("Query error retrieving DSU");
+        },
+        async maybeModelEligibilityCheck => {
+          if (maybeModelEligibilityCheck.isNone()) {
+            return ResponseErrorNotFound("Not Found", "DSU not found");
+          }
 
-        // Since we're sending the result to the frontend,
-        // we stop the orchestrator here in order to avoid
-        // sending a push notification with the same result
-        if (status.runtimeStatus === df.OrchestrationRuntimeStatus.Running) {
-          await client.terminate(
-            makeStartEligibilityCheckOrchestratorId(fiscalCode),
-            "Success"
+          // Since we're sending the result to the frontend,
+          // we stop the orchestrator here in order to avoid
+          // sending a push notification with the same result
+          if (status.runtimeStatus === df.OrchestrationRuntimeStatus.Running) {
+            await client.terminate(
+              makeStartEligibilityCheckOrchestratorId(fiscalCode),
+              "Success"
+            );
+          }
+
+          return toApiEligibilityCheck(maybeModelEligibilityCheck.value).fold<
+            | IResponseErrorInternal
+            | IResponseSuccessJson<EligibilityCheck>
+            | IResponseErrorGone
+          >(
+            err => {
+              return ResponseErrorInternal(
+                `Conversion error: [${readableReport(err)}]`
+              );
+            },
+            response => {
+              if (
+                EligibilityCheckSuccessEligible.is(response) &&
+                isBefore(response.valid_before, new Date())
+              ) {
+                return ResponseErrorGone("Eligibility check expired");
+              }
+              return ResponseSuccessJson(response);
+            }
           );
         }
-
-        return toApiEligibilityCheck(maybeModelEligibilityCheck.value).fold<
-          | IResponseErrorInternal
-          | IResponseSuccessJson<EligibilityCheck>
-          | IResponseErrorGone
-        >(
-          err => {
-            return ResponseErrorInternal(
-              `Conversion error: [${readableReport(err)}]`
-            );
-          },
-          response => {
-            if (
-              EligibilityCheckSuccessEligible.is(response) &&
-              isBefore(response.valid_before, new Date())
-            ) {
-              return ResponseErrorGone("Eligibility check expired");
-            }
-            return ResponseSuccessJson(response);
-          }
-        );
-      }
-    );
+      )
+      .run();
   };
 }
 

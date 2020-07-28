@@ -1,7 +1,6 @@
 import { Context } from "@azure/functions";
 import * as express from "express";
 import { identity } from "fp-ts/lib/function";
-import { fromEither, tryCatch } from "fp-ts/lib/TaskEither";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import { FiscalCodeMiddleware } from "io-functions-commons/dist/src/utils/middlewares/fiscalcode";
 import { RequiredParamMiddleware } from "io-functions-commons/dist/src/utils/middlewares/required_param";
@@ -27,6 +26,7 @@ import { BonusCode } from "../generated/definitions/BonusCode";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { BonusActivationModel } from "../models/bonus_activation";
 import { toApiBonusActivation } from "../utils/conversions";
+import { cosmosErrorsToReadableMessage } from "../utils/errors";
 
 type IGetBonusActivationHandlerOutput =
   | IResponseSuccessJson<BonusActivation>
@@ -43,21 +43,14 @@ type IGetBonusActivationHandler = (
 export function GetBonusActivationHandler(
   bonusActivationModel: BonusActivationModel
 ): IGetBonusActivationHandler {
-  return async (context, fiscalCode, bonusId) =>
+  return async (context, fiscalCode, bonusId) => {
     // search a bonus activation for (fiscalCode, bonusId)
-    tryCatch(
-      () =>
-        bonusActivationModel.findBonusActivationForUser(bonusId, fiscalCode),
-      err => new Error(`Query error: [${err}]`)
-    )
-      .chain(_ =>
-        fromEither(_).mapLeft(
-          queryError =>
-            new Error(`Query Error code=${queryError.code}|${queryError.body}`)
-        )
-      )
+    return bonusActivationModel
+      .findBonusActivationForUser(bonusId, fiscalCode)
       .mapLeft<IGetBonusActivationHandlerOutput>(err => {
-        const error = `GetBonusActivation|ERROR|Error: [${err.message}]`;
+        const error = `GetBonusActivation|ERROR|Error: [${cosmosErrorsToReadableMessage(
+          err
+        )}]`;
         context.log.error(error);
         return ResponseErrorInternal(error);
       })
@@ -91,6 +84,7 @@ export function GetBonusActivationHandler(
         )
       )
       .run();
+  };
 }
 
 export function GetBonusActivation(

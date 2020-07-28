@@ -1,27 +1,20 @@
 /**
  * Get a bonus activation in status = PROCESSING for the tuple (bonusId, fiscalCode)
  */
-import * as documentDbUtils from "io-functions-commons/dist/src/utils/documentdb";
 import { getRequiredStringEnv } from "io-functions-commons/dist/src/utils/env";
 import {
   BONUS_ACTIVATION_COLLECTION_NAME,
   BonusActivationModel
 } from "../models/bonus_activation";
-import { documentClient } from "../services/cosmosdb";
+import { cosmosClient } from "../services/cosmosdb";
 import { getGetBonusActivationActivityHandler } from "./handler";
 
 const cosmosDbName = getRequiredStringEnv("COSMOSDB_BONUS_DATABASE_NAME");
+const bonusActivationContainer = cosmosClient
+  .database(cosmosDbName)
+  .container(BONUS_ACTIVATION_COLLECTION_NAME);
 
-const documentDbDatabaseUrl = documentDbUtils.getDatabaseUri(cosmosDbName);
-const bonusActivationCollectionUrl = documentDbUtils.getCollectionUri(
-  documentDbDatabaseUrl,
-  BONUS_ACTIVATION_COLLECTION_NAME
-);
-
-const bonusActivationModel = new BonusActivationModel(
-  documentClient,
-  bonusActivationCollectionUrl
-);
+const bonusActivationModel = new BonusActivationModel(bonusActivationContainer);
 
 const GetBonusActivationActivity = getGetBonusActivationActivityHandler(
   bonusActivationModel
