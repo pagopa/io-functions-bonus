@@ -1,6 +1,5 @@
 import { Context } from "@azure/functions";
 import { fromEither, fromLeft, taskEither } from "fp-ts/lib/TaskEither";
-import { fromQueryEither } from "io-functions-commons/dist/src/utils/documentdb";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
@@ -10,7 +9,11 @@ import {
   RetrievedBonusActivation
 } from "../models/bonus_activation";
 import { trackException } from "../utils/appinsights";
-import { Failure, TransientFailure } from "../utils/errors";
+import {
+  cosmosErrorsToReadableMessage,
+  Failure,
+  TransientFailure
+} from "../utils/errors";
 
 export const GetBonusActivationActivityInput = t.type({
   applicantFiscalCode: FiscalCode,
@@ -54,18 +57,15 @@ export function getGetBonusActivationActivityHandler(
         )
       )
       .chain(({ applicantFiscalCode, bonusId }) =>
-        fromQueryEither(() =>
-          bonusActivationModel.findBonusActivationForUser(
-            bonusId,
-            applicantFiscalCode
+        bonusActivationModel
+          .findBonusActivationForUser(bonusId, applicantFiscalCode)
+          .mapLeft(err =>
+            // Promise rejected or thrown
+            Failure.encode({
+              kind: "TRANSIENT",
+              reason: `Query error: ${cosmosErrorsToReadableMessage(err)}`
+            })
           )
-        ).mapLeft(err =>
-          // Promise rejected or thrown
-          Failure.encode({
-            kind: "TRANSIENT",
-            reason: `Query error: ${err.code}=${err.body}`
-          })
-        )
       )
       .chain<RetrievedBonusActivation>(maybeBonusActivation =>
         maybeBonusActivation.fold(

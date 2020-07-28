@@ -1,10 +1,7 @@
 import { Context } from "@azure/functions";
 import { fromLeft, TaskEither, taskEither } from "fp-ts/lib/TaskEither";
 import { fromEither } from "fp-ts/lib/TaskEither";
-import {
-  fromQueryEither,
-  QueryError
-} from "io-functions-commons/dist/src/utils/documentdb";
+import { CosmosErrors } from "io-functions-commons/dist/src/utils/cosmosdb_model";
 import * as t from "io-ts";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { BonusActivationStatusEnum } from "../generated/models/BonusActivationStatus";
@@ -15,7 +12,10 @@ import {
   RetrievedBonusActivation
 } from "../models/bonus_activation";
 import { EligibilityCheckModel } from "../models/eligibility_check";
-import { TransientFailure } from "../utils/errors";
+import {
+  cosmosErrorsToReadableMessage,
+  TransientFailure
+} from "../utils/errors";
 
 export const FailedBonusActivationInput = t.interface({
   bonusActivation: BonusActivationWithFamilyUID
@@ -57,26 +57,21 @@ type IFailedBonusActivationHandler = (
 const updateBonusAsFailed = (
   bonusActivationModel: BonusActivationModel,
   bonusActivation: BonusActivationWithFamilyUID
-): TaskEither<QueryError, RetrievedBonusActivation> => {
-  return fromQueryEither(() => {
-    const bonusToUpdate: BonusActivationWithFamilyUID = {
-      ...bonusActivation,
-      status: BonusActivationStatusEnum.FAILED
-    };
-    return bonusActivationModel.replace(bonusToUpdate);
-  });
+): TaskEither<CosmosErrors, RetrievedBonusActivation> => {
+  const bonusToUpdate: BonusActivationWithFamilyUID = {
+    ...bonusActivation,
+    status: BonusActivationStatusEnum.FAILED
+  };
+  return bonusActivationModel.replace(bonusToUpdate);
 };
 
 const deleteEligibilityCheck = (
   eligibilityCheckModel: EligibilityCheckModel,
   bonusActivation: BonusActivationWithFamilyUID
-): TaskEither<QueryError, string> => {
-  return fromQueryEither(() =>
-    eligibilityCheckModel.deleteOneById(
-      bonusActivation.id as BonusCode & NonEmptyString
-    )
+): TaskEither<CosmosErrors, string> =>
+  eligibilityCheckModel.deleteOneById(
+    bonusActivation.id as BonusCode & NonEmptyString
   );
-};
 
 /**
  * Operations to be perfomed in case the bonus request was rejected by ADE
@@ -108,16 +103,21 @@ export function FailedBonusActivationHandler(
           .foldTaskEither(
             err => {
               context.log.warn(
-                `FailedBonusActivationHandler|WARN|Failed deleting dsu: ${err.body}`
+                `FailedBonusActivationHandler|WARN|Failed deleting dsu: ${cosmosErrorsToReadableMessage(
+                  err
+                )}`
               );
-              if (err.code !== 404) {
+              if (
+                err.kind !== "COSMOS_ERROR_RESPONSE" ||
+                err.error.code !== 404
+              ) {
                 return fromLeft<
                   FailedBonusActivationFailure,
                   BonusActivationWithFamilyUID
                 >(
                   TransientFailure.encode({
                     kind: "TRANSIENT",
-                    reason: `Query Error: code=${err.code} body=${err.body}`
+                    reason: `Query Error: ${cosmosErrorsToReadableMessage(err)}`
                   })
                 );
               }
@@ -128,16 +128,17 @@ export function FailedBonusActivationHandler(
       )
       .chain(bonusActivation =>
         updateBonusAsFailed(bonusActivationModel, bonusActivation)
+          .mapLeft(cosmosErrorsToReadableMessage)
           // just ignore this error
           .foldTaskEither(
-            err => {
+            errorMessage => {
               context.log.warn(
-                `FailedBonusActivationHandler|WARN|Failed updating bonus: ${err.body}`
+                `FailedBonusActivationHandler|WARN|Failed updating bonus: ${errorMessage}`
               );
               return fromLeft(
                 TransientFailure.encode({
                   kind: "TRANSIENT",
-                  reason: `Query Error: code=${err.code} body=${err.body}`
+                  reason: `Query Error: ${errorMessage}`
                 })
               );
             },

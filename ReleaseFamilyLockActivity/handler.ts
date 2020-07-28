@@ -1,12 +1,15 @@
 import { fromEither } from "fp-ts/lib/TaskEither";
-import { fromQueryEither } from "io-functions-commons/dist/src/utils/documentdb";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { Context } from "vm";
 import { BonusLeaseModel } from "../models/bonus_lease";
 import { trackException } from "../utils/appinsights";
-import { Failure, TransientFailure } from "../utils/errors";
+import {
+  cosmosErrorsToReadableMessage,
+  Failure,
+  TransientFailure
+} from "../utils/errors";
 
 export const ReleaseFamilyLockActivitySuccess = t.type({
   familyUID: NonEmptyString,
@@ -49,17 +52,18 @@ export function getReleaseFamilyLockActivityHandler(
         })
       )
       .chain(({ familyUID }) =>
-        fromQueryEither(() => bonusLeaseModel.deleteOneById(familyUID))
+        bonusLeaseModel
+          .deleteOneById(familyUID)
           .map(__ => familyUID)
           .mapLeft<Failure>(err =>
-            err.code === 404
+            err.kind === "COSMOS_ERROR_RESPONSE" && err.error.code === 404
               ? Failure.encode({
                   kind: "PERMANENT",
                   reason: "Lock not found"
                 })
               : Failure.encode({
                   kind: "TRANSIENT",
-                  reason: `Query error: ${err.code}=${err.body}`
+                  reason: `Query error: ${cosmosErrorsToReadableMessage(err)}`
                 })
           )
       )

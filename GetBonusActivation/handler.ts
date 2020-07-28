@@ -1,7 +1,6 @@
 import { Context } from "@azure/functions";
 import * as express from "express";
 import { isSome } from "fp-ts/lib/Option";
-import { fromEither, tryCatch } from "fp-ts/lib/TaskEither";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import { FiscalCodeMiddleware } from "io-functions-commons/dist/src/utils/middlewares/fiscalcode";
 import { RequiredParamMiddleware } from "io-functions-commons/dist/src/utils/middlewares/required_param";
@@ -25,6 +24,7 @@ import { BonusCode } from "../generated/definitions/BonusCode";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { BonusActivationModel } from "../models/bonus_activation";
 import { toApiBonusActivation } from "../utils/conversions";
+import { cosmosErrorsToReadableMessage } from "../utils/errors";
 import { checkBonusActivationIsRunning } from "./locks";
 
 type IGetBonusActivationHandlerOutput =
@@ -43,16 +43,11 @@ export function GetBonusActivationHandler(
   bonusActivationModel: BonusActivationModel
 ): IGetBonusActivationHandler {
   return async (context, fiscalCode, bonusId) => {
-    return await tryCatch(
-      () =>
-        bonusActivationModel.findBonusActivationForUser(bonusId, fiscalCode),
-      err => new Error(`Query error: [${err}]`)
-    )
-      .chain(_ =>
-        fromEither(_).mapLeft(
-          queryError =>
-            new Error(`Query Error code=${queryError.code}|${queryError.body}`)
-        )
+    return bonusActivationModel
+      .findBonusActivationForUser(bonusId, fiscalCode)
+      .mapLeft(
+        queryError =>
+          new Error(`Query Error ${cosmosErrorsToReadableMessage(queryError)}`)
       )
       .fold<IGetBonusActivationHandlerOutput>(
         err => {

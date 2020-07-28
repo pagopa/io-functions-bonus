@@ -1,12 +1,14 @@
-import * as DocumentDb from "documentdb";
-import { Either, left, right } from "fp-ts/lib/Either";
-import * as DocumentDbUtils from "io-functions-commons/dist/src/utils/documentdb";
-import { DocumentDbModel } from "io-functions-commons/dist/src/utils/documentdb_model";
+import { Container, ItemResponse } from "@azure/cosmos";
+import { TaskEither, tryCatch } from "fp-ts/lib/TaskEither";
+import {
+  BaseModel,
+  CosmosdbModel,
+  CosmosErrors,
+  toCosmosErrorResponse
+} from "io-functions-commons/dist/src/utils/cosmosdb_model";
+import { wrapWithKind } from "io-functions-commons/dist/src/utils/types";
 import * as t from "io-ts";
-import { readableReport } from "italia-ts-commons/lib/reporters";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
-import { pick, tag } from "italia-ts-commons/lib/types";
-import { keys } from "../utils/types";
 
 export const BONUS_LEASE_COLLECTION_NAME = "bonus-leases";
 
@@ -18,38 +20,19 @@ export const BonusLease = t.interface({
 });
 export type BonusLease = t.TypeOf<typeof BonusLease>;
 
-interface IRetrievedBonusLease {
-  readonly kind: "IRetrievedBonusLease";
-}
-export const RetrievedBonusLease = tag<IRetrievedBonusLease>()(
-  t.intersection([BonusLease, DocumentDbUtils.RetrievedDocument])
+export const RetrievedBonusLease = wrapWithKind(
+  t.intersection([BonusLease, BaseModel]),
+  "IRetrievedBonusLease" as const
 );
 export type RetrievedBonusLease = t.TypeOf<typeof RetrievedBonusLease>;
 
-interface INewBonusLeaseTag {
-  readonly kind: "INewBonusLease";
-}
-export const NewBonusLease = tag<INewBonusLeaseTag>()(
-  t.intersection([BonusLease, DocumentDbUtils.NewDocument])
+export const NewBonusLease = wrapWithKind(
+  t.intersection([BonusLease, BaseModel]),
+  "INewBonusLease" as const
 );
 export type NewBonusLease = t.TypeOf<typeof NewBonusLease>;
 
-function toRetrieved(
-  result: DocumentDb.RetrievedDocument
-): RetrievedBonusLease {
-  return RetrievedBonusLease.decode(result).getOrElseL(err => {
-    throw new Error(
-      `Failed decoding RetrievedBonusLease object: ${readableReport(err)}`
-    );
-  });
-}
-
-function toBaseType(o: RetrievedBonusLease): BonusLease {
-  // removes attributes of RetrievedBonusLease which aren't of BonusLease
-  return pick(keys(BonusLease._A), o);
-}
-
-export class BonusLeaseModel extends DocumentDbModel<
+export class BonusLeaseModel extends CosmosdbModel<
   BonusLease,
   NewBonusLease,
   RetrievedBonusLease
@@ -57,14 +40,10 @@ export class BonusLeaseModel extends DocumentDbModel<
   /**
    * Creates a new BonusLease model
    *
-   * @param dbClient the DocumentDB client
-   * @param collectionUrl the collection URL
+   * @param container the CosmosDB container
    */
-  constructor(
-    dbClient: DocumentDb.DocumentClient,
-    collectionUrl: DocumentDbUtils.IDocumentDbCollectionUri
-  ) {
-    super(dbClient, collectionUrl, toBaseType, toRetrieved);
+  constructor(container: Container) {
+    super(container, NewBonusLease, RetrievedBonusLease);
   }
 
   /**
@@ -75,18 +54,10 @@ export class BonusLeaseModel extends DocumentDbModel<
    */
   public deleteOneById(
     documentId: BonusLease["id"]
-  ): Promise<Either<DocumentDb.QueryError, string>> {
-    const documentUri = DocumentDbUtils.getDocumentUri(
-      this.collectionUri,
-      documentId
-    );
-    return new Promise(resolve =>
-      this.dbClient.deleteDocument(
-        documentUri.uri,
-        { partitionKey: documentId },
-        (err: DocumentDb.QueryError) =>
-          resolve(err ? left(err) : right(documentId))
-      )
-    );
+  ): TaskEither<CosmosErrors, string> {
+    return tryCatch<CosmosErrors, ItemResponse<BonusLease>>(
+      () => this.container.item(documentId).delete(),
+      toCosmosErrorResponse
+    ).map(_ => documentId);
   }
 }

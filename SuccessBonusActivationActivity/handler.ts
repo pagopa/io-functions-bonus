@@ -1,10 +1,7 @@
 import { Context } from "@azure/functions";
 import { array } from "fp-ts/lib/Array";
 import { fromEither, taskEither, TaskEither } from "fp-ts/lib/TaskEither";
-import {
-  fromQueryEither,
-  QueryError
-} from "io-functions-commons/dist/src/utils/documentdb";
+import { CosmosErrors } from "io-functions-commons/dist/src/utils/cosmosdb_model";
 import * as t from "io-ts";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { BonusActivationStatusEnum } from "../generated/definitions/BonusActivationStatus";
@@ -18,7 +15,10 @@ import {
   RetrievedUserBonus,
   UserBonusModel
 } from "../models/user_bonus";
-import { TransientFailure } from "../utils/errors";
+import {
+  cosmosErrorsToReadableMessage,
+  TransientFailure
+} from "../utils/errors";
 
 export const SuccessBonusActivationInput = t.interface({
   bonusActivation: BonusActivationWithFamilyUID
@@ -55,14 +55,12 @@ export type SuccessBonusActivationResult = t.TypeOf<
 const updateBonusAsActive = (
   bonusActivationModel: BonusActivationModel,
   bonusActivation: BonusActivationWithFamilyUID
-): TaskEither<QueryError, RetrievedBonusActivation> => {
-  return fromQueryEither(() => {
-    const bonusToUpdate: BonusActivationWithFamilyUID = {
-      ...bonusActivation,
-      status: BonusActivationStatusEnum.ACTIVE
-    };
-    return bonusActivationModel.replace(bonusToUpdate);
-  });
+): TaskEither<CosmosErrors, RetrievedBonusActivation> => {
+  const bonusToUpdate: BonusActivationWithFamilyUID = {
+    ...bonusActivation,
+    status: BonusActivationStatusEnum.ACTIVE
+  };
+  return bonusActivationModel.replace(bonusToUpdate);
 };
 
 const saveBonusForEachFamilyMember = (
@@ -72,7 +70,7 @@ const saveBonusForEachFamilyMember = (
     id: bonusId,
     dsuRequest: { familyMembers }
   }: BonusActivationWithFamilyUID
-): TaskEither<QueryError, readonly RetrievedUserBonus[]> =>
+): TaskEither<CosmosErrors, readonly RetrievedUserBonus[]> =>
   array.sequence(taskEither)(
     familyMembers
       .map<NewUserBonus>(({ fiscalCode }) => ({
@@ -82,11 +80,7 @@ const saveBonusForEachFamilyMember = (
         isApplicant: applicantFiscalCode === fiscalCode,
         kind: "INewUserBonus"
       }))
-      .map(newUserBonus =>
-        fromQueryEither(() =>
-          userBonusModel.createOrUpdate(newUserBonus, newUserBonus.fiscalCode)
-        )
-      )
+      .map(newUserBonus => userBonusModel.upsert(newUserBonus))
   );
 
 type ISuccessBonusActivationHandler = (
@@ -116,30 +110,30 @@ export function SuccessBonusActivationHandler(
         .map(({ bonusActivation }) => bonusActivation)
     )
       .chain(bonusActivation =>
-        updateBonusAsActive(bonusActivationModel, bonusActivation).mapLeft(
-          err => {
+        updateBonusAsActive(bonusActivationModel, bonusActivation)
+          .mapLeft(cosmosErrorsToReadableMessage)
+          .mapLeft(errMessage => {
             context.log.warn(
-              `FailedBonusActivationHandler|WARN|Failed updating bonus: ${err.body}`
+              `FailedBonusActivationHandler|WARN|Failed updating bonus: ${errMessage}`
             );
             return TransientFailure.encode({
               kind: "TRANSIENT",
-              reason: err.body
+              reason: errMessage
             });
-          }
-        )
+          })
       )
       .chain(bonusActivation =>
-        saveBonusForEachFamilyMember(userBonusModel, bonusActivation).mapLeft(
-          err => {
+        saveBonusForEachFamilyMember(userBonusModel, bonusActivation)
+          .mapLeft(cosmosErrorsToReadableMessage)
+          .mapLeft(errMessage => {
             context.log.warn(
-              `FailedBonusActivationHandler|WARN|Failed saving user bonus: ${err.body}`
+              `FailedBonusActivationHandler|WARN|Failed saving user bonus: ${errMessage}`
             );
             return TransientFailure.encode({
               kind: "TRANSIENT",
-              reason: err.body
+              reason: errMessage
             });
-          }
-        )
+          })
       )
       .fold<SuccessBonusActivationResult>(
         l => l,
