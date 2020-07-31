@@ -1,6 +1,10 @@
-import { left, right } from "fp-ts/lib/Either";
+import { fromLeft } from "fp-ts/lib/IOEither";
+import { taskEither } from "fp-ts/lib/TaskEither";
 import { context } from "../../__mocks__/durable-functions";
-import { aEligibilityCheckSuccessEligibleValid } from "../../__mocks__/mocks";
+import {
+  aEligibilityCheckSuccessEligibleValid,
+  aGenericQueryError
+} from "../../__mocks__/mocks";
 import { EligibilityCheckModel } from "../../models/eligibility_check";
 import {
   ActivityResultFailure,
@@ -8,15 +12,15 @@ import {
   getUpsertEligibilityCheckActivityHandler
 } from "../handler";
 
-const mockCreateOrUpdate = jest.fn();
+const mockUpsert = jest.fn();
 const mockEligibilityCheckModel = ({
-  createOrUpdate: mockCreateOrUpdate
+  upsert: mockUpsert
 } as unknown) as EligibilityCheckModel;
 
 describe("UpsertEligibilityCheckActivityHandler", () => {
   it("should upsert EligibilityCheck and return success ", async () => {
-    mockCreateOrUpdate.mockImplementationOnce(async _ =>
-      right(aEligibilityCheckSuccessEligibleValid)
+    mockUpsert.mockImplementationOnce(_ =>
+      taskEither.of(aEligibilityCheckSuccessEligibleValid)
     );
     const handler = getUpsertEligibilityCheckActivityHandler(
       mockEligibilityCheckModel
@@ -27,13 +31,10 @@ describe("UpsertEligibilityCheckActivityHandler", () => {
       aEligibilityCheckSuccessEligibleValid
     );
 
-    expect(mockCreateOrUpdate).toBeCalledWith(
-      {
-        ...aEligibilityCheckSuccessEligibleValid,
-        kind: "INewEligibilityCheck"
-      },
-      aEligibilityCheckSuccessEligibleValid.id
-    );
+    expect(mockUpsert).toBeCalledWith({
+      ...aEligibilityCheckSuccessEligibleValid,
+      kind: "INewEligibilityCheck"
+    });
 
     const decodedReponse = ActivityResultSuccess.decode(response);
 
@@ -41,9 +42,7 @@ describe("UpsertEligibilityCheckActivityHandler", () => {
   });
 
   it("should returns failure if upsert EligibilityCheck returns an error", async () => {
-    mockCreateOrUpdate.mockImplementationOnce(async _ =>
-      left(new Error("Query Error"))
-    );
+    mockUpsert.mockImplementationOnce(_ => fromLeft(aGenericQueryError));
     const handler = getUpsertEligibilityCheckActivityHandler(
       mockEligibilityCheckModel
     );
