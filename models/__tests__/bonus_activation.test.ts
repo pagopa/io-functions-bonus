@@ -1,36 +1,22 @@
 import { isLeft, isRight } from "fp-ts/lib/Either";
-import { NonEmptyString } from "italia-ts-commons/lib/strings";
-import {
-  BONUS_ACTIVATION_COLLECTION_NAME,
-  BonusActivationModel
-} from "../bonus_activation";
+import { BonusActivationModel } from "../bonus_activation";
 
 import { Container } from "@azure/cosmos";
 import { CosmosErrorResponse } from "io-functions-commons/dist/src/utils/cosmosdb_model";
+import {
+  mockContainer,
+  mockCreate,
+  mockItem,
+  mockRead,
+  mockReplace
+} from "../../__mocks__/cosmosdb-container";
 import {
   aBonusActivationWithFamilyUID,
   aNewBonusActivation,
   aRetrievedBonusActivation
 } from "../../__mocks__/mocks";
 
-const mockReplace = jest.fn();
-const mockFetchAll = jest.fn();
-const mockCreate = jest.fn();
-const mockRead = jest.fn();
-
-const mockQuery = jest
-  .fn()
-  .mockImplementation(() => ({ fetchAll: mockFetchAll }));
-const mockItem = jest
-  .fn()
-  .mockImplementation(() => ({ replace: mockReplace, read: mockRead }));
-const mockContainer = {
-  item: mockItem,
-  items: {
-    create: mockCreate,
-    query: mockQuery
-  }
-};
+const queryError = new Error("Query Error");
 
 describe("BonusActivationModel#create", () => {
   beforeEach(() => {
@@ -53,8 +39,7 @@ describe("BonusActivationModel#create", () => {
     }
   });
   it("should return the error if creation fails", async () => {
-    const expectedError = new Error("Query Error");
-    mockCreate.mockImplementationOnce(() => Promise.reject(expectedError));
+    mockCreate.mockImplementationOnce(() => Promise.reject(queryError));
 
     const model = new BonusActivationModel(
       (mockContainer as unknown) as Container
@@ -65,7 +50,7 @@ describe("BonusActivationModel#create", () => {
     expect(mockCreate).toHaveBeenCalledTimes(1);
     expect(isLeft(result)).toBeTruthy();
     if (isLeft(result)) {
-      expect(result.value).toEqual(CosmosErrorResponse(expectedError));
+      expect(result.value).toEqual(CosmosErrorResponse(queryError));
     }
   });
 });
@@ -101,8 +86,7 @@ describe("BonusActivationModel#find", () => {
   });
 
   it("should return the error", async () => {
-    const expectedError = new Error("Query Error");
-    mockRead.mockImplementationOnce(() => Promise.reject(expectedError));
+    mockRead.mockImplementationOnce(() => Promise.reject(queryError));
 
     const model = new BonusActivationModel(
       (mockContainer as unknown) as Container
@@ -114,7 +98,7 @@ describe("BonusActivationModel#find", () => {
 
     expect(isLeft(result)).toBeTruthy();
     if (isLeft(result)) {
-      expect(result.value).toEqual(CosmosErrorResponse(expectedError));
+      expect(result.value).toEqual(CosmosErrorResponse(queryError));
     }
   });
 });
@@ -144,8 +128,7 @@ describe("BonusActivationModel#replace", () => {
   });
 
   it("should return the error", async () => {
-    const expectedError = new Error("Query Error");
-    mockReplace.mockImplementationOnce(() => Promise.reject(expectedError));
+    mockReplace.mockImplementationOnce(() => Promise.reject(queryError));
 
     const model = new BonusActivationModel(
       (mockContainer as unknown) as Container
@@ -155,7 +138,7 @@ describe("BonusActivationModel#replace", () => {
 
     expect(isLeft(result)).toBeTruthy();
     if (isLeft(result)) {
-      expect(result.value).toEqual(CosmosErrorResponse(expectedError));
+      expect(result.value).toEqual(CosmosErrorResponse(queryError));
     }
   });
 });
