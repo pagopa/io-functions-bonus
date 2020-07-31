@@ -1,4 +1,3 @@
-import { CosmosClient } from "@azure/cosmos";
 import { getRequiredStringEnv } from "io-functions-commons/dist/src/utils/env";
 import {
   ELIGIBILITY_CHECK_COLLECTION_NAME,

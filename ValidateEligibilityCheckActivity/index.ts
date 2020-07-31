@@ -1,4 +1,3 @@
-import { CosmosClient } from "@azure/cosmos";
 import { getRequiredStringEnv } from "io-functions-commons/dist/src/utils/env";
 import {
   BONUS_LEASE_COLLECTION_NAME,
