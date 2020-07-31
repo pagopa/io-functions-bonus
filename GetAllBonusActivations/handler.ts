@@ -1,6 +1,11 @@
 import { Context } from "@azure/functions";
 import * as express from "express";
-import { mapAsyncIterator } from "io-functions-commons/dist/src/utils/async";
+import { isRight } from "fp-ts/lib/Either";
+import {
+  filterAsyncIterator,
+  flattenAsyncIterator,
+  mapAsyncIterator
+} from "io-functions-commons/dist/src/utils/async";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import { FiscalCodeMiddleware } from "io-functions-commons/dist/src/utils/middlewares/fiscalcode";
 import {
@@ -11,6 +16,7 @@ import {
   IResponseSuccessJsonIterator,
   ResponseJsonIterator
 } from "io-functions-commons/dist/src/utils/response";
+import { isDefined } from "io-functions-commons/dist/src/utils/types";
 import {
   IResponseErrorInternal,
   ResponseErrorInternal
@@ -33,6 +39,7 @@ export function GetAllBonusActivationsHandler(
   return (_, fiscalCode) => {
     return userBonusModel
       .findBonusActivations(fiscalCode)
+      .map(flattenAsyncIterator)
       .fold<
         | IResponseSuccessJsonIterator<BonusActivationItem>
         | IResponseErrorInternal
@@ -41,9 +48,14 @@ export function GetAllBonusActivationsHandler(
           return ResponseErrorInternal(err.kind); // TODO: Fix title response
         },
         userBonusActivationsIterator => {
-          const bonusActivations = mapAsyncIterator(
-            userBonusActivationsIterator, // TODO: Build error type mismatch
-            toApiUserBonus
+          const bonusActivations = filterAsyncIterator<
+            BonusActivationItem | undefined,
+            BonusActivationItem
+          >(
+            mapAsyncIterator(userBonusActivationsIterator, val =>
+              isRight(val) ? toApiUserBonus(val.value) : undefined
+            ),
+            (val): val is BonusActivationItem => isDefined(val)
           );
           return ResponseJsonIterator(bonusActivations);
         }
