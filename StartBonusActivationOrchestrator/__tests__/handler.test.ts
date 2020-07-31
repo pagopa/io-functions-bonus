@@ -27,9 +27,9 @@ import { trackException } from "../../utils/appinsights";
 import { PermanentFailure, TransientFailure } from "../../utils/errors";
 import { getStartBonusActivationOrchestratorHandler } from "../handler";
 
-import * as conversions from "../../utils/conversions";
 import { left } from "fp-ts/lib/Either";
 import { ReleaseUserLockActivityResult } from "../../ReleaseUserLockActivity/handler";
+import * as conversions from "../../utils/conversions";
 
 const aHmacSecret = Buffer.from("supersecret");
 
@@ -362,6 +362,7 @@ describe("getStartBonusActivationOrchestratorHandler", () => {
         properties: {
           fatal: "true",
           id: aBonusId,
+          // tslint:disable-next-line: no-duplicate-string
           name: "bonus.activation.error"
         }
       })
