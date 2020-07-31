@@ -12,7 +12,7 @@ import {
 } from "io-functions-commons/dist/src/utils/cosmosdb_model";
 import { wrapWithKind } from "io-functions-commons/dist/src/utils/types";
 import * as t from "io-ts";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 import { BonusCode } from "../generated/models/BonusCode";
 
