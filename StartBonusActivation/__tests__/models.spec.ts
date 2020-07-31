@@ -20,6 +20,8 @@ import { Dsu } from "../../generated/models/Dsu";
 
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 
+import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
+import { aConflictQueryError } from "../../__mocks__/mocks";
 import { RetrievedBonusActivation } from "../../models/bonus_activation";
 
 describe("eligibilityCheckToResponse", () => {
@@ -89,7 +91,7 @@ describe("createBonusActivation", () => {
         retrievedBonusActivationArb,
         async (fiscalCode, familyUID, dsu, retrievedBonusActivation) => {
           const model = {
-            create: () => Promise.resolve(right(retrievedBonusActivation))
+            create: () => taskEither.of(retrievedBonusActivation)
           };
           const result = await createBonusActivation(
             model as any,
@@ -111,13 +113,7 @@ describe("createBonusActivation", () => {
         dsuArb.noShrink(),
         async (fiscalCode, familyUID, dsu) => {
           const model = {
-            create: () =>
-              Promise.resolve(
-                left({
-                  body: "409",
-                  code: 409
-                })
-              )
+            create: () => fromLeft(aConflictQueryError)
           };
 
           const result = await createBonusActivation(

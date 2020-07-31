@@ -1,6 +1,6 @@
 // tslint:disable: no-identical-functions
 
-import { left, right } from "fp-ts/lib/Either";
+import { right } from "fp-ts/lib/Either";
 import { none, some } from "fp-ts/lib/Option";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { ResponseErrorInternal } from "italia-ts-commons/lib/responses";
@@ -12,11 +12,14 @@ import {
 } from "../../__mocks__/durable-functions";
 import {
   aBonusId,
+  aConflictQueryError,
   aEligibilityCheckSuccessConflict,
   aEligibilityCheckSuccessEligibleExpired,
   aEligibilityCheckSuccessEligibleValid,
   aEligibilityCheckSuccessIneligible,
   aFiscalCode,
+  aGenericQueryError,
+  aNotFoundQueryError,
   aRetrievedBonusActivation,
   aRetrievedBonusLease,
   aRetrievedBonusProcessing
@@ -43,28 +46,28 @@ const simulateOrchestratorIsRunning = (forOrchestratorId: string) => {
 };
 
 // mockEligibilityCheckModel
-const mockEligibilityCheckFind = jest.fn().mockImplementation(async () =>
+const mockEligibilityCheckFind = jest.fn().mockImplementation(() =>
   // happy path: retrieve a valid eligible check
-  right(some(aEligibilityCheckSuccessEligibleValid))
+  taskEither.of(some(aEligibilityCheckSuccessEligibleValid))
 );
 const mockEligibilityCheckModel = ({
   find: mockEligibilityCheckFind
 } as unknown) as EligibilityCheckModel;
 
 // mockBonusActivationModel
-const mockBonusActivationCreate = jest.fn().mockImplementation(async _ => {
-  return right(aRetrievedBonusActivation);
+const mockBonusActivationCreate = jest.fn().mockImplementation(_ => {
+  return taskEither.of(aRetrievedBonusActivation);
 });
 const mockBonusActivationModel = ({
   create: mockBonusActivationCreate
 } as unknown) as BonusActivationModel;
 
 // mockBonusLeaseModel
-const mockBonusLeaseCreate = jest.fn().mockImplementation(async _ => {
-  return right(aRetrievedBonusLease);
+const mockBonusLeaseCreate = jest.fn().mockImplementation(_ => {
+  return taskEither.of(aRetrievedBonusLease);
 });
-const mockBonusLeaseDeleteOneById = jest.fn().mockImplementation(async _ => {
-  return right("");
+const mockBonusLeaseDeleteOneById = jest.fn().mockImplementation(_ => {
+  return taskEither.of("");
 });
 const mockBonusLeaseModel = ({
   create: mockBonusLeaseCreate,
@@ -148,8 +151,8 @@ describe("StartBonusActivationHandler", () => {
   });
 
   it("should tell if the eligibility check is too old", async () => {
-    mockEligibilityCheckFind.mockImplementationOnce(async _ =>
-      right(some(aEligibilityCheckSuccessEligibleExpired))
+    mockEligibilityCheckFind.mockImplementationOnce(_ =>
+      taskEither.of(some(aEligibilityCheckSuccessEligibleExpired))
     );
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
@@ -167,8 +170,8 @@ describe("StartBonusActivationHandler", () => {
     expect(mockBonusProcessingCreate).not.toHaveBeenCalled();
   });
 
-  it("should tell if there is no eligibility check for the current user", async () => {
-    mockEligibilityCheckFind.mockImplementationOnce(async _ => right(none));
+  it("should tell if there's no eligibility check for the current user", async () => {
+    mockEligibilityCheckFind.mockImplementationOnce(_ => taskEither.of(none));
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
@@ -186,8 +189,8 @@ describe("StartBonusActivationHandler", () => {
   });
 
   it("should tell if the found eligibility check for the current user is not of type eligible", async () => {
-    mockEligibilityCheckFind.mockImplementationOnce(async _ =>
-      right(some(aEligibilityCheckSuccessIneligible))
+    mockEligibilityCheckFind.mockImplementationOnce(_ =>
+      taskEither.of(some(aEligibilityCheckSuccessIneligible))
     );
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
@@ -206,8 +209,8 @@ describe("StartBonusActivationHandler", () => {
   });
 
   it("should tell if the found eligibility check for the current user is conflict", async () => {
-    mockEligibilityCheckFind.mockImplementationOnce(async _ =>
-      right(some(aEligibilityCheckSuccessConflict))
+    mockEligibilityCheckFind.mockImplementationOnce(_ =>
+      taskEither.of(some(aEligibilityCheckSuccessConflict))
     );
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
@@ -223,8 +226,8 @@ describe("StartBonusActivationHandler", () => {
   });
 
   it("should return an error if the query for eligibility check fails", async () => {
-    mockEligibilityCheckFind.mockImplementationOnce(async _ => {
-      throw new Error("query failed");
+    mockEligibilityCheckFind.mockImplementationOnce(_ => {
+      return fromLeft(new Error("query failed"));
     });
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
@@ -242,11 +245,9 @@ describe("StartBonusActivationHandler", () => {
     expect(mockBonusProcessingCreate).not.toHaveBeenCalled();
   });
 
-  it("should retry bonus code generation if there is already the same code on the db", async () => {
-    mockBonusActivationCreate.mockImplementationOnce(async _ =>
-      left({
-        code: 409
-      })
+  it("should retry bonus code generation if there's already the same code on the db", async () => {
+    mockBonusActivationCreate.mockImplementationOnce(_ =>
+      fromLeft(aConflictQueryError)
     );
 
     const handler = StartBonusActivationHandler(
@@ -275,10 +276,8 @@ describe("StartBonusActivationHandler", () => {
   });
 
   it("should not retry bonus code generation on a non-409 error", async () => {
-    mockBonusActivationCreate.mockImplementationOnce(async _ => {
-      return left({
-        code: 123
-      });
+    mockBonusActivationCreate.mockImplementationOnce(_ => {
+      return fromLeft(aNotFoundQueryError);
     });
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
@@ -298,8 +297,8 @@ describe("StartBonusActivationHandler", () => {
   });
 
   it("should not retry bonus code generation on a generic query error", async () => {
-    mockBonusActivationCreate.mockImplementationOnce(async _ => {
-      throw new Error("any error");
+    mockBonusActivationCreate.mockImplementationOnce(_ => {
+      return fromLeft(aGenericQueryError);
     });
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
@@ -318,11 +317,9 @@ describe("StartBonusActivationHandler", () => {
     expect(mockBonusProcessingCreate).not.toHaveBeenCalled();
   });
 
-  it("should return a conflict if there is a lock already for this family", async () => {
-    mockBonusLeaseCreate.mockImplementationOnce(async _ => {
-      return left({
-        code: 409
-      });
+  it("should return a conflict if there's a lock already for this family", async () => {
+    mockBonusLeaseCreate.mockImplementationOnce(_ => {
+      return fromLeft(aConflictQueryError);
     });
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
@@ -340,9 +337,9 @@ describe("StartBonusActivationHandler", () => {
     expect(mockBonusProcessingCreate).not.toHaveBeenCalled();
   });
 
-  it("should return an internal error if there is a problem while acquiring the lock", async () => {
-    mockBonusLeaseCreate.mockImplementationOnce(async _ => {
-      throw new Error("any error");
+  it("should return an internal error if there's a problem while acquiring the lock", async () => {
+    mockBonusLeaseCreate.mockImplementationOnce(_ => {
+      return fromLeft(new Error("any error"));
     });
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
@@ -361,8 +358,8 @@ describe("StartBonusActivationHandler", () => {
   });
 
   it("should release the lock if the bonus creation fails", async () => {
-    mockBonusActivationCreate.mockImplementationOnce(async _ => {
-      throw new Error("any error");
+    mockBonusActivationCreate.mockImplementationOnce(_ => {
+      return fromLeft(new Error("any error"));
     });
 
     const handler = StartBonusActivationHandler(
@@ -382,8 +379,8 @@ describe("StartBonusActivationHandler", () => {
   });
 
   it("should not relase the lock when fails to acquire the lock", async () => {
-    mockBonusLeaseCreate.mockImplementationOnce(async _ => {
-      throw new Error("any error");
+    mockBonusLeaseCreate.mockImplementationOnce(_ => {
+      return fromLeft(new Error("any error"));
     });
 
     const handler = StartBonusActivationHandler(
@@ -499,8 +496,8 @@ describe("StartBonusActivationHandler", () => {
     enqueueBonusActivation.mockReturnValueOnce(
       fromLeft(ResponseErrorInternal("foo"))
     );
-    mockBonusLeaseDeleteOneById.mockImplementationOnce(async () =>
-      left({ code: 404 })
+    mockBonusLeaseDeleteOneById.mockImplementationOnce(() =>
+      fromLeft(aNotFoundQueryError)
     );
 
     const handler = StartBonusActivationHandler(
@@ -531,8 +528,8 @@ describe("StartBonusActivationHandler", () => {
     enqueueBonusActivation.mockReturnValueOnce(
       fromLeft(ResponseErrorInternal("foo"))
     );
-    mockBonusLeaseDeleteOneById.mockImplementationOnce(async () =>
-      left({ code: 500, body: "any reason" })
+    mockBonusLeaseDeleteOneById.mockImplementationOnce(() =>
+      fromLeft(aGenericQueryError)
     );
 
     const handler = StartBonusActivationHandler(
