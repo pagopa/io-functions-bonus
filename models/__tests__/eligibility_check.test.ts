@@ -1,23 +1,23 @@
-import * as DocumentDb from "documentdb";
 import { isLeft, isRight } from "fp-ts/lib/Either";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import {
-  ELIGIBILITY_CHECK_COLLECTION_NAME,
   EligibilityCheckModel,
   NewEligibilityCheck,
   RetrievedEligibilityCheck
 } from "../eligibility_check";
 
-import * as DocumentDbUtils from "io-functions-commons/dist/src/utils/documentdb";
+import { Container } from "@azure/cosmos";
+import { CosmosErrorResponse } from "io-functions-commons/dist/src/utils/cosmosdb_model";
+import {
+  mockContainer,
+  mockCreate,
+  mockDelete,
+  mockItem,
+  mockRead
+} from "../../__mocks__/cosmosdb-container";
 import { EligibilityCheck } from "../../generated/models/EligibilityCheck";
 import { EligibilityCheckSuccess } from "../../generated/models/EligibilityCheckSuccess";
 import { StatusEnum as EligibilityCheckSuccessEligibleStatus } from "../../generated/models/EligibilityCheckSuccessEligible";
-
-const aDatabaseUri = DocumentDbUtils.getDatabaseUri("mockdb" as NonEmptyString);
-const aCollectionUri = DocumentDbUtils.getCollectionUri(
-  aDatabaseUri,
-  ELIGIBILITY_CHECK_COLLECTION_NAME
-);
 
 const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
 
@@ -47,8 +47,6 @@ const aEligibilityCheck: EligibilityCheck = aEligibilityCheckSuccess;
 
 const aRetrievedEligibilityCheck: RetrievedEligibilityCheck = {
   ...aEligibilityCheck,
-  _self: "xyz",
-  _ts: 123,
   kind: "IRetrievedEligibilityCheck"
 };
 
@@ -57,88 +55,69 @@ const aNewEligibilityCheck: NewEligibilityCheck = {
   kind: "INewEligibilityCheck"
 };
 
+const queryError = new Error("Query Error");
+
 describe("EligibilityCheckModel#create", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
   it("should create a new EligibilityCheck", async () => {
-    const clientMock = {
-      createDocument: jest.fn((_, __, ___, cb) =>
-        cb(undefined, aRetrievedEligibilityCheck)
-      )
-    };
+    mockCreate.mockImplementationOnce(() =>
+      Promise.resolve({ resource: aRetrievedEligibilityCheck })
+    );
 
     const model = new EligibilityCheckModel(
-      (clientMock as unknown) as DocumentDb.DocumentClient,
-      aCollectionUri
+      (mockContainer as unknown) as Container
     );
 
-    const result = await model.create(
-      aNewEligibilityCheck,
-      aNewEligibilityCheck.id
-    );
+    const result = await model.create(aNewEligibilityCheck).run();
 
-    expect(clientMock.createDocument.mock.calls[0][1].kind).toBeUndefined();
+    expect(mockContainer.items.create.mock.calls[0][1].kind).toBeUndefined();
     expect(isRight(result)).toBeTruthy();
     if (isRight(result)) {
       expect(result.value).toEqual(aRetrievedEligibilityCheck);
     }
   });
   it("should return the error if creation fails", async () => {
-    const clientMock = {
-      createDocument: jest.fn((_, __, ___, cb) => cb("error"))
-    };
+    mockCreate.mockImplementationOnce(() => Promise.reject(queryError));
 
     const model = new EligibilityCheckModel(
-      (clientMock as unknown) as DocumentDb.DocumentClient,
-      aCollectionUri
+      (mockContainer as unknown) as Container
     );
 
-    const result = await model.create(
-      aNewEligibilityCheck,
-      aNewEligibilityCheck.id
-    );
+    const result = await model.create(aNewEligibilityCheck).run();
 
-    expect(clientMock.createDocument).toHaveBeenCalledTimes(1);
-    expect(clientMock.createDocument.mock.calls[0][0]).toEqual(
-      `dbs/mockdb/colls/${ELIGIBILITY_CHECK_COLLECTION_NAME}`
-    );
-    expect(clientMock.createDocument.mock.calls[0][1]).toEqual({
-      ...aNewEligibilityCheck,
-      kind: undefined
-    });
-    expect(clientMock.createDocument.mock.calls[0][2]).toEqual({
-      partitionKey: aNewEligibilityCheck.id
-    });
+    expect(mockCreate).toHaveBeenCalledTimes(1);
     expect(isLeft(result)).toBeTruthy();
     if (isLeft(result)) {
-      expect(result.value).toEqual("error");
+      expect(result.value).toEqual(CosmosErrorResponse(queryError));
     }
   });
 });
 
 describe("EligibilityCheckModel#find", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
   it("should return an existing EligibilityCheck", async () => {
-    const clientMock = {
-      readDocument: jest.fn((_, __, cb) =>
-        cb(undefined, aRetrievedEligibilityCheck)
-      )
-    };
-
-    const model = new EligibilityCheckModel(
-      (clientMock as unknown) as DocumentDb.DocumentClient,
-      aCollectionUri
+    mockRead.mockImplementationOnce(() =>
+      Promise.resolve({ resource: aRetrievedEligibilityCheck })
     );
 
-    const result = await model.find(
+    const model = new EligibilityCheckModel(
+      (mockContainer as unknown) as Container
+    );
+
+    const result = await model
+      .find(aRetrievedEligibilityCheck.id, aRetrievedEligibilityCheck.id)
+      .run();
+
+    expect(mockContainer.item).toHaveBeenCalledTimes(1);
+    expect(mockContainer.item).toBeCalledWith(
       aRetrievedEligibilityCheck.id,
       aRetrievedEligibilityCheck.id
     );
-
-    expect(clientMock.readDocument).toHaveBeenCalledTimes(1);
-    expect(clientMock.readDocument.mock.calls[0][0]).toEqual(
-      `dbs/mockdb/colls/${ELIGIBILITY_CHECK_COLLECTION_NAME}/docs/${aRetrievedEligibilityCheck.id}`
-    );
-    expect(clientMock.readDocument.mock.calls[0][1]).toEqual({
-      partitionKey: aRetrievedEligibilityCheck.id
-    });
+    expect(mockRead).toBeCalledTimes(1);
     expect(isRight(result)).toBeTruthy();
     if (isRight(result)) {
       expect(result.value.isSome()).toBeTruthy();
@@ -147,49 +126,40 @@ describe("EligibilityCheckModel#find", () => {
   });
 
   it("should return the error", async () => {
-    const clientMock = {
-      readDocument: jest.fn((_, __, cb) => cb("error"))
-    };
+    mockRead.mockImplementationOnce(() => Promise.reject(queryError));
 
     const model = new EligibilityCheckModel(
-      (clientMock as unknown) as DocumentDb.DocumentClient,
-      aCollectionUri
+      (mockContainer as unknown) as Container
     );
 
-    const result = await model.find(
-      aRetrievedEligibilityCheck.id,
-      aRetrievedEligibilityCheck.id
-    );
+    const result = await model
+      .find(aRetrievedEligibilityCheck.id, aRetrievedEligibilityCheck.id)
+      .run();
 
     expect(isLeft(result)).toBeTruthy();
     if (isLeft(result)) {
-      expect(result.value).toEqual("error");
+      expect(result.value).toEqual(CosmosErrorResponse(queryError));
     }
   });
 });
 
 describe("EligibilityCheckModel#deleteOneById", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
   it("should return the document od if the delete complete with success", async () => {
-    const clientMock = {
-      deleteDocument: jest.fn((_, __, cb) =>
-        cb(undefined, aEligibilityCheck.id)
-      )
-    };
+    mockDelete.mockImplementationOnce(() =>
+      Promise.resolve({ resource: aEligibilityCheck })
+    );
 
     const model = new EligibilityCheckModel(
-      (clientMock as unknown) as DocumentDb.DocumentClient,
-      aCollectionUri
+      (mockContainer as unknown) as Container
     );
 
-    const result = await model.deleteOneById(aEligibilityCheck.id);
+    const result = await model.deleteOneById(aEligibilityCheck.id).run();
 
-    expect(clientMock.deleteDocument).toHaveBeenCalledTimes(1);
-    expect(clientMock.deleteDocument.mock.calls[0][0]).toEqual(
-      `dbs/mockdb/colls/${ELIGIBILITY_CHECK_COLLECTION_NAME}/docs/${aRetrievedEligibilityCheck.id}`
-    );
-    expect(clientMock.deleteDocument.mock.calls[0][1]).toEqual({
-      partitionKey: aEligibilityCheck.id
-    });
+    expect(mockItem).toHaveBeenCalledWith(aEligibilityCheck.id);
+    expect(mockDelete).toHaveBeenCalledTimes(1);
     expect(isRight(result)).toBeTruthy();
     if (isRight(result)) {
       expect(result.value).toEqual(aEligibilityCheck.id);
@@ -197,28 +167,19 @@ describe("EligibilityCheckModel#deleteOneById", () => {
   });
 
   it("should return the error when delete fails", async () => {
-    const aQueryError = {};
-    const clientMock = {
-      deleteDocument: jest.fn((_, __, cb) => cb(aQueryError))
-    };
+    mockDelete.mockImplementationOnce(() => Promise.reject(queryError));
 
     const model = new EligibilityCheckModel(
-      (clientMock as unknown) as DocumentDb.DocumentClient,
-      aCollectionUri
+      (mockContainer as unknown) as Container
     );
 
-    const result = await model.deleteOneById(aEligibilityCheck.id);
+    const result = await model.deleteOneById(aEligibilityCheck.id).run();
 
-    expect(clientMock.deleteDocument).toHaveBeenCalledTimes(1);
-    expect(clientMock.deleteDocument.mock.calls[0][0]).toEqual(
-      `dbs/mockdb/colls/${ELIGIBILITY_CHECK_COLLECTION_NAME}/docs/${aRetrievedEligibilityCheck.id}`
-    );
-    expect(clientMock.deleteDocument.mock.calls[0][1]).toEqual({
-      partitionKey: aEligibilityCheck.id
-    });
+    expect(mockItem).toHaveBeenCalledTimes(1);
+    expect(mockDelete).toHaveBeenCalledTimes(1);
     expect(isLeft(result)).toBeTruthy();
     if (isLeft(result)) {
-      expect(result.value).toEqual(aQueryError);
+      expect(result.value).toEqual(CosmosErrorResponse(queryError));
     }
   });
 });
