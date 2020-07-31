@@ -1,5 +1,4 @@
 import * as df from "durable-functions";
-import { left, right } from "fp-ts/lib/Either";
 import { fromLeft } from "fp-ts/lib/IOEither";
 import { none, some } from "fp-ts/lib/Option";
 import { taskEither } from "fp-ts/lib/TaskEither";
