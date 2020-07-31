@@ -1,5 +1,6 @@
-import { QueryError } from "documentdb";
-import { left, right } from "fp-ts/lib/Either";
+import { left } from "fp-ts/lib/Either";
+import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
+import { CosmosErrors } from "io-functions-commons/dist/src/utils/cosmosdb_model";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { context } from "../../__mocks__/durable-functions";
 import { EligibilityCheckModel } from "../../models/eligibility_check";
@@ -25,7 +26,7 @@ describe("DeleteEligibilityCheckActivityHandler", () => {
   });
 
   it("should delete EligibilityCheck and return success ", async () => {
-    mockDeleteOneById.mockImplementationOnce(async _ => right(_));
+    mockDeleteOneById.mockImplementationOnce(_ => taskEither.of(_));
     const handler = getDeleteEligibilityCheckActivityHandler(
       mockEligibilityCheckModel
     );
@@ -37,13 +38,15 @@ describe("DeleteEligibilityCheckActivityHandler", () => {
     expect(decodedReponse.isRight()).toBeTruthy();
   });
   it("should returns success if delete EligibilityCheck returns Query Error with code 404", async () => {
-    const expectedQueryError: QueryError = {
-      body: "Not Found",
-      code: 404
+    const expectedQueryError: CosmosErrors = {
+      error: {
+        code: 404,
+        message: "Document not found",
+        name: "Not Found"
+      },
+      kind: "COSMOS_ERROR_RESPONSE"
     };
-    mockDeleteOneById.mockImplementationOnce(async _ =>
-      left(expectedQueryError)
-    );
+    mockDeleteOneById.mockImplementationOnce(_ => fromLeft(expectedQueryError));
     const handler = getDeleteEligibilityCheckActivityHandler(
       mockEligibilityCheckModel
     );
@@ -55,13 +58,15 @@ describe("DeleteEligibilityCheckActivityHandler", () => {
     expect(decodedReponse.isRight()).toBeTruthy();
   });
   it("should throw if delete EligibilityCheck returns an error", async () => {
-    const expectedQueryError: QueryError = {
-      body: "CODE BODY",
-      code: 1000
+    const expectedQueryError: CosmosErrors = {
+      error: {
+        code: 1000,
+        message: "Error message",
+        name: "Error name"
+      },
+      kind: "COSMOS_ERROR_RESPONSE"
     };
-    mockDeleteOneById.mockImplementationOnce(async _ =>
-      left(expectedQueryError)
-    );
+    mockDeleteOneById.mockImplementationOnce(_ => fromLeft(expectedQueryError));
     const handler = getDeleteEligibilityCheckActivityHandler(
       mockEligibilityCheckModel
     );
@@ -74,13 +79,15 @@ describe("DeleteEligibilityCheckActivityHandler", () => {
     }
   });
   it("should fail if EligibilityCheck does not exist", async () => {
-    const expectedQueryError: QueryError = {
-      body: "not found",
-      code: 404
+    const expectedQueryError: CosmosErrors = {
+      error: {
+        code: 404,
+        message: "Document not found",
+        name: "Not Found"
+      },
+      kind: "COSMOS_ERROR_RESPONSE"
     };
-    mockDeleteOneById.mockImplementationOnce(async _ =>
-      left(expectedQueryError)
-    );
+    mockDeleteOneById.mockImplementationOnce(_ => fromLeft(expectedQueryError));
     const handler = getDeleteEligibilityCheckActivityHandler(
       mockEligibilityCheckModel
     );
