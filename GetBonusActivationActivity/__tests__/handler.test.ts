@@ -1,5 +1,8 @@
 import { left, right } from "fp-ts/lib/Either";
-import { none, some } from "fp-ts/lib/Option";
+import { fromLeft } from "fp-ts/lib/IOEither";
+import { fromEither, none, some } from "fp-ts/lib/Option";
+import { taskEither } from "fp-ts/lib/TaskEither";
+import { CosmosErrors } from "io-functions-commons/dist/src/utils/cosmosdb_model";
 import { context } from "../../__mocks__/durable-functions";
 import {
   aBonusId,
@@ -17,7 +20,10 @@ import { getGetBonusActivationActivityHandler } from "../handler";
 
 jest.mock("../../utils/appinsights");
 
-const aQueryError = { code: 123, body: "foobar" };
+const aQueryError: CosmosErrors = {
+  error: { code: 123, name: "foobar", message: "foobar" },
+  kind: "COSMOS_ERROR_RESPONSE"
+};
 
 const aRetrievedBonusActivationProcessing: RetrievedBonusActivation = {
   ...aRetrievedBonusActivation,
@@ -25,8 +31,8 @@ const aRetrievedBonusActivationProcessing: RetrievedBonusActivation = {
 };
 
 // mockBonusActivationModel
-const mockBonusActivationFind = jest.fn().mockImplementation(async _ => {
-  return right(some(aRetrievedBonusActivationProcessing));
+const mockBonusActivationFind = jest.fn().mockImplementation(_ => {
+  return taskEither.of(some(aRetrievedBonusActivationProcessing));
 });
 const mockBonusActivationModel = ({
   findBonusActivationForUser: mockBonusActivationFind
@@ -51,30 +57,7 @@ describe("getGetBonusActivationActivityHandler", () => {
   });
 
   it("should throw an error on query error", async () => {
-    mockBonusActivationFind.mockImplementationOnce(async () =>
-      left(aQueryError)
-    );
-
-    const handler = getGetBonusActivationActivityHandler(
-      mockBonusActivationModel
-    );
-
-    try {
-      await handler(context, {
-        applicantFiscalCode: aFiscalCode,
-        bonusId: aBonusId
-      });
-      fail();
-    } catch (err) {
-      expect(err).toBeInstanceOf(Error);
-      expect(trackException).toHaveBeenCalled();
-    }
-  });
-
-  it("should throw an error on unhandled query exception", async () => {
-    mockBonusActivationFind.mockImplementationOnce(async () => {
-      throw new Error("any error");
-    });
+    mockBonusActivationFind.mockImplementationOnce(() => fromLeft(aQueryError));
 
     const handler = getGetBonusActivationActivityHandler(
       mockBonusActivationModel
@@ -93,7 +76,7 @@ describe("getGetBonusActivationActivityHandler", () => {
   });
 
   it("should return a permament error on bonus not found", async () => {
-    mockBonusActivationFind.mockImplementationOnce(async () => right(none));
+    mockBonusActivationFind.mockImplementationOnce(() => taskEither.of(none));
 
     const handler = getGetBonusActivationActivityHandler(
       mockBonusActivationModel
