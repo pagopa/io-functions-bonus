@@ -1,6 +1,8 @@
 import * as df from "durable-functions";
 import { left, right } from "fp-ts/lib/Either";
+import { fromLeft } from "fp-ts/lib/IOEither";
 import { none, some } from "fp-ts/lib/Option";
+import { taskEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import {
   context,
@@ -50,8 +52,8 @@ describe("GetEligibilityCheckHandler", () => {
       runtimeStatus: df.OrchestrationRuntimeStatus.Running
     }));
 
-    mockFind.mockImplementation(async (_, __) =>
-      right(some(aEligibilityCheckSuccessEligibleValid))
+    mockFind.mockImplementation((_, __) =>
+      taskEither.of(some(aEligibilityCheckSuccessEligibleValid))
     );
 
     const handler = GetEligibilityCheckHandler(mockEligibilityCheckModel);
@@ -71,8 +73,8 @@ describe("GetEligibilityCheckHandler", () => {
       customStatus: "COMPLETED"
     }));
 
-    mockFind.mockImplementation(async (_, __) =>
-      right(some(aEligibilityCheckSuccessEligible))
+    mockFind.mockImplementation((_, __) =>
+      taskEither.of(some(aEligibilityCheckSuccessEligible))
     );
 
     const handler = GetEligibilityCheckHandler(mockEligibilityCheckModel);
@@ -88,7 +90,7 @@ describe("GetEligibilityCheckHandler", () => {
       customStatus: "COMPLETED"
     }));
 
-    mockFind.mockImplementation(async (_, __) => right(none));
+    mockFind.mockImplementation((_, __) => taskEither.of(none));
 
     const handler = GetEligibilityCheckHandler(mockEligibilityCheckModel);
 
@@ -101,9 +103,7 @@ describe("GetEligibilityCheckHandler", () => {
       customStatus: "COMPLETED"
     }));
 
-    mockFind.mockImplementation(async (_, __) =>
-      left(new Error("Query Error"))
-    );
+    mockFind.mockImplementation((_, __) => fromLeft(new Error("Query Error")));
 
     const handler = GetEligibilityCheckHandler(mockEligibilityCheckModel);
 
