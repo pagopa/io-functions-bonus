@@ -1,4 +1,3 @@
-import { left, right } from "fp-ts/lib/Either";
 import { context } from "../../__mocks__/durable-functions";
 import { BonusLeaseModel } from "../../models/bonus_lease";
 import { PermanentFailure } from "../../utils/errors";
@@ -7,6 +6,7 @@ import {
   ReleaseFamilyLockActivitySuccess
 } from "../handler";
 
+import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import {
   aFamilyUID,
   aGenericQueryError,
@@ -17,11 +17,9 @@ import { trackException } from "../../utils/appinsights";
 jest.mock("../../utils/appinsights");
 
 // mockBonusActivationModel
-const mockBonusActivationDeleteOneById = jest
-  .fn()
-  .mockImplementation(async _ => {
-    return right("");
-  });
+const mockBonusActivationDeleteOneById = jest.fn().mockImplementation(_ => {
+  return taskEither.of("");
+});
 const mockBonusLeaseModel = ({
   deleteOneById: mockBonusActivationDeleteOneById
 } as unknown) as BonusLeaseModel;
@@ -43,8 +41,8 @@ describe("getReleaseFamilyLockActivityHandler", () => {
   });
 
   it("should return failure on lease not found", async () => {
-    mockBonusActivationDeleteOneById.mockImplementationOnce(async () =>
-      left(aNotFoundQueryError)
+    mockBonusActivationDeleteOneById.mockImplementationOnce(() =>
+      fromLeft(aNotFoundQueryError)
     );
 
     const handler = getReleaseFamilyLockActivityHandler(mockBonusLeaseModel);
@@ -58,8 +56,8 @@ describe("getReleaseFamilyLockActivityHandler", () => {
   });
 
   it("should throw on delete error", async () => {
-    mockBonusActivationDeleteOneById.mockImplementationOnce(async () =>
-      left(aGenericQueryError)
+    mockBonusActivationDeleteOneById.mockImplementationOnce(() =>
+      fromLeft(aGenericQueryError)
     );
 
     const handler = getReleaseFamilyLockActivityHandler(mockBonusLeaseModel);
