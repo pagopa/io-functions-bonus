@@ -8,6 +8,7 @@ import {
   CosmosDecodingError,
   CosmosErrorResponse,
   CosmosErrors,
+  CosmosResource,
   toCosmosErrorResponse
 } from "io-functions-commons/dist/src/utils/cosmosdb_model";
 import { wrapWithKind } from "io-functions-commons/dist/src/utils/types";
@@ -22,7 +23,7 @@ export const BONUS_ACTIVATION_COLLECTION_NAME = "bonus-activations";
 export const BONUS_ACTIVATION_MODEL_PK_FIELD = "id";
 
 export const RetrievedBonusActivation = wrapWithKind(
-  t.intersection([BonusActivationWithFamilyUID, BaseModel]),
+  t.intersection([BonusActivationWithFamilyUID, CosmosResource]),
   "IRetrievedBonusActivation" as const
 );
 

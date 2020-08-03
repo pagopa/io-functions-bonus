@@ -132,6 +132,10 @@ export const aBonusActivationWithFamilyUID: BonusActivationWithFamilyUID = {
 
 export const aRetrievedBonusActivation: RetrievedBonusActivation = {
   ...aBonusActivationWithFamilyUID,
+  _etag: "_etag",
+  _rid: "_rid",
+  _self: "_self",
+  _ts: 1,
   id: aBonusActivationId,
   kind: "IRetrievedBonusActivation"
 };
@@ -147,8 +151,10 @@ export const aBonusProcessing = BonusProcessing.decode({
 
 export const aRetrievedBonusProcessing = RetrievedBonusProcessing.decode({
   ...aBonusProcessing,
-  _self: "xyz",
-  _ts: 123,
+  _etag: "_etag",
+  _rid: "_rid",
+  _self: "_self",
+  _ts: 1,
   kind: "IRetrievedBonusProcessing"
 }).getOrElseL(_ => {
   throw new Error(
@@ -173,6 +179,10 @@ export const aNewBonusLease: NewBonusLease = {
 
 export const aRetrievedBonusLease: RetrievedBonusLease = {
   ...aBonusLease,
+  _etag: "_etag",
+  _rid: "_rid",
+  _self: "_self",
+  _ts: 1,
   kind: "IRetrievedBonusLease"
 };
 
@@ -184,6 +194,10 @@ export const aUserBonus: UserBonus = {
 
 export const aRetrievedUserBonus: RetrievedUserBonus = {
   ...aUserBonus,
+  _etag: "_etag",
+  _rid: "_rid",
+  _self: "_self",
+  _ts: 1,
   id: (aUserBonus.bonusId as unknown) as NonEmptyString,
   kind: "IRetrievedUserBonus"
 };

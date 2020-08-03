@@ -23,6 +23,10 @@ const aBonusLease: BonusLease = {
 
 const aRetrievedBonusLease: RetrievedBonusLease = {
   ...aBonusLease,
+  _etag: "_etag",
+  _rid: "_rid",
+  _self: "_self",
+  _ts: 1,
   kind: "IRetrievedBonusLease"
 };
 

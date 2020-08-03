@@ -47,6 +47,10 @@ const aEligibilityCheck: EligibilityCheck = aEligibilityCheckSuccess;
 
 const aRetrievedEligibilityCheck: RetrievedEligibilityCheck = {
   ...aEligibilityCheck,
+  _etag: "_etag",
+  _rid: "_rid",
+  _self: "_self",
+  _ts: 1,
   kind: "IRetrievedEligibilityCheck"
 };
 
