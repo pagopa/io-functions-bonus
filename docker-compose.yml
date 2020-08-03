@@ -17,8 +17,8 @@ services:
       - "5860:5860"
     networks:
       - io-fn
-    depends_on:
-      - fnstorage
+    #depends_on:
+    #  - fnstorage
     volumes:
       - .:/usr/src/app
 
