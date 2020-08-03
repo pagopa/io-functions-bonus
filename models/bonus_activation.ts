@@ -56,7 +56,6 @@ export class BonusActivationModel extends CosmosdbModel<
     bonusId: BonusCode,
     fiscalCode: FiscalCode
   ): TaskEither<CosmosErrors, Option<RetrievedBonusActivation>> {
-    const bonusActivationAlias = "bonusActivation";
     return this.findOneByQuery({
       parameters: [
         {
@@ -68,7 +67,7 @@ export class BonusActivationModel extends CosmosdbModel<
           value: fiscalCode
         }
       ],
-      query: `SELECT b as ${bonusActivationAlias} FROM b JOIN familyMember IN b.dsuRequest.familyMembers WHERE b.${BONUS_ACTIVATION_MODEL_PK_FIELD} = @bonusId AND familyMember.fiscalCode = @fiscalCode`
+      query: `SELECT VALUE b FROM b JOIN familyMember IN b.dsuRequest.familyMembers WHERE b.${BONUS_ACTIVATION_MODEL_PK_FIELD} = @bonusId AND familyMember.fiscalCode = @fiscalCode`
     });
   }
 
