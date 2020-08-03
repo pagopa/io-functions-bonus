@@ -4,6 +4,7 @@ import {
   BaseModel,
   CosmosdbModel,
   CosmosErrors,
+  CosmosResource,
   toCosmosErrorResponse
 } from "io-functions-commons/dist/src/utils/cosmosdb_model";
 import { wrapWithKind } from "io-functions-commons/dist/src/utils/types";
@@ -21,7 +22,7 @@ export const BonusLease = t.interface({
 export type BonusLease = t.TypeOf<typeof BonusLease>;
 
 export const RetrievedBonusLease = wrapWithKind(
-  t.intersection([BonusLease, BaseModel]),
+  t.intersection([BonusLease, CosmosResource]),
   "IRetrievedBonusLease" as const
 );
 export type RetrievedBonusLease = t.TypeOf<typeof RetrievedBonusLease>;

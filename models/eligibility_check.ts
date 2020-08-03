@@ -10,6 +10,7 @@ import {
   BaseModel,
   CosmosdbModel,
   CosmosErrors,
+  CosmosResource,
   toCosmosErrorResponse
 } from "io-functions-commons/dist/src/utils/cosmosdb_model";
 import { wrapWithKind } from "io-functions-commons/dist/src/utils/types";
@@ -20,7 +21,7 @@ export const ELIGIBILITY_CHECK_COLLECTION_NAME = "eligibility-checks";
 export const ELIGIBILITY_CHECK_MODEL_PK_FIELD = "id";
 
 export const RetrievedEligibilityCheck = wrapWithKind(
-  t.intersection([EligibilityCheck, BaseModel]),
+  t.intersection([EligibilityCheck, CosmosResource]),
   "IRetrievedEligibilityCheck" as const
 );
 export type RetrievedEligibilityCheck = t.TypeOf<

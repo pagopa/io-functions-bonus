@@ -27,6 +27,10 @@ const aUserBonus: UserBonus = {
 
 const aRetrievedUserBonus: RetrievedUserBonus = {
   ...aUserBonus,
+  _etag: "_etag",
+  _rid: "_rid",
+  _self: "_self",
+  _ts: 1,
   id: aUserBonusId,
   kind: "IRetrievedUserBonus"
 };
