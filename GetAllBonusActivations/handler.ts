@@ -48,10 +48,7 @@ export function GetAllBonusActivationsHandler(
           return ResponseErrorInternal(err.kind); // TODO: Fix title response
         },
         userBonusActivationsIterator => {
-          const bonusActivations = filterAsyncIterator<
-            BonusActivationItem | undefined,
-            BonusActivationItem
-          >(
+          const bonusActivations = filterAsyncIterator(
             mapAsyncIterator(userBonusActivationsIterator, val =>
               isRight(val) ? toApiUserBonus(val.value) : undefined
             ),
