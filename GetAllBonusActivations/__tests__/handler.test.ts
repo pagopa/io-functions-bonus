@@ -62,6 +62,9 @@ describe("GetAllBonusActivationsHandler", () => {
     mockNext.mockImplementationOnce(() =>
       Promise.resolve({ done: true, value: undefined })
     );
+    mockFindBonusActivations.mockImplementationOnce(() =>
+      taskEither.of(mockAsyncIterator)
+    );
     const handler = GetAllBonusActivationsHandler(mockUserBonusModel);
 
     const response = await handler(context, aFiscalCode);
