@@ -25,6 +25,7 @@ import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { BonusActivationItem } from "../generated/definitions/BonusActivationItem";
 import { UserBonusModel } from "../models/user_bonus";
 import { toApiUserBonus } from "../utils/conversions";
+import { cosmosErrorsToReadableMessage } from "../utils/errors";
 
 type IGetAllBonusActivationsHandler = (
   context: Context,
@@ -36,7 +37,7 @@ type IGetAllBonusActivationsHandler = (
 export function GetAllBonusActivationsHandler(
   userBonusModel: UserBonusModel
 ): IGetAllBonusActivationsHandler {
-  return (_, fiscalCode) => {
+  return (context, fiscalCode) => {
     return userBonusModel
       .findBonusActivations(fiscalCode)
       .map(flattenAsyncIterator)
@@ -45,7 +46,14 @@ export function GetAllBonusActivationsHandler(
         | IResponseErrorInternal
       >(
         err => {
-          return ResponseErrorInternal(err.kind); // TODO: Fix title response
+          context.log.error(
+            `GetAllBonusActivations|ERROR|Query Error: [${cosmosErrorsToReadableMessage(
+              err
+            )}]`
+          );
+          return ResponseErrorInternal(
+            "Internal Server Error on findBonusActivations"
+          );
         },
         userBonusActivationsIterator => {
           const bonusActivations = filterAsyncIterator(
