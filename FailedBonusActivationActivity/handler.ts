@@ -6,7 +6,7 @@ import {
   QueryError
 } from "io-functions-commons/dist/src/utils/documentdb";
 import * as t from "io-ts";
-import { NonEmptyString } from "italia-ts-commons/lib/strings";
+import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { BonusActivationStatusEnum } from "../generated/models/BonusActivationStatus";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
 import { BonusCode } from "../generated/models/BonusCode";
@@ -73,7 +73,7 @@ const deleteEligibilityCheck = (
 ): TaskEither<QueryError, string> => {
   return fromQueryEither(() =>
     eligibilityCheckModel.deleteOneById(
-      bonusActivation.id as BonusCode & NonEmptyString
+      bonusActivation.applicantFiscalCode as FiscalCode & NonEmptyString
     )
   );
 };
