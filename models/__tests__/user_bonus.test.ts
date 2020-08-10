@@ -88,7 +88,10 @@ describe("UserBonusModel#find", () => {
     const model = new UserBonusModel((mockContainer as unknown) as Container);
 
     const result = await model
-      .find(aRetrievedUserBonus.id, aRetrievedUserBonus.id)
+      .find([
+        aRetrievedUserBonus.id,
+        (aRetrievedUserBonus.id as unknown) as FiscalCode
+      ])
       .run();
 
     expect(mockContainer.item).toHaveBeenCalledTimes(1);
@@ -110,7 +113,10 @@ describe("UserBonusModel#find", () => {
     const model = new UserBonusModel((mockContainer as unknown) as Container);
 
     const result = await model
-      .find(aRetrievedUserBonus.id, aRetrievedUserBonus.id)
+      .find([
+        aRetrievedUserBonus.id,
+        (aRetrievedUserBonus.id as unknown) as FiscalCode
+      ])
       .run();
 
     expect(isLeft(result)).toBeTruthy();

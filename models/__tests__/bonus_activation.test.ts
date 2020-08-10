@@ -68,9 +68,7 @@ describe("BonusActivationModel#find", () => {
       (mockContainer as unknown) as Container
     );
 
-    const result = await model
-      .find(aRetrievedBonusActivation.id, aRetrievedBonusActivation.id)
-      .run();
+    const result = await model.find([aRetrievedBonusActivation.id]).run();
 
     expect(mockContainer.item).toHaveBeenCalledTimes(1);
     expect(mockContainer.item).toBeCalledWith(
@@ -118,7 +116,10 @@ describe("BonusActivationModel#replace", () => {
 
     const result = await model.replace(aBonusActivationWithFamilyUID).run();
 
-    expect(mockItem).toHaveBeenCalledWith(aBonusActivationWithFamilyUID.id);
+    expect(mockItem).toHaveBeenCalledWith(
+      aBonusActivationWithFamilyUID.id,
+      aBonusActivationWithFamilyUID.id
+    );
     expect(mockReplace).toHaveBeenCalledTimes(1);
     expect(mockReplace).toHaveBeenCalledWith(aBonusActivationWithFamilyUID);
     expect(isRight(result)).toBeTruthy();

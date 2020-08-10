@@ -14,7 +14,7 @@ import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { BonusCode } from "../generated/models/BonusCode";
 
 export const USER_BONUS_COLLECTION_NAME = "user-bonuses";
-export const USER_BONUS_MODEL_PK_FIELD = "fiscalCode";
+export const USER_BONUS_MODEL_PK_FIELD = "fiscalCode" as const;
 
 const UserBonus = t.interface({
   // Id of the Bonus available to the user
@@ -41,7 +41,8 @@ export type NewUserBonus = t.TypeOf<typeof NewUserBonus>;
 export class UserBonusModel extends CosmosdbModel<
   UserBonus,
   NewUserBonus,
-  RetrievedUserBonus
+  RetrievedUserBonus,
+  typeof USER_BONUS_MODEL_PK_FIELD
 > {
   /**
    * Creates a new UserBonus model

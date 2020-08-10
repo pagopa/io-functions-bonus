@@ -21,7 +21,7 @@ import {
   ResponseSuccessAccepted,
   ResponseSuccessJson
 } from "italia-ts-commons/lib/responses";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { EligibilityCheck } from "../generated/definitions/EligibilityCheck";
 import { EligibilityCheckSuccessEligible } from "../generated/definitions/EligibilityCheckSuccessEligible";
 import { EligibilityCheckModel } from "../models/eligibility_check";
@@ -59,7 +59,7 @@ export function GetEligibilityCheckHandler(
       return ResponseSuccessAccepted("Still running");
     }
     return eligibilityCheckModel
-      .find(fiscalCode, fiscalCode)
+      .find([(fiscalCode as unknown) as NonEmptyString])
       .fold<
         Promise<
           // tslint:disable-next-line: max-union-size

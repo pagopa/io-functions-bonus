@@ -18,7 +18,7 @@ import * as t from "io-ts";
 import { EligibilityCheck } from "../generated/models/EligibilityCheck";
 
 export const ELIGIBILITY_CHECK_COLLECTION_NAME = "eligibility-checks";
-export const ELIGIBILITY_CHECK_MODEL_PK_FIELD = "id";
+export const ELIGIBILITY_CHECK_MODEL_PK_FIELD = "id" as const;
 
 export const RetrievedEligibilityCheck = wrapWithKind(
   t.intersection([EligibilityCheck, CosmosResource]),
@@ -58,7 +58,7 @@ export class EligibilityCheckModel extends CosmosdbModel<
     documentId: EligibilityCheck["id"]
   ): TaskEither<CosmosErrors, string> {
     return tryCatch<CosmosErrors, ItemResponse<EligibilityCheck>>(
-      () => this.container.item(documentId).delete(),
+      () => this.container.item(documentId, documentId).delete(),
       toCosmosErrorResponse
     ).map(_ => documentId);
   }

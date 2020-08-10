@@ -45,6 +45,7 @@ import { genRandomBonusCode } from "../utils/bonusCode";
 import { QueueService } from "azure-storage";
 import { toString } from "fp-ts/lib/function";
 import { CosmosErrors } from "io-functions-commons/dist/src/utils/cosmosdb_model";
+import { errorsToReadableMessages } from "italia-ts-commons/lib/reporters";
 import { Millisecond } from "italia-ts-commons/lib/units";
 import { ContinueBonusActivationInput } from "../ContinueBonusActivation";
 import { BonusActivation } from "../generated/definitions/BonusActivation";
@@ -108,19 +109,30 @@ export const getLatestValidDSU = (
   | IResponseErrorInternal,
   EligibilityCheckSuccessEligible
 > =>
-  eligibilityCheckModel.find(fiscalCode, fiscalCode).foldTaskEither(
-    err =>
-      fromLeft(
-        ResponseErrorInternal(
-          `Error reading DSU: ${cosmosErrorsToReadableMessage(err)}`
-        )
-      ),
-    maybeEligibilityCheck =>
-      maybeEligibilityCheck.fold<ReturnType<typeof getLatestValidDSU>>(
-        fromLeft(ResponseErrorForbiddenNotAuthorized),
-        eligibilityCheckToResponse
+  fromEither(
+    NonEmptyString.decode(fiscalCode).mapLeft(err =>
+      ResponseErrorInternal(
+        `Invalid FiscalCode parameter: [${errorsToReadableMessages(err)}]`
       )
-  );
+    )
+  )
+    .chain(_ =>
+      eligibilityCheckModel
+        .find([_])
+        .mapLeft(err =>
+          ResponseErrorInternal(
+            `Error reading DSU: ${cosmosErrorsToReadableMessage(err)}`
+          )
+        )
+    )
+    .foldTaskEither(
+      _ => fromLeft(_),
+      maybeEligibilityCheck =>
+        maybeEligibilityCheck.fold<ReturnType<typeof getLatestValidDSU>>(
+          fromLeft(ResponseErrorForbiddenNotAuthorized),
+          eligibilityCheckToResponse
+        )
+    );
 
 // CosmosDB conflict: primary key violation
 const shouldRetryOn409 = (err: CosmosErrors) =>
