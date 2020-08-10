@@ -9,7 +9,6 @@ import * as t from "io-ts";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { BonusActivationStatusEnum } from "../generated/models/BonusActivationStatus";
 import { BonusActivationWithFamilyUID } from "../generated/models/BonusActivationWithFamilyUID";
-import { BonusCode } from "../generated/models/BonusCode";
 import {
   BonusActivationModel,
   RetrievedBonusActivation
