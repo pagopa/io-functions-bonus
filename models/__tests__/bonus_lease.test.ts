@@ -84,7 +84,7 @@ describe("BonusLeaseModel#deleteOneById", () => {
 
     const result = await model.deleteOneById(aBonusLease.id).run();
 
-    expect(mockItem).toHaveBeenCalledWith(aBonusLease.id);
+    expect(mockItem).toHaveBeenCalledWith(aBonusLease.id, aBonusLease.id);
     expect(mockDelete).toHaveBeenCalledTimes(1);
     expect(isRight(result)).toBeTruthy();
     if (isRight(result)) {

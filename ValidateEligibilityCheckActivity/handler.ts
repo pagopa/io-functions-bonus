@@ -54,7 +54,7 @@ export function getValidateEligibilityCheckActivityHandler(
           }))
         );
         return bonusLeaseModel
-          .find(familyUID, familyUID)
+          .find([familyUID])
           .foldTaskEither<Error, ValidateEligibilityCheckActivityOutput>(
             error =>
               fromEither(

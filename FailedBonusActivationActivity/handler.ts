@@ -70,6 +70,7 @@ const deleteEligibilityCheck = (
   bonusActivation: BonusActivationWithFamilyUID
 ): TaskEither<CosmosErrors, string> =>
   eligibilityCheckModel.deleteOneById(
+    // TODO: Must be this bonusActivation.applicantFiscalCode?
     bonusActivation.id as BonusCode & NonEmptyString
   );
 

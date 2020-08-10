@@ -59,7 +59,7 @@ describe("GetEligibilityCheckHandler", () => {
 
     const response = await handler(context, aFiscalCode);
 
-    expect(mockFind).toBeCalledWith(aFiscalCode, aFiscalCode);
+    expect(mockFind).toBeCalledWith([aFiscalCode]);
     expect(mockTerminate).toBeCalledWith(
       makeStartEligibilityCheckOrchestratorId(aFiscalCode),
       "Success"
@@ -80,7 +80,7 @@ describe("GetEligibilityCheckHandler", () => {
 
     const response = await handler(context, aFiscalCode);
 
-    expect(mockFind).toBeCalledWith(aFiscalCode, aFiscalCode);
+    expect(mockFind).toBeCalledWith([aFiscalCode]);
 
     expect(response.kind).toBe("IResponseErrorGone");
   });

@@ -14,7 +14,7 @@ import { NonEmptyString } from "italia-ts-commons/lib/strings";
 export const BONUS_LEASE_COLLECTION_NAME = "bonus-leases";
 
 // Computed unique ID from family members fiscal codes
-export const BONUS_LEASE_MODEL_PK_FIELD = "id";
+export const BONUS_LEASE_MODEL_PK_FIELD = "id" as const;
 
 export const BonusLease = t.interface({
   id: NonEmptyString
@@ -57,7 +57,7 @@ export class BonusLeaseModel extends CosmosdbModel<
     documentId: BonusLease["id"]
   ): TaskEither<CosmosErrors, string> {
     return tryCatch<CosmosErrors, ItemResponse<BonusLease>>(
-      () => this.container.item(documentId).delete(),
+      () => this.container.item(documentId, documentId).delete(),
       toCosmosErrorResponse
     ).map(_ => documentId);
   }

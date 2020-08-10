@@ -15,7 +15,7 @@ import { BonusCode } from "../generated/models/BonusCode";
 export const BONUS_PROCESSING_COLLECTION_NAME = "bonus-processing";
 
 // Applicant fiscal code
-export const BONUS_PROCESSING_MODEL_PK_FIELD = "id";
+export const BONUS_PROCESSING_MODEL_PK_FIELD = "id" as const;
 
 export const BonusProcessing = t.interface({
   bonusId: BonusCode,
@@ -61,7 +61,7 @@ export class BonusProcessingModel extends CosmosdbModel<
     documentId: BonusProcessing["id"]
   ): TaskEither<CosmosErrors, string> {
     return tryCatch<CosmosErrors, ItemResponse<BonusProcessing>>(
-      () => this.container.item(documentId).delete(),
+      () => this.container.item(documentId, documentId).delete(),
       toCosmosErrorResponse
     ).map(_ => documentId);
   }

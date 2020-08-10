@@ -20,7 +20,7 @@ import { BonusCode } from "../generated/models/BonusCode";
 export const BONUS_ACTIVATION_COLLECTION_NAME = "bonus-activations";
 
 // 12 characters unique ID
-export const BONUS_ACTIVATION_MODEL_PK_FIELD = "id";
+export const BONUS_ACTIVATION_MODEL_PK_FIELD = "id" as const;
 
 export const RetrievedBonusActivation = wrapWithKind(
   t.intersection([BonusActivationWithFamilyUID, CosmosResource]),
@@ -81,7 +81,7 @@ export class BonusActivationModel extends CosmosdbModel<
     document: BonusActivationWithFamilyUID
   ): TaskEither<CosmosErrors, RetrievedBonusActivation> {
     return tryCatch<CosmosErrors, ItemResponse<BonusActivationWithFamilyUID>>(
-      () => this.container.item(document.id).replace(document),
+      () => this.container.item(document.id, document.id).replace(document),
       toCosmosErrorResponse
     )
       .map(_ => fromNullable(_.resource))

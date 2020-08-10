@@ -112,9 +112,7 @@ describe("EligibilityCheckModel#find", () => {
       (mockContainer as unknown) as Container
     );
 
-    const result = await model
-      .find(aRetrievedEligibilityCheck.id, aRetrievedEligibilityCheck.id)
-      .run();
+    const result = await model.find([aRetrievedEligibilityCheck.id]).run();
 
     expect(mockContainer.item).toHaveBeenCalledTimes(1);
     expect(mockContainer.item).toBeCalledWith(
@@ -136,9 +134,7 @@ describe("EligibilityCheckModel#find", () => {
       (mockContainer as unknown) as Container
     );
 
-    const result = await model
-      .find(aRetrievedEligibilityCheck.id, aRetrievedEligibilityCheck.id)
-      .run();
+    const result = await model.find([aRetrievedEligibilityCheck.id]).run();
 
     expect(isLeft(result)).toBeTruthy();
     if (isLeft(result)) {
@@ -162,7 +158,10 @@ describe("EligibilityCheckModel#deleteOneById", () => {
 
     const result = await model.deleteOneById(aEligibilityCheck.id).run();
 
-    expect(mockItem).toHaveBeenCalledWith(aEligibilityCheck.id);
+    expect(mockItem).toHaveBeenCalledWith(
+      aEligibilityCheck.id,
+      aEligibilityCheck.id
+    );
     expect(mockDelete).toHaveBeenCalledTimes(1);
     expect(isRight(result)).toBeTruthy();
     if (isRight(result)) {
