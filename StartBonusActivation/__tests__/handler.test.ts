@@ -446,7 +446,7 @@ describe("StartBonusActivationHandler", () => {
     expect(response.kind).toBe("IResponseSuccessRedirectToResource");
   });
 
-  it("should ignore failures on reading bonus processing", async () => {
+  it("should handle failure on reading bonus processing", async () => {
     mockBonusProcessingFind.mockImplementationOnce(async () => {
       throw new Error("any failure");
     });
@@ -463,7 +463,7 @@ describe("StartBonusActivationHandler", () => {
     const response = await handler(context, aFiscalCode);
 
     // just a success result
-    expect(response.kind).toBe("IResponseSuccessRedirectToResource");
+    expect(response.kind).toBe("IResponseErrorInternal");
   });
 
   it("should release family lock when message enqueing fail", async () => {

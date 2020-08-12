@@ -87,12 +87,13 @@ export function StartBonusActivationHandler(
           >(
             err => {
               context.log.warn(
-                `StartBonusActivationHandler|WARN|Failed reading BonusProcessing for fiscalCode: ${fiscalCode}. Reason: ${JSON.stringify(
+                `StartBonusActivationHandler|WARN|Failed reading BonusProcessing|ERR=${JSON.stringify(
                   err
                 )}`
               );
-              // we consider failures as record not found
-              return taskEither.of(none);
+              return fromLeft(
+                ResponseErrorInternal("Failed reading BonusProcessing")
+              );
             },
             _ => taskEither.of(_)
           )
