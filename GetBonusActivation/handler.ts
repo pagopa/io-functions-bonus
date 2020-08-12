@@ -43,6 +43,11 @@ export function GetBonusActivationHandler(
   bonusActivationModel: BonusActivationModel
 ): IGetBonusActivationHandler {
   return async (context, fiscalCode, bonusId) => {
+    context.log.info(
+      `GetBonusActivationHandler|
+      ${JSON.stringify(fiscalCode)}|
+      ${JSON.stringify(bonusId)}`
+    );
     return await tryCatch(
       () =>
         bonusActivationModel.findBonusActivationForUser(bonusId, fiscalCode),
