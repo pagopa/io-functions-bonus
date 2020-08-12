@@ -7,7 +7,7 @@
       "leaseCollectionName": "change-feed-leases",
       "leaseCollectionPrefix": "ec",
       "connectionStringSetting": "COSMOSDB_CONNECTION_STRING",
-      "databaseName": "%COSMOSDB_BONUS_DATABASE_NAME%",
+      "databaseName": "db",
       "collectionName": "eligibility-checks",
       "createLeaseCollectionIfNotExists": true,
       "startFromBeginning": false
