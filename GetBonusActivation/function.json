@@ -21,7 +21,7 @@
     {
       "type": "cosmosDB",
       "name": "processingBonusIdIn",
-      "databaseName": "%COSMOSDB_BONUS_DATABASE_NAME%",
+      "databaseName": "db",
       "collectionName": "bonus-processing",
       "connectionStringSetting": "COSMOSDB_CONNECTION_STRING",
       "direction": "in",
