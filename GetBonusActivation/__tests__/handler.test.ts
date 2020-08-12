@@ -5,24 +5,10 @@ import { context } from "../../__mocks__/durable-functions";
 import {
   aBonusId,
   aFiscalCode,
-  aRetrievedBonusActivation,
-  aRetrievedBonusProcessing
+  aRetrievedBonusActivation
 } from "../../__mocks__/mocks";
 import { BonusActivationModel } from "../../models/bonus_activation";
-import { BonusProcessingModel } from "../../models/bonus_processing";
 import { GetBonusActivationHandler } from "../handler";
-
-const mockBonusProcessingCreate = jest.fn().mockImplementation(async _ => {
-  return right(aRetrievedBonusProcessing);
-});
-const mockBonusProcessingFind = jest.fn().mockImplementation(async () =>
-  // happy path: retrieve a valid eligible check
-  right(none)
-);
-const mockBonusProcessingModel = ({
-  create: mockBonusProcessingCreate,
-  find: mockBonusProcessingFind
-} as unknown) as BonusProcessingModel;
 
 // mockBonusActivationModel
 const mockBonusActivationFindBonusActivationForUser = jest
@@ -36,10 +22,7 @@ const mockBonusActivationModel = ({
 
 describe("GetBonusActivationHandler", () => {
   it("should return success of everything is fine", async () => {
-    const handler = GetBonusActivationHandler(
-      mockBonusActivationModel,
-      mockBonusProcessingModel
-    );
+    const handler = GetBonusActivationHandler(mockBonusActivationModel);
 
     const result = await handler(context, aFiscalCode, aBonusId);
 
@@ -55,10 +38,7 @@ describe("GetBonusActivationHandler", () => {
         throw new Error("any error");
       }
     );
-    const handler = GetBonusActivationHandler(
-      mockBonusActivationModel,
-      mockBonusProcessingModel
-    );
+    const handler = GetBonusActivationHandler(mockBonusActivationModel);
 
     const result = await handler(context, aFiscalCode, aBonusId);
 
@@ -72,10 +52,7 @@ describe("GetBonusActivationHandler", () => {
     mockBonusActivationFindBonusActivationForUser.mockImplementationOnce(
       async () => left(new Error("any error"))
     );
-    const handler = GetBonusActivationHandler(
-      mockBonusActivationModel,
-      mockBonusProcessingModel
-    );
+    const handler = GetBonusActivationHandler(mockBonusActivationModel);
 
     const result = await handler(context, aFiscalCode, aBonusId);
 
@@ -89,10 +66,7 @@ describe("GetBonusActivationHandler", () => {
     mockBonusActivationFindBonusActivationForUser.mockImplementationOnce(
       async () => right(none)
     );
-    const handler = GetBonusActivationHandler(
-      mockBonusActivationModel,
-      mockBonusProcessingModel
-    );
+    const handler = GetBonusActivationHandler(mockBonusActivationModel);
 
     const result = await handler(context, aFiscalCode, aBonusId);
 
