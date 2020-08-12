@@ -1,12 +1,7 @@
 import { Context } from "@azure/functions";
 import * as express from "express";
 import { identity } from "fp-ts/lib/function";
-import { Option } from "fp-ts/lib/Option";
-import { fromEither, TaskEither, tryCatch } from "fp-ts/lib/TaskEither";
-import {
-  fromQueryEither,
-  QueryError
-} from "io-functions-commons/dist/src/utils/documentdb";
+import { fromEither, tryCatch } from "fp-ts/lib/TaskEither";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import { FiscalCodeMiddleware } from "io-functions-commons/dist/src/utils/middlewares/fiscalcode";
 import { RequiredParamMiddleware } from "io-functions-commons/dist/src/utils/middlewares/required_param";
@@ -31,17 +26,7 @@ import { BonusActivationStatusEnum } from "../generated/definitions/BonusActivat
 import { BonusCode } from "../generated/definitions/BonusCode";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { BonusActivationModel } from "../models/bonus_activation";
-import {
-  BonusProcessing,
-  BonusProcessingModel
-} from "../models/bonus_processing";
 import { toApiBonusActivation } from "../utils/conversions";
-
-export const getBonusProcessing = (
-  bonusProcessingModel: BonusProcessingModel,
-  fiscalCode: FiscalCode
-): TaskEither<QueryError, Option<BonusProcessing>> =>
-  fromQueryEither(() => bonusProcessingModel.find(fiscalCode, fiscalCode));
 
 type IGetBonusActivationHandlerOutput =
   | IResponseSuccessJson<BonusActivation>
