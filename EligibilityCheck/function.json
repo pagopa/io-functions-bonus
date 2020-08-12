@@ -17,26 +17,6 @@
       "name": "starter",
       "type": "durableClient",
       "direction": "in"
-    },
-    {
-      "type": "cosmosDB",
-      "name": "processingBonusIdIn",
-      "databaseName": "db",
-      "collectionName": "bonus-processing",
-      "connectionStringSetting": "COSMOSDB_CONNECTION_STRING",
-      "direction": "in",
-      "Id": "{fiscalcode}",
-      "PartitionKey": "{fiscalcode}"
-    },
-    {
-      "type": "cosmosDB",
-      "name": "eligibilityCheck",
-      "databaseName": "db",
-      "collectionName": "eligibility-checks",
-      "connectionStringSetting": "COSMOSDB_CONNECTION_STRING",
-      "direction": "in",
-      "Id": "{fiscalcode}",
-      "PartitionKey": "{fiscalcode}"
     }
   ],
   "scriptFile": "../dist/EligibilityCheck/index.js"
