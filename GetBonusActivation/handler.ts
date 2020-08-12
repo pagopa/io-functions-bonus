@@ -1,14 +1,8 @@
 import { Context } from "@azure/functions";
 import * as express from "express";
 import { isSome, Option } from "fp-ts/lib/Option";
-import { Task } from "fp-ts/lib/Task";
-import {
-  fromEither,
-  fromLeft,
-  TaskEither,
-  taskEither,
-  tryCatch
-} from "fp-ts/lib/TaskEither";
+import { task } from "fp-ts/lib/Task";
+import { fromEither, TaskEither, tryCatch } from "fp-ts/lib/TaskEither";
 import {
   fromQueryEither,
   QueryError
@@ -39,8 +33,8 @@ import {
   BonusProcessing,
   BonusProcessingModel
 } from "../models/bonus_processing";
-import { checkBonusActivationIsRunning } from "../StartBonusActivation/locks";
 import { toApiBonusActivation } from "../utils/conversions";
+import { checkBonusActivationIsRunning } from "./locks";
 
 export const getBonusProcessing = (
   bonusProcessingModel: BonusProcessingModel,
@@ -80,11 +74,11 @@ export function GetBonusActivationHandler(
         err => {
           const error = `GetBonusActivation|ERROR|Error: [${err.message}]`;
           context.log.error(error);
-          return new Task(async () => ResponseErrorInternal(error));
+          return task.of(ResponseErrorInternal(error));
         },
         maybeBonusActivation => {
           if (isSome(maybeBonusActivation)) {
-            return new Task(async () =>
+            return task.of(
               toApiBonusActivation(maybeBonusActivation.value).fold<
                 IResponseSuccessJson<BonusActivation> | IResponseErrorInternal
               >(
@@ -101,24 +95,18 @@ export function GetBonusActivationHandler(
           }
 
           return getBonusProcessing(bonusProcessingModel, fiscalCode)
-            .foldTaskEither<
-              IResponseErrorInternal | IResponseSuccessAccepted<InstanceId>,
-              Option<BonusProcessing>
-            >(
-              err => {
-                context.log.warn(
-                  `StartBonusActivationHandler|WARN|Failed reading BonusProcessing|ERR=${JSON.stringify(
-                    err
-                  )}`
-                );
-                return fromLeft(
-                  ResponseErrorInternal("Failed reading BonusProcessing")
-                );
-              },
-              _ => taskEither.of(_)
-            )
+            .mapLeft<
+              IResponseErrorInternal | IResponseSuccessAccepted<InstanceId>
+            >(err => {
+              context.log.warn(
+                `StartBonusActivationHandler|WARN|Failed reading BonusProcessing|ERR=${JSON.stringify(
+                  err
+                )}`
+              );
+              return ResponseErrorInternal("Failed reading BonusProcessing");
+            })
             .chain(maybeBonusProcessing =>
-              checkBonusActivationIsRunning(maybeBonusProcessing)
+              fromEither(checkBonusActivationIsRunning(maybeBonusProcessing))
             )
             .fold<IGetBonusActivationHandlerOutput>(
               // When the bonus is not found into the database but a bonus activation
