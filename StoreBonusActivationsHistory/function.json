@@ -7,7 +7,7 @@
       "leaseCollectionName": "change-feed-leases",
       "leaseCollectionPrefix": "ba",
       "connectionStringSetting": "COSMOSDB_CONNECTION_STRING",
-      "databaseName": "db",
+      "databaseName": "%COSMOSDB_BONUS_DATABASE_NAME%",
       "collectionName": "bonus-activations",
       "createLeaseCollectionIfNotExists": true,
       "startFromBeginning": false
