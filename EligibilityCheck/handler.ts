@@ -53,6 +53,8 @@ export function EligibilityCheckHandler(
   now: () => Date = () => new Date()
 ): IEligibilityCheckHandler {
   return async (context, fiscalCode) => {
+    context.log.info(`EligibilityCheckHandler|${fiscalCode}`);
+
     const client = df.getClient(context);
 
     // If a bonus activation for that user is in progress
