@@ -1,12 +1,10 @@
 import { Container } from "@azure/cosmos";
-import { tryCatch2v } from "fp-ts/lib/Either";
-import { fromEither, TaskEither } from "fp-ts/lib/TaskEither";
+import { TaskEither, taskEither } from "fp-ts/lib/TaskEither";
 import {
   BaseModel,
   CosmosdbModel,
   CosmosErrors,
-  CosmosResource,
-  toCosmosErrorResponse
+  CosmosResource
 } from "io-functions-commons/dist/src/utils/cosmosdb_model";
 import { wrapWithKind } from "io-functions-commons/dist/src/utils/types";
 import * as t from "io-ts";
@@ -69,6 +67,6 @@ export class UserBonusModel extends CosmosdbModel<
       ],
       query: `SELECT * FROM m WHERE m.${USER_BONUS_MODEL_PK_FIELD} = @fiscalCode`
     })[Symbol.asyncIterator]();
-    return fromEither(tryCatch2v(() => iterator, toCosmosErrorResponse));
+    return taskEither.of(iterator);
   }
 }

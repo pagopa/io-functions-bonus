@@ -25,7 +25,7 @@ const aUserBonus: UserBonus = {
   isApplicant: true
 };
 
-const aRetrievedUserBonus: RetrievedUserBonus = {
+export const aRetrievedUserBonus: RetrievedUserBonus = {
   ...aUserBonus,
   _etag: "_etag",
   _rid: "_rid",
