@@ -36,7 +36,10 @@ const mockBonusActivationModel = ({
 
 describe("GetBonusActivationHandler", () => {
   it("should return success of everything is fine", async () => {
-    const handler = GetBonusActivationHandler(mockBonusActivationModel);
+    const handler = GetBonusActivationHandler(
+      mockBonusActivationModel,
+      mockBonusProcessingModel
+    );
 
     const result = await handler(context, aFiscalCode, aBonusId);
 
@@ -52,7 +55,10 @@ describe("GetBonusActivationHandler", () => {
         throw new Error("any error");
       }
     );
-    const handler = GetBonusActivationHandler(mockBonusActivationModel);
+    const handler = GetBonusActivationHandler(
+      mockBonusActivationModel,
+      mockBonusProcessingModel
+    );
 
     const result = await handler(context, aFiscalCode, aBonusId);
 
@@ -66,7 +72,10 @@ describe("GetBonusActivationHandler", () => {
     mockBonusActivationFindBonusActivationForUser.mockImplementationOnce(
       async () => left(new Error("any error"))
     );
-    const handler = GetBonusActivationHandler(mockBonusActivationModel);
+    const handler = GetBonusActivationHandler(
+      mockBonusActivationModel,
+      mockBonusProcessingModel
+    );
 
     const result = await handler(context, aFiscalCode, aBonusId);
 
@@ -80,7 +89,10 @@ describe("GetBonusActivationHandler", () => {
     mockBonusActivationFindBonusActivationForUser.mockImplementationOnce(
       async () => right(none)
     );
-    const handler = GetBonusActivationHandler(mockBonusActivationModel);
+    const handler = GetBonusActivationHandler(
+      mockBonusActivationModel,
+      mockBonusProcessingModel
+    );
 
     const result = await handler(context, aFiscalCode, aBonusId);
 
