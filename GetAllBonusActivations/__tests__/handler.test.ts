@@ -1,10 +1,12 @@
+import { Container } from "@azure/cosmos";
 import { Response } from "express";
 import { right } from "fp-ts/lib/Either";
-import { none, some } from "fp-ts/lib/Option";
 import { taskEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { response as MockResponse } from "jest-mock-express";
+import { mockContainer, mockQuery } from "../../__mocks__/cosmosdb-container";
 import { context } from "../../__mocks__/durable-functions";
+import { aRetrievedUserBonus } from "../../models/__tests__/user_bonus.test";
 import { UserBonus, UserBonusModel } from "../../models/user_bonus";
 import { GetAllBonusActivationsHandler } from "../handler";
 
@@ -75,5 +77,32 @@ describe("GetAllBonusActivationsHandler", () => {
 
     expect(mockNext).toHaveBeenCalledTimes(1);
     expect(mockResponse.json).toBeCalledWith({ items: [], page_size: 0 });
+  });
+
+  it("should raise an expection when response apply is called if getAsyncIterator throws", async () => {
+    const expectedError = new Error("Query Iterator exception");
+    // tslint:disable-next-line: no-any
+    async function* mockAsyncIterable(): AsyncIterable<any> {
+      yield { resources: [aRetrievedUserBonus] };
+      throw expectedError;
+    }
+    mockQuery.mockImplementation(() => ({
+      getAsyncIterator: mockAsyncIterable
+    }));
+
+    const model = new UserBonusModel((mockContainer as unknown) as Container);
+    const handler = GetAllBonusActivationsHandler(model);
+    const response = await handler(context, aFiscalCode);
+
+    expect.assertions(2);
+    expect(response.kind).toBe("IResponseSuccessJsonIterator");
+    const mockResponse = MockResponse();
+    try {
+      await response.apply((mockResponse as unknown) as Response);
+    } catch (err) {
+      // This exception is catched inside the wrapRequestHandler
+      // and a ResponseErrorInternal was returned
+      expect(err).toEqual(expectedError);
+    }
   });
 });
