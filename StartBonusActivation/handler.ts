@@ -24,7 +24,6 @@ import { BonusActivationModel } from "../models/bonus_activation";
 import { EligibilityCheckModel } from "../models/eligibility_check";
 
 import { identity } from "fp-ts/lib/function";
-import { none } from "fp-ts/lib/Option";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { BonusActivation as ApiBonusActivation } from "../generated/definitions/BonusActivation";
 import { InstanceId } from "../generated/definitions/InstanceId";
