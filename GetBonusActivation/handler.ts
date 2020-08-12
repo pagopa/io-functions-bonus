@@ -1,7 +1,7 @@
 import { Context } from "@azure/functions";
 import * as express from "express";
-import { isSome, Option } from "fp-ts/lib/Option";
-import { task } from "fp-ts/lib/Task";
+import { identity } from "fp-ts/lib/function";
+import { Option } from "fp-ts/lib/Option";
 import { fromEither, TaskEither, tryCatch } from "fp-ts/lib/TaskEither";
 import {
   fromQueryEither,
@@ -22,10 +22,12 @@ import {
   IResponseSuccessJson,
   ResponseErrorInternal,
   ResponseErrorNotFound,
+  ResponseSuccessAccepted,
   ResponseSuccessJson
 } from "italia-ts-commons/lib/responses";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { BonusActivation } from "../generated/definitions/BonusActivation";
+import { BonusActivationStatusEnum } from "../generated/definitions/BonusActivationStatus";
 import { BonusCode } from "../generated/definitions/BonusCode";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { BonusActivationModel } from "../models/bonus_activation";
@@ -34,7 +36,6 @@ import {
   BonusProcessingModel
 } from "../models/bonus_processing";
 import { toApiBonusActivation } from "../utils/conversions";
-import { checkBonusActivationIsRunning } from "./locks";
 
 export const getBonusProcessing = (
   bonusProcessingModel: BonusProcessingModel,
@@ -55,11 +56,11 @@ type IGetBonusActivationHandler = (
 ) => Promise<IGetBonusActivationHandlerOutput>;
 
 export function GetBonusActivationHandler(
-  bonusActivationModel: BonusActivationModel,
-  bonusProcessingModel: BonusProcessingModel
+  bonusActivationModel: BonusActivationModel
 ): IGetBonusActivationHandler {
-  return async (context, fiscalCode, bonusId) => {
-    return await tryCatch(
+  return async (context, fiscalCode, bonusId) =>
+    // search a bonus activation for (fiscalCode, bonusId)
+    tryCatch(
       () =>
         bonusActivationModel.findBonusActivationForUser(bonusId, fiscalCode),
       err => new Error(`Query error: [${err}]`)
@@ -70,66 +71,47 @@ export function GetBonusActivationHandler(
             new Error(`Query Error code=${queryError.code}|${queryError.body}`)
         )
       )
-      .foldTask<IGetBonusActivationHandlerOutput>(
-        err => {
-          const error = `GetBonusActivation|ERROR|Error: [${err.message}]`;
-          context.log.error(error);
-          return task.of(ResponseErrorInternal(error));
-        },
-        maybeBonusActivation => {
-          if (isSome(maybeBonusActivation)) {
-            return task.of(
-              toApiBonusActivation(maybeBonusActivation.value).fold<
-                IResponseSuccessJson<BonusActivation> | IResponseErrorInternal
-              >(
-                err => {
-                  const error = `GetBonusActivation|ERROR|Conversion Error: [${readableReport(
-                    err
-                  )}]`;
-                  context.log.error(error);
-                  return ResponseErrorInternal(error);
-                },
-                bonusActivation => ResponseSuccessJson(bonusActivation)
+      .mapLeft<IGetBonusActivationHandlerOutput>(err => {
+        const error = `GetBonusActivation|ERROR|Error: [${err.message}]`;
+        context.log.error(error);
+        return ResponseErrorInternal(error);
+      })
+      .fold<IGetBonusActivationHandlerOutput>(identity, maybeBonusActivation =>
+        maybeBonusActivation.map(toApiBonusActivation).fold(
+          // no bonus activation is found
+          ResponseErrorNotFound("Not Found", "Bonus activation not found"),
+          // a bonus activation is found
+          errorOrBonusActivation =>
+            errorOrBonusActivation
+              .map<IGetBonusActivationHandlerOutput>(bonusActivation =>
+                bonusActivation.status === BonusActivationStatusEnum.PROCESSING
+                  ? // if there's a bonus processing, we return the identity of the process
+                    ResponseSuccessAccepted(
+                      "Still running",
+                      InstanceId.encode({
+                        id: (bonusActivation.id as unknown) as NonEmptyString
+                      })
+                    )
+                  : // otherwise we return the bonus activation payload
+                    ResponseSuccessJson(bonusActivation)
               )
-            );
-          }
-
-          return getBonusProcessing(bonusProcessingModel, fiscalCode)
-            .mapLeft<
-              IResponseErrorInternal | IResponseSuccessAccepted<InstanceId>
-            >(err => {
-              context.log.warn(
-                `StartBonusActivationHandler|WARN|Failed reading BonusProcessing|ERR=${JSON.stringify(
+              // in case the conversion to ApiBonusActivation is failed
+              .getOrElseL(err => {
+                const error = `GetBonusActivation|ERROR|Conversion Error: [${readableReport(
                   err
-                )}`
-              );
-              return ResponseErrorInternal("Failed reading BonusProcessing");
-            })
-            .chain(maybeBonusProcessing =>
-              fromEither(checkBonusActivationIsRunning(maybeBonusProcessing))
-            )
-            .fold<IGetBonusActivationHandlerOutput>(
-              // When the bonus is not found into the database but a bonus activation
-              // is still in progress for the user, we return 202 Accepted with the bonus id
-              response => response,
-              // Return  not found in case no running bonus activation is found
-              _ =>
-                ResponseErrorNotFound("Not Found", "Bonus activation not found")
-            );
-        }
+                )}]`;
+                context.log.error(error);
+                return ResponseErrorInternal(error);
+              })
+        )
       )
       .run();
-  };
 }
 
 export function GetBonusActivation(
-  bonusActivationModel: BonusActivationModel,
-  bonusProcessingModel: BonusProcessingModel
+  bonusActivationModel: BonusActivationModel
 ): express.RequestHandler {
-  const handler = GetBonusActivationHandler(
-    bonusActivationModel,
-    bonusProcessingModel
-  );
+  const handler = GetBonusActivationHandler(bonusActivationModel);
 
   const middlewaresWrap = withRequestMiddlewares(
     // Extract Azure Functions bindings

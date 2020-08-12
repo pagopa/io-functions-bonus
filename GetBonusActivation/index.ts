@@ -9,10 +9,6 @@ import {
   BONUS_ACTIVATION_COLLECTION_NAME,
   BonusActivationModel
 } from "../models/bonus_activation";
-import {
-  BONUS_PROCESSING_COLLECTION_NAME,
-  BonusProcessingModel
-} from "../models/bonus_processing";
 import { documentClient } from "../services/cosmosdb";
 import { GetBonusActivation } from "./handler";
 
@@ -29,14 +25,6 @@ const bonusActivationModel = new BonusActivationModel(
   bonusActivationCollectionUrl
 );
 
-const bonusProcessingModel = new BonusProcessingModel(
-  documentClient,
-  documentDbUtils.getCollectionUri(
-    documentDbDatabaseUrl,
-    BONUS_PROCESSING_COLLECTION_NAME
-  )
-);
-
 // Setup Express
 const app = express();
 secureExpressApp(app);
@@ -44,7 +32,7 @@ secureExpressApp(app);
 // Add express route
 app.get(
   "/api/v1/bonus/vacanze/activations/:fiscalcode/:bonus_id",
-  GetBonusActivation(bonusActivationModel, bonusProcessingModel)
+  GetBonusActivation(bonusActivationModel)
 );
 
 const azureFunctionHandler = createAzureFunctionHandler(app);
