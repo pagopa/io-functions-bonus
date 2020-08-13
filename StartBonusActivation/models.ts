@@ -295,7 +295,7 @@ export const getBonusProcessing = (
   // tslint:disable-next-line: variable-name
   fiscalCode: FiscalCode
 ): TaskEither<CosmosErrors, Option<BonusProcessing>> =>
-  bonusProcessingModel.find(fiscalCode, fiscalCode);
+  bonusProcessingModel.find([fiscalCode as FiscalCode & NonEmptyString]);
 
 const makeNewBonusProcessing = (
   id: FiscalCode,

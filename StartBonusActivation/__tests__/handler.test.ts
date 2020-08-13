@@ -1,6 +1,5 @@
 // tslint:disable: no-identical-functions
 
-import { right } from "fp-ts/lib/Either";
 import { none, some } from "fp-ts/lib/Option";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { ResponseErrorInternal } from "italia-ts-commons/lib/responses";
@@ -12,6 +11,7 @@ import {
 } from "../../__mocks__/durable-functions";
 import {
   aBonusId,
+  aBonusProcessing,
   aConflictQueryError,
   aEligibilityCheckSuccessConflict,
   aEligibilityCheckSuccessEligibleExpired,
@@ -74,12 +74,12 @@ const mockBonusLeaseModel = ({
   deleteOneById: mockBonusLeaseDeleteOneById
 } as unknown) as BonusLeaseModel;
 
-const mockBonusProcessingCreate = jest.fn().mockImplementation(async _ => {
-  return right(aRetrievedBonusProcessing);
+const mockBonusProcessingCreate = jest.fn().mockImplementation(_ => {
+  return taskEither.of(aRetrievedBonusProcessing);
 });
-const mockBonusProcessingFind = jest.fn().mockImplementation(async () =>
+const mockBonusProcessingFind = jest.fn().mockImplementation(() =>
   // happy path: retrieve a valid eligible check
-  right(none)
+  taskEither.of(none)
 );
 const mockBonusProcessingModel = ({
   create: mockBonusProcessingCreate,
@@ -102,6 +102,9 @@ describe("StartBonusActivationHandler", () => {
     simulateOrchestratorIsRunning(
       makeStartEligibilityCheckOrchestratorId(aFiscalCode)
     );
+    mockBonusProcessingFind.mockImplementationOnce(() =>
+      taskEither.of(some(aBonusProcessing))
+    );
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
@@ -119,8 +122,8 @@ describe("StartBonusActivationHandler", () => {
   });
 
   it("should notify the user if there is already a bonus activation running", async () => {
-    mockBonusProcessingFind.mockImplementationOnce(async () =>
-      right(
+    mockBonusProcessingFind.mockImplementationOnce(() =>
+      taskEither.of(
         some(
           BonusProcessing.encode({
             bonusId: aBonusId,
@@ -226,9 +229,9 @@ describe("StartBonusActivationHandler", () => {
   });
 
   it("should return an error if the query for eligibility check fails", async () => {
-    mockEligibilityCheckFind.mockImplementationOnce(_ => {
-      return fromLeft(new Error("query failed"));
-    });
+    mockEligibilityCheckFind.mockImplementationOnce(_ =>
+      fromLeft(new Error("query failed"))
+    );
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
       mockBonusLeaseModel,
@@ -424,9 +427,9 @@ describe("StartBonusActivationHandler", () => {
   });
 
   it("should ignore failures on saving bonus processing", async () => {
-    mockBonusProcessingCreate.mockImplementationOnce(async () => {
-      throw new Error("any failure");
-    });
+    mockBonusProcessingCreate.mockImplementationOnce(() =>
+      fromLeft(new Error("any failure"))
+    );
 
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,
@@ -444,9 +447,9 @@ describe("StartBonusActivationHandler", () => {
   });
 
   it("should handle failure on reading bonus processing", async () => {
-    mockBonusProcessingFind.mockImplementationOnce(async () => {
-      throw new Error("any failure");
-    });
+    mockBonusProcessingFind.mockImplementationOnce(() =>
+      fromLeft(new Error("any failure"))
+    );
 
     const handler = StartBonusActivationHandler(
       mockBonusActivationModel,

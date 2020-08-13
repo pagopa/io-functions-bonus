@@ -47,13 +47,11 @@ const bonusActivationModel = new BonusActivationModel(bonusActivationContainer);
 
 const bonusLeaseModel = new BonusLeaseModel(bonusLeaseContainer);
 
-const bonusProcessingModel = new BonusProcessingModel(
-  documentClient,
-  documentDbUtils.getCollectionUri(
-    documentDbDatabaseUrl,
-    BONUS_PROCESSING_COLLECTION_NAME
-  )
-);
+const bonusProcessingContainer = cosmosClient
+  .database(cosmosDbName)
+  .container(BONUS_PROCESSING_COLLECTION_NAME);
+
+const bonusProcessingModel = new BonusProcessingModel(bonusProcessingContainer);
 
 // Setup Express
 const app = express();

@@ -1,5 +1,6 @@
 import { right } from "fp-ts/lib/Either";
 import { none, some } from "fp-ts/lib/Option";
+import { taskEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import {
   context,
@@ -8,14 +9,8 @@ import {
   mockStatusCompleted,
   mockStatusRunning
 } from "../../__mocks__/durable-functions";
-import {
-  aBonusId,
-  aEligibilityCheckSuccessEligibleValid
-} from "../../__mocks__/mocks";
-import {
-  BonusProcessing,
-  BonusProcessingModel
-} from "../../models/bonus_processing";
+import { aEligibilityCheckSuccessEligibleValid } from "../../__mocks__/mocks";
+import { BonusProcessingModel } from "../../models/bonus_processing";
 import { EligibilityCheckModel } from "../../models/eligibility_check";
 import { makeStartEligibilityCheckOrchestratorId } from "../../utils/orchestrators";
 import { EligibilityCheckHandler } from "../handler";
@@ -55,9 +50,7 @@ describe("EligibilityCheckHandler", () => {
   });
 
   it("should returns a 403 status response if a bonus activation is running", async () => {
-    mockBonusProcessingFind.mockImplementation(() =>
-      Promise.resolve(right(some(1)))
-    );
+    mockBonusProcessingFind.mockImplementation(() => taskEither.of(some(1)));
 
     const handler = EligibilityCheckHandler(
       mockEligibilityCheckModel,
@@ -72,9 +65,8 @@ describe("EligibilityCheckHandler", () => {
     simulateOrchestratorIsRunning(
       makeStartEligibilityCheckOrchestratorId(aFiscalCode)
     );
-    mockBonusProcessingFind.mockImplementation(() =>
-      Promise.resolve(right(none))
-    );
+    mockBonusProcessingFind.mockImplementation(() => taskEither.of(none));
+    mockEligibilityCheckFind.mockImplementation(() => taskEither.of(none));
 
     const handler = EligibilityCheckHandler(
       mockEligibilityCheckModel,
@@ -87,11 +79,9 @@ describe("EligibilityCheckHandler", () => {
   });
   it("should returns ResponseSuccessRedirectToResource if exists a Valid EligibilityCheck", async () => {
     mockEligibilityCheckFind.mockImplementationOnce(() =>
-      Promise.resolve(right(some(aEligibilityCheckSuccessEligibleValid)))
+      taskEither.of(some(aEligibilityCheckSuccessEligibleValid))
     );
-    mockBonusProcessingFind.mockImplementation(() =>
-      Promise.resolve(right(none))
-    );
+    mockBonusProcessingFind.mockImplementation(() => taskEither.of(none));
 
     const handler = EligibilityCheckHandler(
       mockEligibilityCheckModel,
@@ -108,9 +98,7 @@ describe("EligibilityCheckHandler", () => {
     mockStartNew.mockImplementationOnce(async (_, __, ___) => {
       return "instanceId";
     });
-    mockBonusProcessingFind.mockImplementation(() =>
-      Promise.resolve(right(none))
-    );
+    mockBonusProcessingFind.mockImplementation(() => taskEither.of(none));
 
     const handler = EligibilityCheckHandler(
       mockEligibilityCheckModel,
@@ -131,9 +119,7 @@ describe("EligibilityCheckHandler", () => {
     mockStartNew.mockImplementationOnce(async (_, __, ___) => {
       throw new Error("Error starting the orchestrator");
     });
-    mockBonusProcessingFind.mockImplementation(() =>
-      Promise.resolve(right(none))
-    );
+    mockBonusProcessingFind.mockImplementation(() => taskEither.of(none));
 
     const handler = EligibilityCheckHandler(
       mockEligibilityCheckModel,
