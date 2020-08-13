@@ -5,24 +5,10 @@ import { context } from "../../__mocks__/durable-functions";
 import {
   aBonusId,
   aFiscalCode,
-  aRetrievedBonusActivation,
-  aRetrievedBonusProcessing
+  aRetrievedBonusActivation
 } from "../../__mocks__/mocks";
 import { BonusActivationModel } from "../../models/bonus_activation";
-import { BonusProcessingModel } from "../../models/bonus_processing";
 import { GetBonusActivationHandler } from "../handler";
-
-const mockBonusProcessingCreate = jest.fn().mockImplementation(async _ => {
-  return right(aRetrievedBonusProcessing);
-});
-const mockBonusProcessingFind = jest.fn().mockImplementation(async () =>
-  // happy path: retrieve a valid eligible check
-  right(none)
-);
-const mockBonusProcessingModel = ({
-  create: mockBonusProcessingCreate,
-  find: mockBonusProcessingFind
-} as unknown) as BonusProcessingModel;
 
 // mockBonusActivationModel
 const mockBonusActivationFindBonusActivationForUser = jest
