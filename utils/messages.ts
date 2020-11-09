@@ -29,7 +29,7 @@ Prosegui con la richiesta **entro le ${format(
       )}**, per ricominciare da dove hai lasciato. Oltre questa scadenza, dovrai iniziare una nuova domanda.
 
 Clicca il pulsante qui sotto per procedere.
-`
+`,
     } as MessageContent),
 
   EligibilityCheckSuccessIneligible: () =>
@@ -50,7 +50,7 @@ Di conseguenza non hai diritto al Bonus Vacanze.
 
 Se la situazione patrimoniale del tuo nucleo familiare è cambiata rispetto all'ultima Dichiarazione Sostitutiva Unica (DSU) presentata,
 puoi presentarne una nuova attraverso i canali previsti da INPS.
-`
+`,
     } as MessageContent),
 
   EligibilityCheckFailure: () =>
@@ -74,7 +74,7 @@ Puoi fare subito una [simulazione online](https://servizi2.inps.it/servizi/Iseer
 per verificare la tua idoneità, oppure richiedere l'ISEE sui canali previsti da INPS.
 
 Attenzione: il calcolo effettuato con la simulazione non ha valore certificativo e l’esito non sostituisce in alcun modo l’attestazione ISEE rilasciata dall’Inps.
-`
+`,
     } as MessageContent),
 
   EligibilityCheckFailureINPSUnavailable: () =>
@@ -92,7 +92,7 @@ en:
 ---
 Abbiamo riscontrato un problema nella comunicazione con INPS.
 
-Ti preghiamo di iniziare una nuova richiesta.`
+Ti preghiamo di iniziare una nuova richiesta.`,
     } as MessageContent),
 
   EligibilityCheckConflict: () =>
@@ -101,7 +101,7 @@ Ti preghiamo di iniziare una nuova richiesta.`
       markdown: `INPS ha completato le verifiche sull’ISEE e risulta che **qualcuno del tuo nucleo familiare ha già richiesto il Bonus Vacanze.**  
 
 **Il Bonus è in fase di attivazione.** Ti manderemo un messaggio quando sarà attivo.
-`
+`,
     } as MessageContent),
 
   EligibilityCheckConflictWithBonusActivated: () =>
@@ -119,8 +119,8 @@ en:
 ---
 INPS ha completato le verifiche sull’ISEE e risulta che **qualcuno del tuo nucleo familiare ha già richiesto il Bonus Vacanze.**  
 
-**Il Bonus Vacanze è attivo.** Puoi visualizzarne i dettagli nella sezione Pagamenti.
-`
+**Il Bonus Vacanze è attivo.** Puoi visualizzarne i dettagli nella sezione Portafoglio.
+`,
     } as MessageContent),
 
   EligibilityCheckSuccessEligibleWithDiscrepancies: (validBefore: Date) =>
@@ -152,7 +152,7 @@ Se decidi di proseguire con la richiesta, fallo **entro le ${format(
       )}**, per ricominciare da dove hai lasciato. Oltre questa scadenza, dovrai iniziare una nuova domanda.
 
 Clicca il pulsante qui sotto per procedere.
-`
+`,
     } as MessageContent),
 
   BonusActivationSuccess: () =>
@@ -168,9 +168,9 @@ en:
         text: "Check Bonus Vacanze"
         action: "ioit://WALLET_HOME"
 ---
-Buone notizie! **Il Bonus Vacanze per il tuo nucleo familiare è attivo e lo potrai trovare all’interno della sezione Pagamenti.**  
+Buone notizie! **Il Bonus Vacanze per il tuo nucleo familiare è attivo e lo potrai trovare all’interno della sezione Portafoglio.**  
 
-Ti ricordiamo che chiunque della tua famiglia potrà spenderlo presso le strutture ricettive aderenti dal 1 luglio al 31 dicembre 2020.`
+Ti ricordiamo che chiunque della tua famiglia potrà spenderlo presso le strutture ricettive aderenti dal 1 luglio al 31 dicembre 2020.`,
     } as MessageContent),
 
   BonusActivationFailure: (validBefore: Date) =>
@@ -195,8 +195,8 @@ Ti chiediamo di confermare di nuovo la tua richiesta **entro le ${format(
         "dd-MM"
       )}**, per ricominciare da dove hai lasciato. Oltre questa scadenza, dovrai iniziare una nuova domanda.
 
-Clicca il pulsante qui sotto per procedere.`
-    } as MessageContent)
+Clicca il pulsante qui sotto per procedere.`,
+    } as MessageContent),
 };
 
 export const getMessage = (
