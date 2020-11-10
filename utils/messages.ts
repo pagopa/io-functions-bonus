@@ -119,7 +119,7 @@ en:
 ---
 INPS ha completato le verifiche sull’ISEE e risulta che **qualcuno del tuo nucleo familiare ha già richiesto il Bonus Vacanze.**  
 
-**Il Bonus Vacanze è attivo.** Puoi visualizzarne i dettagli nella sezione Pagamenti.
+**Il Bonus Vacanze è attivo.** Puoi visualizzarne i dettagli nella sezione Portafoglio.
 `
     } as MessageContent),
 
@@ -168,7 +168,7 @@ en:
         text: "Check Bonus Vacanze"
         action: "ioit://WALLET_HOME"
 ---
-Buone notizie! **Il Bonus Vacanze per il tuo nucleo familiare è attivo e lo potrai trovare all’interno della sezione Pagamenti.**  
+Buone notizie! **Il Bonus Vacanze per il tuo nucleo familiare è attivo e lo potrai trovare all’interno della sezione Portafoglio.**  
 
 Ti ricordiamo che chiunque della tua famiglia potrà spenderlo presso le strutture ricettive aderenti dal 1 luglio al 31 dicembre 2020.`
     } as MessageContent),
