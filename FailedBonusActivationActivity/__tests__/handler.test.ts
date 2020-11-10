@@ -1,6 +1,6 @@
 // tslint:disable: no-identical-functions
 
-import { right } from "fp-ts/lib/Either";
+import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { context } from "../../__mocks__/durable-functions";
 import {
   aBonusActivationWithFamilyUID,
@@ -18,14 +18,14 @@ import {
 // mockEligibilityCheckModel
 const mockEligibilityCheckDeleteOneById = jest
   .fn()
-  .mockImplementation(async () => right(""));
+  .mockImplementation(() => taskEither.of(""));
 const mockEligibilityCheckModel = ({
   deleteOneById: mockEligibilityCheckDeleteOneById
 } as unknown) as EligibilityCheckModel;
 
 // mockBonusActivationModel
-const mockBonusActivationReplace = jest.fn().mockImplementation(async _ => {
-  return right(aRetrievedBonusActivation);
+const mockBonusActivationReplace = jest.fn().mockImplementation(_ => {
+  return taskEither.of(aRetrievedBonusActivation);
 });
 const mockBonusActivationModel = ({
   replace: mockBonusActivationReplace
@@ -51,9 +51,9 @@ describe("FailedBonusActivationHandler", () => {
   });
 
   it("should throw a transient error if dsu fails to delete", async () => {
-    mockEligibilityCheckDeleteOneById.mockImplementationOnce(async () => {
-      throw new Error("any error");
-    });
+    mockEligibilityCheckDeleteOneById.mockImplementationOnce(() =>
+      fromLeft(new Error("any error"))
+    );
 
     const handler = FailedBonusActivationHandler(
       mockBonusActivationModel,
@@ -71,9 +71,9 @@ describe("FailedBonusActivationHandler", () => {
   });
 
   it("should throw a transient error if bonus fails to update", async () => {
-    mockBonusActivationReplace.mockImplementationOnce(async () => {
-      throw new Error("any error");
-    });
+    mockBonusActivationReplace.mockImplementationOnce(() =>
+      fromLeft(new Error("any error"))
+    );
 
     const handler = FailedBonusActivationHandler(
       mockBonusActivationModel,

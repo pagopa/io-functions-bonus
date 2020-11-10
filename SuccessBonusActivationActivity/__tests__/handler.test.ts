@@ -1,9 +1,11 @@
 // tslint:disable: no-identical-functions
 
 import { right } from "fp-ts/lib/Either";
+import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { context } from "../../__mocks__/durable-functions";
 import {
   aBonusActivationWithFamilyUID,
+  aGenericQueryError,
   aRetrievedBonusActivation,
   aRetrievedUserBonus
 } from "../../__mocks__/mocks";
@@ -17,19 +19,19 @@ import {
 } from "../handler";
 
 // mockBonusActivationModel
-const mockBonusActivationReplace = jest.fn().mockImplementation(async _ => {
-  return right(aRetrievedBonusActivation);
+const mockBonusActivationReplace = jest.fn().mockImplementation(_ => {
+  return taskEither.of(aRetrievedBonusActivation);
 });
 const mockBonusActivationModel = ({
   replace: mockBonusActivationReplace
 } as unknown) as BonusActivationModel;
 
 // mockBonusLeaseModel
-const mockUserBonusCreateOrUpdate = jest.fn().mockImplementation(async _ => {
-  return right(aRetrievedUserBonus);
+const mockUserBonusUpsert = jest.fn().mockImplementation(_ => {
+  return taskEither.of(aRetrievedUserBonus);
 });
 const mockUserBonusModel = ({
-  createOrUpdate: mockUserBonusCreateOrUpdate
+  upsert: mockUserBonusUpsert
 } as unknown) as UserBonusModel;
 
 describe("SuccessBonusActivationHandler", () => {
@@ -52,9 +54,9 @@ describe("SuccessBonusActivationHandler", () => {
   });
 
   it("should return an error if the bonus update fails", async () => {
-    mockBonusActivationReplace.mockImplementationOnce(async () => {
-      throw new Error("any error");
-    });
+    mockBonusActivationReplace.mockImplementationOnce(() =>
+      fromLeft(aGenericQueryError)
+    );
     const handler = SuccessBonusActivationHandler(
       mockBonusActivationModel,
       mockUserBonusModel
@@ -84,9 +86,7 @@ describe("SuccessBonusActivationHandler", () => {
     const response = await handler(context, {
       bonusActivation: aBonusActivationWithFamilyUID
     });
-    expect(mockUserBonusCreateOrUpdate).toHaveBeenCalledTimes(
-      familyMembers.length
-    );
+    expect(mockUserBonusUpsert).toHaveBeenCalledTimes(familyMembers.length);
     expect(
       SuccessBonusActivationSuccess.decode(response).isRight()
     ).toBeTruthy();
@@ -102,7 +102,7 @@ describe("SuccessBonusActivationHandler", () => {
       bonusActivation: aBonusActivationWithFamilyUID
     });
 
-    const { calls } = mockUserBonusCreateOrUpdate.mock;
+    const { calls } = mockUserBonusUpsert.mock;
 
     // only the correct applicant id
     calls.forEach(([{ isApplicant, fiscalCode }]) => {

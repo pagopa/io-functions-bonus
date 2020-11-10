@@ -1,22 +1,20 @@
-import * as DocumentDb from "documentdb";
 import { isLeft, isRight } from "fp-ts/lib/Either";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import {
   NewUserBonus,
   RetrievedUserBonus,
-  USER_BONUS_COLLECTION_NAME,
   UserBonus,
   UserBonusModel
 } from "../user_bonus";
 
-import * as DocumentDbUtils from "io-functions-commons/dist/src/utils/documentdb";
+import { Container } from "@azure/cosmos";
+import { CosmosErrorResponse } from "io-functions-commons/dist/src/utils/cosmosdb_model";
+import {
+  mockContainer,
+  mockCreate,
+  mockRead
+} from "../../__mocks__/cosmosdb-container";
 import { BonusCode } from "../../generated/models/BonusCode";
-
-const aDatabaseUri = DocumentDbUtils.getDatabaseUri("mockdb" as NonEmptyString);
-const aCollectionUri = DocumentDbUtils.getCollectionUri(
-  aDatabaseUri,
-  USER_BONUS_COLLECTION_NAME
-);
 
 const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
 const aBonusId = "AAAAAAAAAAA3" as BonusCode;
@@ -27,10 +25,12 @@ const aUserBonus: UserBonus = {
   isApplicant: true
 };
 
-const aRetrievedUserBonus: RetrievedUserBonus = {
+export const aRetrievedUserBonus: RetrievedUserBonus = {
   ...aUserBonus,
-  _self: "xyz",
-  _ts: 123,
+  _etag: "_etag",
+  _rid: "_rid",
+  _self: "_self",
+  _ts: 1,
   id: aUserBonusId,
   kind: "IRetrievedUserBonus"
 };
@@ -41,80 +41,65 @@ const aNewUserBonus: NewUserBonus = {
   kind: "INewUserBonus"
 };
 
-describe("UserBonusModel#create", () => {
-  it("should create a new UserBonus", async () => {
-    const clientMock = {
-      createDocument: jest.fn((_, __, ___, cb) =>
-        cb(undefined, aRetrievedUserBonus)
-      )
-    };
+const queryError = new Error("Query Error");
 
-    const model = new UserBonusModel(
-      (clientMock as unknown) as DocumentDb.DocumentClient,
-      aCollectionUri
+describe("UserBonusModel#create", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+  it("should create a new UserBonus", async () => {
+    mockCreate.mockImplementationOnce(() =>
+      Promise.resolve({ resource: aRetrievedUserBonus })
     );
 
-    const result = await model.create(aNewUserBonus, aNewUserBonus.id);
+    const model = new UserBonusModel((mockContainer as unknown) as Container);
 
-    expect(clientMock.createDocument.mock.calls[0][1].kind).toBeUndefined();
+    const result = await model.create(aNewUserBonus).run();
+
+    expect(mockContainer.items.create.mock.calls[0][1].kind).toBeUndefined();
     expect(isRight(result)).toBeTruthy();
     if (isRight(result)) {
       expect(result.value).toEqual(aRetrievedUserBonus);
     }
   });
   it("should return the error if creation fails", async () => {
-    const clientMock = {
-      createDocument: jest.fn((_, __, ___, cb) => cb("error"))
-    };
+    mockCreate.mockImplementationOnce(() => Promise.reject(queryError));
 
-    const model = new UserBonusModel(
-      (clientMock as unknown) as DocumentDb.DocumentClient,
-      aCollectionUri
-    );
+    const model = new UserBonusModel((mockContainer as unknown) as Container);
 
-    const result = await model.create(aNewUserBonus, aNewUserBonus.id);
+    const result = await model.create(aNewUserBonus).run();
 
-    expect(clientMock.createDocument).toHaveBeenCalledTimes(1);
-    expect(clientMock.createDocument.mock.calls[0][0]).toEqual(
-      `dbs/mockdb/colls/${USER_BONUS_COLLECTION_NAME}`
-    );
-    expect(clientMock.createDocument.mock.calls[0][1]).toEqual({
-      ...aNewUserBonus,
-      kind: undefined
-    });
-    expect(clientMock.createDocument.mock.calls[0][2]).toEqual({
-      partitionKey: aNewUserBonus.id
-    });
+    expect(mockCreate).toHaveBeenCalledTimes(1);
     expect(isLeft(result)).toBeTruthy();
     if (isLeft(result)) {
-      expect(result.value).toEqual("error");
+      expect(result.value).toEqual(CosmosErrorResponse(queryError));
     }
   });
 });
 
 describe("UserBonusModel#find", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
   it("should return an existing UserBonus", async () => {
-    const clientMock = {
-      readDocument: jest.fn((_, __, cb) => cb(undefined, aRetrievedUserBonus))
-    };
-
-    const model = new UserBonusModel(
-      (clientMock as unknown) as DocumentDb.DocumentClient,
-      aCollectionUri
+    mockRead.mockImplementationOnce(() =>
+      Promise.resolve({ resource: aRetrievedUserBonus })
     );
+    const model = new UserBonusModel((mockContainer as unknown) as Container);
 
-    const result = await model.find(
+    const result = await model
+      .find([
+        aRetrievedUserBonus.id,
+        (aRetrievedUserBonus.id as unknown) as FiscalCode
+      ])
+      .run();
+
+    expect(mockContainer.item).toHaveBeenCalledTimes(1);
+    expect(mockContainer.item).toBeCalledWith(
       aRetrievedUserBonus.id,
       aRetrievedUserBonus.id
     );
-
-    expect(clientMock.readDocument).toHaveBeenCalledTimes(1);
-    expect(clientMock.readDocument.mock.calls[0][0]).toEqual(
-      `dbs/mockdb/colls/${USER_BONUS_COLLECTION_NAME}/docs/${aRetrievedUserBonus.id}`
-    );
-    expect(clientMock.readDocument.mock.calls[0][1]).toEqual({
-      partitionKey: aRetrievedUserBonus.id
-    });
+    expect(mockRead).toBeCalledTimes(1);
     expect(isRight(result)).toBeTruthy();
     if (isRight(result)) {
       expect(result.value.isSome()).toBeTruthy();
@@ -123,23 +108,20 @@ describe("UserBonusModel#find", () => {
   });
 
   it("should return the error", async () => {
-    const clientMock = {
-      readDocument: jest.fn((_, __, cb) => cb("error"))
-    };
+    mockRead.mockImplementationOnce(() => Promise.reject(queryError));
 
-    const model = new UserBonusModel(
-      (clientMock as unknown) as DocumentDb.DocumentClient,
-      aCollectionUri
-    );
+    const model = new UserBonusModel((mockContainer as unknown) as Container);
 
-    const result = await model.find(
-      aRetrievedUserBonus.id,
-      aRetrievedUserBonus.id
-    );
+    const result = await model
+      .find([
+        aRetrievedUserBonus.id,
+        (aRetrievedUserBonus.id as unknown) as FiscalCode
+      ])
+      .run();
 
     expect(isLeft(result)).toBeTruthy();
     if (isLeft(result)) {
-      expect(result.value).toEqual("error");
+      expect(result.value).toEqual(CosmosErrorResponse(queryError));
     }
   });
 });

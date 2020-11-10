@@ -4,65 +4,37 @@
  * It can be a case of Success of Failure: in the first case it will also include a list of the family members of the associated DSU
  */
 
-import * as DocumentDb from "documentdb";
-import { Either, left, right } from "fp-ts/lib/Either";
-import * as DocumentDbUtils from "io-functions-commons/dist/src/utils/documentdb";
-import { DocumentDbModel } from "io-functions-commons/dist/src/utils/documentdb_model";
+import { Container, ItemResponse } from "@azure/cosmos";
+import { TaskEither, tryCatch } from "fp-ts/lib/TaskEither";
+import {
+  BaseModel,
+  CosmosdbModel,
+  CosmosErrors,
+  CosmosResource,
+  toCosmosErrorResponse
+} from "io-functions-commons/dist/src/utils/cosmosdb_model";
+import { wrapWithKind } from "io-functions-commons/dist/src/utils/types";
 import * as t from "io-ts";
-import { readableReport } from "italia-ts-commons/lib/reporters";
-import { pick, tag } from "italia-ts-commons/lib/types";
 import { EligibilityCheck } from "../generated/models/EligibilityCheck";
-import { EligibilityCheckFailure } from "../generated/models/EligibilityCheckFailure";
-import { EligibilityCheckSuccessConflict } from "../generated/models/EligibilityCheckSuccessConflict";
-import { EligibilityCheckSuccessEligible } from "../generated/models/EligibilityCheckSuccessEligible";
-import { EligibilityCheckSuccessIneligible } from "../generated/models/EligibilityCheckSuccessIneligible";
-import { assertNever, keys } from "../utils/types";
 
 export const ELIGIBILITY_CHECK_COLLECTION_NAME = "eligibility-checks";
-export const ELIGIBILITY_CHECK_MODEL_PK_FIELD = "id";
+export const ELIGIBILITY_CHECK_MODEL_PK_FIELD = "id" as const;
 
-interface IRetrievedEligibilityCheck {
-  readonly kind: "IRetrievedEligibilityCheck";
-}
-export const RetrievedEligibilityCheck = tag<IRetrievedEligibilityCheck>()(
-  t.intersection([EligibilityCheck, DocumentDbUtils.RetrievedDocument])
+export const RetrievedEligibilityCheck = wrapWithKind(
+  t.intersection([EligibilityCheck, CosmosResource]),
+  "IRetrievedEligibilityCheck" as const
 );
 export type RetrievedEligibilityCheck = t.TypeOf<
   typeof RetrievedEligibilityCheck
 >;
 
-interface INewEligibilityCheckTag {
-  readonly kind: "INewEligibilityCheck";
-}
-export const NewEligibilityCheck = tag<INewEligibilityCheckTag>()(
-  t.intersection([EligibilityCheck, DocumentDbUtils.NewDocument])
+export const NewEligibilityCheck = wrapWithKind(
+  t.intersection([EligibilityCheck, BaseModel]),
+  "INewEligibilityCheck" as const
 );
 export type NewEligibilityCheck = t.TypeOf<typeof NewEligibilityCheck>;
 
-function toRetrieved(
-  result: DocumentDb.RetrievedDocument
-): RetrievedEligibilityCheck {
-  return RetrievedEligibilityCheck.decode(result).getOrElseL(err => {
-    throw new Error(
-      `Failed decoding RetrievedEligibilityCheck object: ${readableReport(err)}`
-    );
-  });
-}
-
-function toBaseType(o: RetrievedEligibilityCheck): EligibilityCheck {
-  // removes attributes of RetrievedEligibilityCheck which aren't of EligibilityCheck
-  return EligibilityCheckSuccessEligible.is(o)
-    ? pick(keys(EligibilityCheckSuccessEligible._A), o)
-    : EligibilityCheckSuccessIneligible.is(o)
-    ? pick(keys(EligibilityCheckSuccessIneligible._A), o)
-    : EligibilityCheckSuccessConflict.is(o)
-    ? pick(keys(EligibilityCheckSuccessConflict._A), o)
-    : EligibilityCheckFailure.is(o)
-    ? pick(keys(EligibilityCheckFailure._A), o)
-    : assertNever(o);
-}
-
-export class EligibilityCheckModel extends DocumentDbModel<
+export class EligibilityCheckModel extends CosmosdbModel<
   EligibilityCheck,
   NewEligibilityCheck,
   RetrievedEligibilityCheck
@@ -70,14 +42,10 @@ export class EligibilityCheckModel extends DocumentDbModel<
   /**
    * Creates a new EligibilityCheck model
    *
-   * @param dbClient the DocumentDB client
-   * @param collectionUrl the collection URL
+   * @param container the CosmosDB container
    */
-  constructor(
-    dbClient: DocumentDb.DocumentClient,
-    collectionUrl: DocumentDbUtils.IDocumentDbCollectionUri
-  ) {
-    super(dbClient, collectionUrl, toBaseType, toRetrieved);
+  constructor(container: Container) {
+    super(container, NewEligibilityCheck, RetrievedEligibilityCheck);
   }
 
   /**
@@ -88,18 +56,10 @@ export class EligibilityCheckModel extends DocumentDbModel<
    */
   public deleteOneById(
     documentId: EligibilityCheck["id"]
-  ): Promise<Either<DocumentDb.QueryError, string>> {
-    const documentUri = DocumentDbUtils.getDocumentUri(
-      this.collectionUri,
-      documentId
-    );
-    return new Promise(resolve =>
-      this.dbClient.deleteDocument(
-        documentUri.uri,
-        { partitionKey: documentId },
-        (err: DocumentDb.QueryError) =>
-          resolve(err ? left(err) : right(documentId))
-      )
-    );
+  ): TaskEither<CosmosErrors, string> {
+    return tryCatch<CosmosErrors, ItemResponse<EligibilityCheck>>(
+      () => this.container.item(documentId, documentId).delete(),
+      toCosmosErrorResponse
+    ).map(_ => documentId);
   }
 }

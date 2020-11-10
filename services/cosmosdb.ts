@@ -3,20 +3,16 @@
  */
 import * as t from "io-ts";
 
-import { DocumentClient as DocumentDBClient } from "documentdb";
+import { CosmosClient } from "@azure/cosmos";
 import { getRequiredStringEnv } from "io-functions-commons/dist/src/utils/env";
 
-const cosmosDbUri = getRequiredStringEnv("COSMOSDB_BONUS_URI");
-const masterKey = getRequiredStringEnv("COSMOSDB_BONUS_KEY");
-
-export const documentClient = new DocumentDBClient(
-  cosmosDbUri,
-  {
-    masterKey
-  },
-  undefined,
-  "Strong"
-);
+const endpoint = getRequiredStringEnv("COSMOSDB_BONUS_URI");
+const key = getRequiredStringEnv("COSMOSDB_BONUS_KEY");
+export const cosmosClient = new CosmosClient({
+  consistencyLevel: "Strong",
+  endpoint,
+  key
+});
 
 export const CosmosDbDocument = t.readonly(t.UnknownRecord);
 export type CosmosDbDocument = t.TypeOf<typeof CosmosDbDocument>;

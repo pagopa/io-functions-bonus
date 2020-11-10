@@ -44,10 +44,8 @@ import { genRandomBonusCode } from "../utils/bonusCode";
 
 import { QueueService } from "azure-storage";
 import { toString } from "fp-ts/lib/function";
-import {
-  fromQueryEither,
-  QueryError
-} from "io-functions-commons/dist/src/utils/documentdb";
+import { CosmosErrors } from "io-functions-commons/dist/src/utils/cosmosdb_model";
+import { errorsToReadableMessages } from "italia-ts-commons/lib/reporters";
 import { Millisecond } from "italia-ts-commons/lib/units";
 import { ContinueBonusActivationInput } from "../ContinueBonusActivation";
 import { BonusActivation } from "../generated/definitions/BonusActivation";
@@ -60,7 +58,8 @@ import {
   BonusProcessingModel,
   NewBonusProcessing
 } from "../models/bonus_processing";
-import { errorToQueryError } from "./utils";
+import { cosmosErrorsToReadableMessage } from "../utils/errors";
+import { errorToCosmosErrors } from "./utils";
 
 const CREATION_MAX_RETRIES_ON_CONFLICT = 5;
 const CREATION_DELAY_ON_CONFLICT = 50 as Millisecond;
@@ -68,7 +67,7 @@ const CREATION_DELAY_ON_CONFLICT = 50 as Millisecond;
 // When attempting to create the bonus document on cosmos, we will retry in case
 // of a (very unlikely) conflict with an existing bonus with the same BonusID.
 // The retry policy has a constant delay.
-const withRetryPolicy = withRetries<QueryError, RetrievedBonusActivation>(
+const withRetryPolicy = withRetries<CosmosErrors, RetrievedBonusActivation>(
   CREATION_MAX_RETRIES_ON_CONFLICT,
   () => CREATION_DELAY_ON_CONFLICT
 );
@@ -110,19 +109,34 @@ export const getLatestValidDSU = (
   | IResponseErrorInternal,
   EligibilityCheckSuccessEligible
 > =>
-  fromQueryEither(() =>
-    eligibilityCheckModel.find(fiscalCode, fiscalCode)
-  ).foldTaskEither(
-    err => fromLeft(ResponseErrorInternal(`Error reading DSU: ${err.body}`)),
-    maybeEligibilityCheck =>
-      maybeEligibilityCheck.fold<ReturnType<typeof getLatestValidDSU>>(
-        fromLeft(ResponseErrorForbiddenNotAuthorized),
-        eligibilityCheckToResponse
+  fromEither(
+    NonEmptyString.decode(fiscalCode).mapLeft(err =>
+      ResponseErrorInternal(
+        `Invalid FiscalCode parameter: [${errorsToReadableMessages(err)}]`
       )
-  );
+    )
+  )
+    .chain(_ =>
+      eligibilityCheckModel
+        .find([_])
+        .mapLeft(err =>
+          ResponseErrorInternal(
+            `Error reading DSU: ${cosmosErrorsToReadableMessage(err)}`
+          )
+        )
+    )
+    .foldTaskEither(
+      _ => fromLeft(_),
+      maybeEligibilityCheck =>
+        maybeEligibilityCheck.fold<ReturnType<typeof getLatestValidDSU>>(
+          fromLeft(ResponseErrorForbiddenNotAuthorized),
+          eligibilityCheckToResponse
+        )
+    );
 
 // CosmosDB conflict: primary key violation
-const shouldRetryOn409 = (err: QueryError) => err.code === 409;
+const shouldRetryOn409 = (err: CosmosErrors) =>
+  err.kind === "COSMOS_ERROR_RESPONSE" && err.error.code === 409;
 
 const genRandomBonusCodeTask = tryCatch(genRandomBonusCode, toError);
 
@@ -156,29 +170,27 @@ export const createBonusActivation = (
   dsu: Dsu
 ): TaskEither<IResponseErrorInternal, BonusActivationWithFamilyUID> => {
   const retriableBonusActivationTask = genRandomBonusCodeTask
-    .mapLeft(errorToQueryError)
-    .foldTaskEither<QueryError | TransientError, RetrievedBonusActivation>(
+    .mapLeft(errorToCosmosErrors)
+    .foldTaskEither<CosmosErrors | TransientError, RetrievedBonusActivation>(
       fromLeft,
-      (bonusCode: BonusCode) =>
-        fromQueryEither(() => {
-          const bonusActivation = makeNewBonusActivation(
-            fiscalCode,
-            familyUID,
-            dsu,
-            bonusCode
-          );
-          return bonusActivationModel.create(
-            bonusActivation,
-            bonusActivation.id
-          );
-        }).mapLeft(err => (shouldRetryOn409(err) ? TransientError : err))
+      (bonusCode: BonusCode) => {
+        const bonusActivation = makeNewBonusActivation(
+          fiscalCode,
+          familyUID,
+          dsu,
+          bonusCode
+        );
+        return bonusActivationModel
+          .create(bonusActivation)
+          .mapLeft(err => (shouldRetryOn409(err) ? TransientError : err));
+      }
 
       // The following cast is due to the fact that
       // TaskEither<QueryError | TransientError, ...>
       // cannot be passed as parameter to withRetries<QueryError, ...>
       // since the union (QueryError) has different types (string vs number)
       // for the same field (code)
-    ) as RetriableTask<QueryError, RetrievedBonusActivation>;
+    ) as RetriableTask<CosmosErrors, RetrievedBonusActivation>;
 
   return withRetryPolicy(
     retriableBonusActivationTask
@@ -188,7 +200,9 @@ export const createBonusActivation = (
           `Error creating BonusActivation: cannot create a db record after ${CREATION_MAX_RETRIES_ON_CONFLICT} attempts`
         )
       : ResponseErrorInternal(
-          `Error creating BonusActivation: ${errorOrMaxRetry.body}`
+          `Error creating BonusActivation: ${cosmosErrorsToReadableMessage(
+            errorOrMaxRetry
+          )}`
         )
   );
 };
@@ -206,23 +220,22 @@ export const acquireLockForUserFamily = (
   bonusLeaseModel: BonusLeaseModel,
   familyUID: FamilyUID
 ): TaskEither<IResponseErrorConflict | IResponseErrorInternal, unknown> =>
-  fromQueryEither(() =>
-    bonusLeaseModel.create(
-      {
-        id: familyUID,
-        kind: "INewBonusLease"
-      },
-      familyUID
-    )
-  ).mapLeft(err =>
-    err.code === 409
-      ? ResponseErrorConflict(
-          `There's already a lease for familyUID ${familyUID}`
-        )
-      : ResponseErrorInternal(
-          `Error while acquiring lease for familyUID ${familyUID}: ${err.body}`
-        )
-  );
+  bonusLeaseModel
+    .create({
+      id: familyUID,
+      kind: "INewBonusLease"
+    })
+    .mapLeft(err =>
+      err.kind === "COSMOS_ERROR_RESPONSE" && err.error.code === 409
+        ? ResponseErrorConflict(
+            `There's already a lease for familyUID ${familyUID}`
+          )
+        : ResponseErrorInternal(
+            `Error while acquiring lease for familyUID ${familyUID}: ${cosmosErrorsToReadableMessage(
+              err
+            )}`
+          )
+    );
 
 /**
  * Release the lock that was eventually acquired for this request. A release attempt on a lock that doesn't exist is considered successful.
@@ -236,13 +249,15 @@ export const relaseLockForUserFamily = (
   bonusLeaseModel: BonusLeaseModel,
   familyUID: FamilyUID
 ): TaskEither<IResponseErrorInternal, FamilyUID> => {
-  return fromQueryEither(() =>
-    bonusLeaseModel.deleteOneById(familyUID)
-  ).foldTaskEither(
+  return bonusLeaseModel.deleteOneById(familyUID).foldTaskEither(
     err =>
-      err.code === 404
+      err.kind === "COSMOS_ERROR_RESPONSE" && err.error.code === 404
         ? taskEither.of(familyUID)
-        : fromLeft(ResponseErrorInternal(`Error releasing lock: ${err.body}`)),
+        : fromLeft(
+            ResponseErrorInternal(
+              `Error releasing lock: ${cosmosErrorsToReadableMessage(err)}`
+            )
+          ),
     _ => taskEither.of(familyUID)
   );
 };
@@ -279,8 +294,8 @@ export const getBonusProcessing = (
   bonusProcessingModel: BonusProcessingModel,
   // tslint:disable-next-line: variable-name
   fiscalCode: FiscalCode
-): TaskEither<QueryError, Option<BonusProcessing>> =>
-  fromQueryEither(() => bonusProcessingModel.find(fiscalCode, fiscalCode));
+): TaskEither<CosmosErrors, Option<BonusProcessing>> =>
+  bonusProcessingModel.find([fiscalCode as FiscalCode & NonEmptyString]);
 
 const makeNewBonusProcessing = (
   id: FiscalCode,
@@ -300,7 +315,5 @@ export const saveBonusProcessing = (
   bonusProcessingModel: BonusProcessingModel,
   // tslint:disable-next-line: variable-name
   { id, bonusId }: BonusProcessing
-): TaskEither<QueryError, BonusProcessing> =>
-  fromQueryEither(() =>
-    bonusProcessingModel.create(makeNewBonusProcessing(id, bonusId), id)
-  );
+): TaskEither<CosmosErrors, BonusProcessing> =>
+  bonusProcessingModel.create(makeNewBonusProcessing(id, bonusId));

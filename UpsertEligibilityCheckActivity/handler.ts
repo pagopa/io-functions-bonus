@@ -1,12 +1,10 @@
 import { Context } from "@azure/functions";
-import { fromEither, tryCatch } from "fp-ts/lib/TaskEither";
+import { fromEither } from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { EligibilityCheck } from "../generated/models/EligibilityCheck";
-import {
-  ELIGIBILITY_CHECK_MODEL_PK_FIELD,
-  EligibilityCheckModel
-} from "../models/eligibility_check";
+import { EligibilityCheckModel } from "../models/eligibility_check";
+import { cosmosErrorsToReadableMessage } from "../utils/errors";
 
 export const UpsertEligibilityCheckActivityInput = EligibilityCheck;
 export type UpsertEligibilityCheckActivityInput = t.TypeOf<
@@ -45,18 +43,15 @@ export function getUpsertEligibilityCheckActivityHandler(
       )
     )
       .chain(eligibilityCheck =>
-        tryCatch(
-          () => {
-            return eligibilityCheckModel.createOrUpdate(
-              { ...eligibilityCheck, kind: "INewEligibilityCheck" },
-              eligibilityCheck[ELIGIBILITY_CHECK_MODEL_PK_FIELD]
-            );
-          },
-          err => new Error(`Error upserting EligibilityCheck [${err}]`)
-        )
-      )
-      .chain(_ =>
-        fromEither(_).mapLeft(err => new Error(`Query Error: ${err.body}`))
+        eligibilityCheckModel
+          .upsert({
+            ...eligibilityCheck,
+            kind: "INewEligibilityCheck"
+          })
+          .mapLeft(
+            err =>
+              new Error(`Query Error: ${cosmosErrorsToReadableMessage(err)}`)
+          )
       )
       .fold<ActivityResult>(
         err => {

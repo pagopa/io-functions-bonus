@@ -1,13 +1,14 @@
 import { Context } from "@azure/functions";
 import { left, right } from "fp-ts/lib/Either";
 import { isNone } from "fp-ts/lib/Option";
-import { fromEither, tryCatch } from "fp-ts/lib/TaskEither";
+import { fromEither, taskEither } from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { EligibilityCheck as ApiEligibilityCheck } from "../generated/definitions/EligibilityCheck";
 import { StatusEnum as ConflictStatusEnum } from "../generated/definitions/EligibilityCheckSuccessConflict";
 import { StatusEnum as EligibleStatusEnum } from "../generated/definitions/EligibilityCheckSuccessEligible";
 import { BonusLeaseModel } from "../models/bonus_lease";
+import { cosmosErrorsToReadableMessage } from "../utils/errors";
 import { generateFamilyUID } from "../utils/hash";
 
 export const ValidateEligibilityCheckActivityInput = ApiEligibilityCheck;
@@ -52,29 +53,29 @@ export function getValidateEligibilityCheckActivityHandler(
             surname: familyMember.surname
           }))
         );
-        return tryCatch(
-          () => bonusLeaseModel.find(familyUID, familyUID),
-          () => new Error("Error calling bonusLeaseModel.find")
-        ).foldTaskEither<Error, ValidateEligibilityCheckActivityOutput>(
-          error => fromEither(left(error)),
-          queryResult =>
-            fromEither(
-              queryResult
-                .mapLeft(
-                  queryError =>
-                    new Error(`Query Error: code=[${queryError.code}]`)
+        return bonusLeaseModel
+          .find([familyUID])
+          .foldTaskEither<Error, ValidateEligibilityCheckActivityOutput>(
+            error =>
+              fromEither(
+                left(
+                  new Error(
+                    `Query Error: code=[${cosmosErrorsToReadableMessage(
+                      error
+                    )}]`
+                  )
                 )
-                .map(bonusLease => {
-                  if (isNone(bonusLease)) {
-                    return eligibilityCheck;
-                  }
-                  return {
-                    ...eligibilityCheck,
-                    status: ConflictStatusEnum.CONFLICT
-                  };
-                })
-            )
-        );
+              ),
+            bonusLease => {
+              if (isNone(bonusLease)) {
+                return taskEither.of(eligibilityCheck);
+              }
+              return taskEither.of({
+                ...eligibilityCheck,
+                status: ConflictStatusEnum.CONFLICT
+              });
+            }
+          );
       })
       .fold(
         error => {

@@ -1,16 +1,18 @@
 import { toString } from "fp-ts/lib/function";
 import { fromEither } from "fp-ts/lib/TaskEither";
-import {
-  fromQueryEither,
-  QueryError
-} from "io-functions-commons/dist/src/utils/documentdb";
+import { CosmosErrors } from "io-functions-commons/dist/src/utils/cosmosdb_model";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { Context } from "vm";
 import { BonusProcessingModel } from "../models/bonus_processing";
 import { trackException } from "../utils/appinsights";
-import { Failure, PermanentFailure, TransientFailure } from "../utils/errors";
+import {
+  cosmosErrorsToReadableMessage,
+  Failure,
+  PermanentFailure,
+  TransientFailure
+} from "../utils/errors";
 
 export const ReleaseUserLockActivitySuccess = t.type({
   id: FiscalCode,
@@ -49,10 +51,10 @@ const lockNotFoundFailure = Failure.encode({
   reason: "Lock not found"
 });
 
-const queryErrorFailure = (err: QueryError) =>
+const queryErrorFailure = (err: CosmosErrors) =>
   Failure.encode({
     kind: "TRANSIENT",
-    reason: `Query error: ${err.code}=${err.body}`
+    reason: `Query error: ${cosmosErrorsToReadableMessage(err)}`
   });
 
 const releaseUserLockActivitySuccess = (
@@ -74,10 +76,13 @@ export function getReleaseUserLockActivityHandler(
     return fromEither(ReleaseUserLockActivityInput.decode(input))
       .mapLeft<Failure>(invalidInputFailure)
       .chain(({ id }) =>
-        fromQueryEither(() => bonusProcessingModel.deleteOneById(id))
+        bonusProcessingModel
+          .deleteOneById(id)
           .map(__ => id)
           .mapLeft<Failure>(err =>
-            err.code === 404 ? lockNotFoundFailure : queryErrorFailure(err)
+            err.kind === "COSMOS_ERROR_RESPONSE" && err.error.code === 404
+              ? lockNotFoundFailure
+              : queryErrorFailure(err)
           )
       )
       .fold<ReleaseUserLockActivityResult>(err => {

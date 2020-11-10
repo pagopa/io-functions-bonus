@@ -1,5 +1,6 @@
-import { isRight, right } from "fp-ts/lib/Either";
+import { isRight } from "fp-ts/lib/Either";
 import { none, some } from "fp-ts/lib/Option";
+import { taskEither } from "fp-ts/lib/TaskEither";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { context } from "../../__mocks__/durable-functions";
 import { EligibilityCheckSuccessConflict } from "../../generated/definitions/EligibilityCheckSuccessConflict";
@@ -44,9 +45,7 @@ describe("ValidateEligibilityCheckActivityHandler", () => {
   });
 
   it("should return EligibilityCheckSuccessConflict if a bonus lease was found", async () => {
-    mockFind.mockImplementation((id, _) =>
-      Promise.resolve(right(some({ id })))
-    );
+    mockFind.mockImplementation((id, _) => taskEither.of(some({ id })));
 
     const handler = getValidateEligibilityCheckActivityHandler(bonusLeaseModel);
 
@@ -58,7 +57,7 @@ describe("ValidateEligibilityCheckActivityHandler", () => {
   });
 
   it("should return original input if no bonus lease was found", async () => {
-    mockFind.mockImplementation((__, _) => Promise.resolve(right(none)));
+    mockFind.mockImplementation((__, _) => taskEither.of(none));
 
     const handler = getValidateEligibilityCheckActivityHandler(bonusLeaseModel);
 

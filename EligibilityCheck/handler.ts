@@ -5,7 +5,7 @@ import * as express from "express";
 import { fromOption, isLeft, isRight } from "fp-ts/lib/Either";
 import { toString } from "fp-ts/lib/function";
 import { isSome } from "fp-ts/lib/Option";
-import { fromEither, fromPredicate, tryCatch } from "fp-ts/lib/TaskEither";
+import { fromEither, fromPredicate } from "fp-ts/lib/TaskEither";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import { FiscalCodeMiddleware } from "io-functions-commons/dist/src/utils/middlewares/fiscalcode";
 import {
@@ -27,6 +27,7 @@ import { EligibilityCheckSuccessEligible } from "../generated/models/Eligibility
 import { BonusProcessingModel } from "../models/bonus_processing";
 import { EligibilityCheckModel } from "../models/eligibility_check";
 import { initTelemetryClient, trackException } from "../utils/appinsights";
+import { cosmosErrorsToReadableMessage } from "../utils/errors";
 import { makeStartEligibilityCheckOrchestratorId } from "../utils/orchestrators";
 import { checkEligibilityCheckIsRunning } from "./orchestrators";
 
@@ -57,10 +58,9 @@ export function EligibilityCheckHandler(
 
     // If a bonus activation for that user is in progress
     // returns 403 status response
-    const bonusProcessingFindResponse = await bonusProcessingModel.find(
-      fiscalCode,
-      fiscalCode
-    );
+    const bonusProcessingFindResponse = await bonusProcessingModel
+      .find([fiscalCode as FiscalCode & NonEmptyString])
+      .run();
     if (isRight(bonusProcessingFindResponse)) {
       const maybeBonusActivationResponse = bonusProcessingFindResponse.value;
       if (isSome(maybeBonusActivationResponse)) {
@@ -74,17 +74,13 @@ export function EligibilityCheckHandler(
     const instanceId: InstanceId = {
       id: (fiscalCode as unknown) as NonEmptyString
     };
-    const hasEligibilityCheckValid = await tryCatch(
-      () => eligibilityCheckModel.find(fiscalCode, fiscalCode),
-      _ => new Error("Error reading Eligibility Check from database")
-    )
-      .chain(_ =>
-        fromEither(_).mapLeft(
-          queryError =>
-            new Error(
-              `Query error [body:${queryError.body}|code: ${queryError.code}]`
-            )
-        )
+    const hasEligibilityCheckValid = await eligibilityCheckModel
+      .find([fiscalCode as FiscalCode & NonEmptyString])
+      .mapLeft(
+        queryError =>
+          new Error(
+            `Query error [${cosmosErrorsToReadableMessage(queryError)}]`
+          )
       )
       .chain(_ =>
         fromEither(fromOption(new Error("Eligibility Check not found"))(_))

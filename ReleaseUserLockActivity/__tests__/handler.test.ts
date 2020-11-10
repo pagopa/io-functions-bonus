@@ -1,4 +1,5 @@
-import { left, right } from "fp-ts/lib/Either";
+import { fromLeft } from "fp-ts/lib/IOEither";
+import { taskEither } from "fp-ts/lib/TaskEither";
 import { context } from "../../__mocks__/durable-functions";
 import {
   aFiscalCode,
@@ -16,11 +17,9 @@ import {
 jest.mock("../../utils/appinsights");
 
 // mockBonusProcessingModel
-const mockBonusProcessingDeleteOneById = jest
-  .fn()
-  .mockImplementation(async _ => {
-    return right("");
-  });
+const mockBonusProcessingDeleteOneById = jest.fn().mockImplementation(_ => {
+  return taskEither.of("");
+});
 const mockBonusProcessingModel = ({
   deleteOneById: mockBonusProcessingDeleteOneById
 } as unknown) as BonusProcessingModel;
@@ -42,8 +41,8 @@ describe("getReleaseUserLockActivityHandler", () => {
   });
 
   it("should return failure on lease not found", async () => {
-    mockBonusProcessingDeleteOneById.mockImplementationOnce(async () =>
-      left(aNotFoundQueryError)
+    mockBonusProcessingDeleteOneById.mockImplementationOnce(() =>
+      fromLeft(aNotFoundQueryError)
     );
 
     const handler = getReleaseUserLockActivityHandler(mockBonusProcessingModel);
@@ -57,8 +56,8 @@ describe("getReleaseUserLockActivityHandler", () => {
   });
 
   it("should throw on delete error", async () => {
-    mockBonusProcessingDeleteOneById.mockImplementationOnce(async () =>
-      left(aGenericQueryError)
+    mockBonusProcessingDeleteOneById.mockImplementationOnce(() =>
+      fromLeft(aGenericQueryError)
     );
 
     const handler = getReleaseUserLockActivityHandler(mockBonusProcessingModel);

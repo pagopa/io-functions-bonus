@@ -22,7 +22,7 @@ import {
 } from "../generated/models/EligibilityCheckSuccessIneligible";
 
 import { MessageContent } from "io-functions-commons/dist/generated/definitions/MessageContent";
-import { QueryError } from "io-functions-commons/dist/src/utils/documentdb";
+import { CosmosErrors } from "io-functions-commons/dist/src/utils/cosmosdb_model";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import {
   BonusVacanzaInvalidRequestError,
@@ -132,8 +132,10 @@ export const aBonusActivationWithFamilyUID: BonusActivationWithFamilyUID = {
 
 export const aRetrievedBonusActivation: RetrievedBonusActivation = {
   ...aBonusActivationWithFamilyUID,
-  _self: "xyz",
-  _ts: 123,
+  _etag: "_etag",
+  _rid: "_rid",
+  _self: "_self",
+  _ts: 1,
   id: aBonusActivationId,
   kind: "IRetrievedBonusActivation"
 };
@@ -149,8 +151,10 @@ export const aBonusProcessing = BonusProcessing.decode({
 
 export const aRetrievedBonusProcessing = RetrievedBonusProcessing.decode({
   ...aBonusProcessing,
-  _self: "xyz",
-  _ts: 123,
+  _etag: "_etag",
+  _rid: "_rid",
+  _self: "_self",
+  _ts: 1,
   kind: "IRetrievedBonusProcessing"
 }).getOrElseL(_ => {
   throw new Error(
@@ -175,8 +179,10 @@ export const aNewBonusLease: NewBonusLease = {
 
 export const aRetrievedBonusLease: RetrievedBonusLease = {
   ...aBonusLease,
-  _self: "xyz",
-  _ts: 123,
+  _etag: "_etag",
+  _rid: "_rid",
+  _self: "_self",
+  _ts: 1,
   kind: "IRetrievedBonusLease"
 };
 
@@ -188,8 +194,10 @@ export const aUserBonus: UserBonus = {
 
 export const aRetrievedUserBonus: RetrievedUserBonus = {
   ...aUserBonus,
-  _self: "xyz",
-  _ts: 123,
+  _etag: "_etag",
+  _rid: "_rid",
+  _self: "_self",
+  _ts: 1,
   id: (aUserBonus.bonusId as unknown) as NonEmptyString,
   kind: "IRetrievedUserBonus"
 };
@@ -223,19 +231,42 @@ export const aBonusVacanzaTransientError: BonusVacanzaTransientError = {
   errorMessage: "Generic Error"
 };
 
-export const aGenericQueryError: QueryError = {
-  body: "generic error",
-  code: "error"
+export const aGenericQueryError: CosmosErrors = {
+  error: {
+    body: {
+      code: "error",
+      message: "generic error"
+    },
+    message: "generic error",
+    name: "Error"
+  },
+  kind: "COSMOS_ERROR_RESPONSE"
 };
 
-export const aNotFoundQueryError: QueryError = {
-  body: "Not Found",
-  code: 404
+export const aNotFoundQueryError: CosmosErrors = {
+  error: {
+    body: {
+      code: "error",
+      message: "not found error"
+    },
+    code: 404,
+    message: "not found error",
+    name: "Not found"
+  },
+  kind: "COSMOS_ERROR_RESPONSE"
 };
 
-export const aConflictQueryError: QueryError = {
-  body: "Conflict",
-  code: 409
+export const aConflictQueryError: CosmosErrors = {
+  error: {
+    body: {
+      code: "error",
+      message: "conflict error"
+    },
+    code: 409,
+    message: "conflict error",
+    name: "Conflict"
+  },
+  kind: "COSMOS_ERROR_RESPONSE"
 };
 
 export const aMessageContent = MessageContent.decode({

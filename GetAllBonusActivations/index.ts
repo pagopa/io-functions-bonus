@@ -1,6 +1,5 @@
 import { AzureFunction, Context } from "@azure/functions";
 import * as express from "express";
-import * as documentDbUtils from "io-functions-commons/dist/src/utils/documentdb";
 import { getRequiredStringEnv } from "io-functions-commons/dist/src/utils/env";
 import { secureExpressApp } from "io-functions-commons/dist/src/utils/express";
 import { setAppContext } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
@@ -9,21 +8,16 @@ import {
   USER_BONUS_COLLECTION_NAME,
   UserBonusModel
 } from "../models/user_bonus";
-import { documentClient } from "../services/cosmosdb";
+import { cosmosClient } from "../services/cosmosdb";
 import { GetAllBonusActivations } from "./handler";
 
 const cosmosDbName = getRequiredStringEnv("COSMOSDB_BONUS_DATABASE_NAME");
 
-const documentDbDatabaseUrl = documentDbUtils.getDatabaseUri(cosmosDbName);
-const userBonusCollectionUrl = documentDbUtils.getCollectionUri(
-  documentDbDatabaseUrl,
-  USER_BONUS_COLLECTION_NAME
-);
+const userBonusContainer = cosmosClient
+  .database(cosmosDbName)
+  .container(USER_BONUS_COLLECTION_NAME);
 
-const userBonusModel = new UserBonusModel(
-  documentClient,
-  userBonusCollectionUrl
-);
+const userBonusModel = new UserBonusModel(userBonusContainer);
 
 // Setup Express
 const app = express();

@@ -1,10 +1,10 @@
 import { Context } from "@azure/functions";
-import { right } from "fp-ts/lib/Either";
-import { fromEither, tryCatch } from "fp-ts/lib/TaskEither";
+import { fromEither, taskEither } from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { EligibilityCheckModel } from "../models/eligibility_check";
+import { cosmosErrorsToReadableMessage } from "../utils/errors";
 
 export const DeleteEligibilityCheckActivityInput = FiscalCode;
 export type DeleteEligibilityCheckActivityInput = t.TypeOf<
@@ -49,27 +49,25 @@ export const getDeleteEligibilityCheckActivityHandler = (
         )
     )
       .chain(fiscalCode =>
-        tryCatch(
-          () => eligibilityCheckModel.deleteOneById(fiscalCode),
-          err => new Error(`Error deleting EligibilityCheck: [${err}]`)
-        ).chain(_ =>
-          fromEither(_).foldTaskEither(
-            err => {
-              if (err.code === 404) {
-                return fromEither(right("NOT FOUND"));
-              }
-              // this condition address the case we want the activity to throw, so the orchestrator can retry
-              const queryError = new Error(
-                `Query Error: code=${err.code} body=${err.body}`
-              );
-              context.log.error(
-                `DeleteEligibilityCheckActivity|ERROR|%s`,
-                queryError.message
-              );
-              throw queryError;
-            },
-            id => fromEither(right(id))
-          )
+        eligibilityCheckModel.deleteOneById(fiscalCode).foldTaskEither(
+          err => {
+            if (
+              err.kind === "COSMOS_ERROR_RESPONSE" &&
+              err.error.code === 404
+            ) {
+              return taskEither.of("NOT FOUND");
+            }
+            // this condition address the case we want the activity to throw, so the orchestrator can retry
+            const queryError = new Error(
+              `Query Error: ${cosmosErrorsToReadableMessage(err)}`
+            );
+            context.log.error(
+              `DeleteEligibilityCheckActivity|ERROR|%s`,
+              queryError.message
+            );
+            throw queryError;
+          },
+          _ => taskEither.of(_)
         )
       )
       .fold<ActivityResult>(
