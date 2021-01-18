@@ -81,6 +81,9 @@ stages:
         - script: |
             yarn test:coverage
           displayName: 'Unit tests exec'
+          env:
+            # env variable required by singleton module
+            BONUS_STORAGE_CONNECTION_STRING: 'foobar'
 
         - bash: |
             bash <(curl -s https://codecov.io/bash)
