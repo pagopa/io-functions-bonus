@@ -41,7 +41,7 @@ stages:
         steps:
         - template: azure-templates/setup-project.yml
         - script: |
-            yarn lint
+            npx oval validate -p openapi/index.yaml
           displayName: 'Lint'
 
       - job: validate_api_specification     
