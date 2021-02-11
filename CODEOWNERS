@@ -1,4 +1,4 @@
 # see https://help.github.com/en/articles/about-code-owners#example-of-a-codeowners-file
 
-* @aledore @gunzip @burnedmarshal @balanza
-
+# everything but the lockfile
+!yarn.lock @aledore @gunzip @burnedmarshal @balanza
