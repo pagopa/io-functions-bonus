@@ -1,9 +1,9 @@
 {
-  "name": "io-functions-bonus",
+  "name": "@pagopa/io-functions-bonus",
   "description": "",
   "author": "IO team",
   "repository": "https://github.com/pagopa/io-functions-bonus",
-  "version": "1.25.0",
+  "version": "1.26.0",
   "license": "MIT",
   "scripts": {
     "prebuild": "shx rm -rf dist && yarn generate",
@@ -71,7 +71,7 @@
     "io-functions-express": "^0.1.0",
     "io-ts": "1.8.5",
     "italia-ts-commons": "^8.5.0",
-    "node-fetch": "^2.6.0",
+    "node-fetch": "^2.6.1",
     "winston": "^3.2.1",
     "xmldom": "^0.3.0"
   },
