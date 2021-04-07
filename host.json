@@ -5,8 +5,7 @@
       "default": "Information",
       "DurableTask.AzureStorage": "Warning",
       "DurableTask.Core": "Warning",
-      "Function.GetAllBonusActivations": "Warning",
-      "Function.GetBonusActivation": "Warning"
+      "Function.GetAllBonusActivations": "Warning"
     },
     "applicationInsights": {
       "samplingSettings": {
