@@ -65,7 +65,7 @@
     "date-fns": "^2.14.0",
     "documentdb": "^1.15.3",
     "durable-functions": "^1.4.1",
-    "express": "^4.15.3",
+    "express": "^4.17.3",
     "fp-ts": "1.17.4",
     "io-functions-commons": "^10.5.0",
     "io-functions-express": "^0.1.0",
